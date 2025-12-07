@@ -8,13 +8,13 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 // Add domains for analytics, comments, or other services as needed
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
+  script-src 'self' 'unsafe-inline';
   style-src 'self' 'unsafe-inline';
   img-src * blob: data:;
   media-src *.s3.amazonaws.com;
   connect-src *;
   font-src 'self';
-  frame-src 'self';
+  frame-src 'self' giscus.app;
 `
 
 const securityHeaders = [
