@@ -113,7 +113,7 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
     const authorResults = allAuthors.find((p) => p.slug === author)
     return coreContent(authorResults as Authors)
   })
-  const mainContent = coreContent(post)
+  const mainContent = { ...coreContent(post), translationOf: post.translationOf, draft: post.draft }
   const jsonLd = post.structuredData
   jsonLd['author'] = authorDetails.map((author) => {
     return {

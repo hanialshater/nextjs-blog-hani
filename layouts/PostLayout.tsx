@@ -33,7 +33,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
   const { locale, t, dir } = useLocale()
   const isRTL = dir === 'rtl'
 
-  const { path, slug, date, title, tags, readingTime, translationOf } = content
+  const { path, slug, date, title, tags, readingTime, translationOf, draft } = content
   const basePath = path.split('/')[0]
   const postUrl = `${siteMetadata.siteUrl}/${locale}/blog/${slug}`
 
@@ -75,6 +75,24 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
               <div>
                 <PageTitle>{title}</PageTitle>
               </div>
+              {draft && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <span>{t('blog.draft')}</span>
+                </div>
+              )}
               {translationOf && (
                 <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
                   <svg
