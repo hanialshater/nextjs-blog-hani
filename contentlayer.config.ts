@@ -46,7 +46,11 @@ const computedFields: ComputedFields = {
   readingTime: { type: 'json', resolve: (doc) => readingTime(doc.body.raw) },
   slug: {
     type: 'string',
-    resolve: (doc) => doc._raw.flattenedPath.replace(/^.+?(\/)/, ''),
+    resolve: (doc) => {
+      // Remove folder prefix and strip language suffix (.ar, .en, etc.)
+      const rawSlug = doc._raw.flattenedPath.replace(/^.+?(\/)/, '')
+      return rawSlug.replace(/\.(ar|en)$/, '')
+    },
   },
   path: {
     type: 'string',
