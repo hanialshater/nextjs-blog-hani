@@ -27,6 +27,7 @@ Translate the specified blog post to Levantine Arabic (عربي شامي - Jorda
    - Natural flow as if talking to a friend
    - Use expressions people actually say
    - When a concept doesn't have a cultural equivalent, explain it naturally instead of inventing awkward translations
+   - **IMPORTANT: Use masculine forms by default** (Arabic convention). Don't use feminine verb forms like "صحّي، فرشي، افتحي، بتشوفي" - use masculine "فيق، فرش، افتح، بتشوف"
 
 4. **Voice Examples from the Author:**
    ```
