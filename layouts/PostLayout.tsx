@@ -11,10 +11,6 @@ import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
 
-const editUrl = (path: string) => `${siteMetadata.siteRepo}/blob/main/data/${path}`
-const discussUrl = (path: string) =>
-  `https://mobile.twitter.com/search?q=${encodeURIComponent(`${siteMetadata.siteUrl}/${path}`)}`
-
 const postDateTemplate: Intl.DateTimeFormatOptions = {
   weekday: 'long',
   year: 'numeric',
@@ -31,7 +27,7 @@ interface LayoutProps {
 }
 
 export default function PostLayout({ content, authorDetails, next, prev, children }: LayoutProps) {
-  const { filePath, path, slug, date, title, tags, readingTime } = content
+  const { path, slug, date, title, tags, readingTime } = content
   const basePath = path.split('/')[0]
   const postUrl = `${siteMetadata.siteUrl}/blog/${slug}`
 
@@ -100,14 +96,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
             </dl>
             <div className="divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700">
               <div className="prose dark:prose-invert max-w-none pt-10 pb-8">{children}</div>
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-6 pb-6 text-sm text-gray-700 dark:text-gray-300">
-                <div>
-                  <Link href={discussUrl(path)} rel="nofollow">
-                    Discuss on Twitter
-                  </Link>
-                  {` • `}
-                  <Link href={editUrl(filePath)}>View on GitHub</Link>
-                </div>
+              <div className="flex justify-end pt-6 pb-6">
                 <ShareButtons url={postUrl} title={title} />
               </div>
               {siteMetadata.comments && (
