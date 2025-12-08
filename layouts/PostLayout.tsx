@@ -33,7 +33,8 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
   const { locale, t, dir } = useLocale()
   const isRTL = dir === 'rtl'
 
-  const { path, slug, date, title, tags, readingTime, translationOf, draft } = content
+  const { path, slug, date, title, tags, readingTime, translationOf, originalLanguage, draft } =
+    content
   const basePath = path.split('/')[0]
   const postUrl = `${siteMetadata.siteUrl}/${locale}/blog/${slug}`
 
@@ -111,7 +112,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                   <span>{t('blog.autoTranslated')}</span>
                   <span className="mx-1">·</span>
                   <Link
-                    href={`/en/blog/${translationOf}`}
+                    href={`/${originalLanguage || 'en'}/blog/${translationOf}`}
                     className="font-medium underline hover:no-underline"
                   >
                     {t('blog.viewOriginal')}

@@ -95,6 +95,7 @@ export const Blog = defineDocumentType(() => ({
     canonicalUrl: { type: 'string' },
     language: { type: 'enum', options: ['en', 'ar'], default: 'en' },
     translationOf: { type: 'string' }, // slug of the original post (for translations)
+    originalLanguage: { type: 'enum', options: ['en', 'ar'], default: 'en' }, // language of the original post
   },
   computedFields: {
     ...computedFields,
