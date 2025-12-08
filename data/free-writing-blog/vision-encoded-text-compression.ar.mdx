@@ -1,0 +1,226 @@
+---
+title: 'ضغط النص بالصور: توفير 8 أضعاف بالـ tokens بدون موديلات مخصصة'
+date: '2025-10-23'
+tags: ['ai', 'optimization', 'vision-models', 'cost-reduction', 'machine-learning']
+draft: false
+summary: 'أداء DeepSeek-OCR ثوري، بس فيك تحقق نتيجة مشابهة من ضغط 8x للنص (توفير 87% بالـ tokens) بدقة 99.5% باستخدام موديلات LLM عادية متل Gemini 2.5'
+language: ar
+translationOf: vision-encoded-text-compression
+---
+
+**TL;DR**: أداء DeepSeek-OCR ثوري، بس فيك تحقق نتيجة مشابهة من **ضغط 8×** للنص (توفير 87% بالـ tokens) بدقة **99.5%** باستخدام موديلات LLM عادية متل Gemini 2.5
+
+**مش مصدق؟** بس انسخ هالصورة والصقها بـ Gemini مع الـ prompt "read this text and write it down":
+
+![Try it yourself](/static/images/blog/vision-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+
+هالصورة الصغيرة فيها 1,287 حرف اللي Gemini رح يقرأهم بدقة 99.5%—باستخدام بس 40 token بدل 321.
+
+## الاكتشاف بالصدفة
+
+قبل كم شهر، كنت عم جرب أداء LLM على مهمة تلخيص. بدي أستخدم صور ونص بالـ prompts تبعي، فطبيعياً، بلشت أبعت screenshots. اشتغل منيح بشكل مفاجئ.
+
+بعدين صرت فضولي: شو لو صغرت الـ screenshots؟ بلشت أضغطهم—أصغر، أصغر، وأصغر. كل مرة، Gemini كان يكمل يقرأ النص بشكل مثالي. وقتها فهمت:
+
+**قراءة الصور اللي فيها نص كانت أكفأ 6× بالـ tokens من إرسال النص الفعلي!**
+
+هاد كان منطقي حدسياً. الطبيعة ما عندها tokens—بنستخدم بس عيوننا نقرأ. الرؤية هي الواجهة الطبيعية للمعلومات.
+
+تحمست واقترحت fine-tuning لـ LLMs على نص منخفض الدقة لتخفيض تكاليف الـ inference. بس متل كتير أشياء بالحياة، أحبطني الشك عن الدقة. "الـ OCR رح يكون سيء،" قالوا. "رح تخسر كتير معلومات." الفكرة راحت عالرف، منسية.
+
+## التبرير
+
+اليوم، شفت **DeepSeek-OCR** وتقريباً نطيت من كرسيي. أثبتوا الفكرة—موديل متخصص بيضغط النص لـ vision tokens، محققين ضغط 7-20×. حدسي كان صح!
+
+**DeepSeek-OCR**: موديل vision-language 3B مدرب خصيصاً بيشفر صور النص لـ vision tokens مضغوطة، بعدين بيفكها. بيحقق دقة 97% بضغط 10× مع تدريب متخصص على 30M+ وثيقة.
+
+بس هون المفاجأة: **ما بتحتاج DeepSeek-OCR.**
+
+موديلات الرؤية العادية متل Gemini 2.5 بتقدر تعمل هاد. بس لازم:
+1. ترندر نصك لصورة
+2. تصغرها صح
+3. تبعتها لأي vision API
+
+**بوف**—حصلت على تخفيض 8× بالتكلفة لمهمتك المفضلة.
+
+هيك عملناها.
+
+## النتائج
+
+عملنا اختبارات ablation منهجية على مستويات ضغط مختلفة:
+
+| الإعداد | Tokens | الضغط | الدقة | الحالة |
+| ------- | ------ | ----- | ----- | ------ |
+| نص عادي | 321 | 1× | 100% | Baseline |
+| 8px Y=1.0 | 68 | 4.7× | 91.1% | ✗ ضعيف |
+| 8px Y=0.9 | 60 | 5.4× | 87.8% | ✗ ضعيف |
+| **8px Y=0.8** | **54** | **6×** | **99.4%** | ✓ جيد |
+| 8px Y=0.7 | 46 | 7× | 55.0% | ✗ فشل |
+| **8px Y=0.6** | **40** | **8×** | **99.5%** | ✓ **الأفضل** |
+
+**الفائز**: 8px Verdana مع ضغط عمودي 60% (Y-scale 0.6)
+
+**الأداء**:
+- **40 token** مقابل 321 token نص عادي
+- **ضغط 8×** (توفير 87% بالـ tokens)
+- **دقة 99.5%** (تقريباً مثالي)
+
+## شكل ضغط 8×
+
+هاي الصورة المضغوطة الفعلية اللي Gemini بيقرأها بدقة 99.5%:
+
+![8× Compressed Text](/static/images/blog/vision-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+
+**هالصورة فيها 1,287 حرف** (مراجعة MacBook Pro كاملة) بـ **40 token** بس.
+
+الخطأ الوحيد بالنسخ: `"500K" → "500k"` (الأحرف الكبيرة).
+
+## كيف بيشتغل
+
+الـ pipeline بسيط جداً—بس HTML و Playwright:
+
+```python
+from playwright.async_api import async_playwright
+from PIL import Image
+
+async def render_compressed_text(text: str, output_path: str):
+    # 1. Generate HTML with ultra-small font
+    html = f"""
+    <html><body style="width:800px;font-family:Verdana;font-size:8px;line-height:8px;margin:0">
+        {text}
+    </body></html>
+    """
+
+    # 2. Screenshot with Playwright
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(html)
+        await page.screenshot(path='temp.png')
+        await browser.close()
+
+    # 3. Vertical compression (Y-scale 0.6)
+    img = Image.open('temp.png')
+    new_height = int(img.height * 0.6)
+    img = img.resize((img.width, new_height), Image.Resampling.LANCZOS)
+    img.save(output_path)
+```
+
+هاد كلشي. ما في موديلات مخصصة، ما في تدريب، ما في infrastructure.
+
+## DeepSeek-OCR مقابل أسلوبنا
+
+| المقياس | DeepSeek-OCR | أسلوبنا |
+| ------- | ------------ | ------- |
+| **الضغط** | 7-20× | **8×** |
+| **الدقة (@8×)** | ~95% | **99.5%** |
+| **الموديل** | Custom 3B VLM | Gemini عادي |
+| **التدريب** | 30M+ وثيقة | لا شي |
+| **النشر** | GPU مستضاف ذاتياً | API call |
+| **وقت الإعداد** | أيام | دقائق |
+
+**ضاهينا ضغطهم بدقة أحسن بدون أي infrastructure.**
+
+## الهاوية النوعية
+
+الضغط مش خطي—في هاوية جودة حادة:
+
+- **Y-scale 0.8** → دقة 99.4% ✓
+- **Y-scale 0.7** → دقة 55.0% ✗ (تدهور OCR)
+- **Y-scale 0.6** → دقة 99.5% ✓ (النقطة الحلوة!)
+
+عند 0.7، أشكال الحروف بتتدهور بما فيه الكفاية لكسر OCR تبع Gemini. عند 0.6، قراءة مثالية.
+
+## شو ما اشتغل
+
+جربنا مخططات ضغط تانية:
+
+**Binary Grids**: تحويل ل binary 8-bit، رندرة كـ pixels. ممكن تحقق ضغط 23×، بس موديلات الرؤية ما بتقدر تفك أنماط binary عشوائية بدون تدريب. فشل.
+
+**Morse Code**: النقاط والخطوط فعلياً بتستخدم tokens *أكتر* (192 مقابل 321) بسبب متطلبات المسافات. فشل.
+
+**RGB Channel Splitting**: تشفير نص مختلف بقنوات R/G/B. Gemini بيفسرها كـ chromatic aberration. فشل.
+
+**الخط العربي**: جربنا ضغط النص العربي وفشل. الخطوط المعقدة بحروف متصلة وتشكيل بتحتاج خطوط أكبر وما بتحقق نفس نسب الضغط. هالطريقة بتشتغل أحسن للغات بالخط اللاتيني.
+
+**الدرس**: رندرة النص البسيطة بتغلب التشفير الذكي مع موديلات جاهزة.
+
+## Claude مقابل Gemini: فجوة الرؤية
+
+| الموديل | أصغر خط قابل للقراءة | أحسن ضغط | الدقة |
+| ------- | ------------------- | -------- | ----- |
+| Claude 4.5 | 14px | 261 token (توفير 19%) | 99.8% |
+| Gemini 2.5 | 8px | 40 token (توفير 87%) | 99.5% |
+
+**موديل رؤية Gemini أحسن 4×** بقراءة النص الصغير. Claude بيهلوس عند 8px.
+
+## ملاحظات المنهجية
+
+**حساب الـ Tokens**: tokens الصور بتُحسب باستخدام معادلة vision API لـ Claude/Gemini: `tokens = (width × height) / 750`. لإعداد 8px Y=0.6، الصورة 800×30px = 24,000 pixel / 750 = 40 token.
+
+**تنويه**: هاي تجارب صغيرة الحجم. خذ النتائج بحذر. اختبر بشكل شامل على حالة الاستخدام المحددة قبل النشر. أنواع نص مختلفة (كود، شعر، جداول) ممكن يكون إلها profiles دقة مختلفة.
+
+---
+
+## ليش هاد مهم؟
+
+### ١. بس بلشنا
+
+هاد بس البداية. مع خطوط وطرق تشفير أكفأ، ممكن نحقق **ضغط 20× أو أكتر**. RGB channel multiplexing ممكن يدفع هاد أبعد.
+
+بتساءل متى رح نشوف LLMs مدربة بدون مدخلات tokenized أبداً—بس مدخلات صور صرفة. حقيقة إنه موديلات الرؤية بتقدر تقرأ نص مضغوط بهالمنيحية بتقترح إننا ممكن ما نحتاج text tokenization بالمستقبل.
+
+### ٢. نوافذ سياق هرمية: مستقبل RAG
+
+التضمين الأكتر إثارة مش الضغط بحد ذاته—هو اللي بيكشفه عن **الـ pooling والمعالجة الهرمية**.
+
+تخيل architectures LLM مستقبلية بنوافذ سياق هرمية: الطبقات الأدنى بتعالج صور خام بمئات الملايين من الـ tokens، بينما الطبقات العليا الأذكى بتشتغل بتمثيلات مضغوطة ومجردة بـ tokens أقل بكتير. لو هاد اشتغل، ممكن يثور أنظمة RAG.
+
+خليني أسميها **VET-RAG** (Vision-Encoded Text Retrieval-Augmented Generation)—سمعتها هون أول! بدل تقطيع وتضمين النص، ممكن نخزن وثائق كاملة كصور مضغوطة، نخلي طبقات الرؤية تعمل الشغل الثقيل، ونرفع بس التمثيلات المضغوطة ذات الصلة لطبقات الاستنتاج.
+
+### ٣. فيك تستخدم هاد اليوم
+
+الأهم: **هاد مش نظري**. فيك تطبقه هلق:
+
+- ابعت prompts الطويلة كصور مضغوطة
+- وفر 8× على تكاليف الـ tokens فوراً
+- اشكرني بعدين!
+
+ما في موديلات مخصصة، ما في infrastructure، ما في تدريب. بس رندر، اضغط، وابعت.
+
+---
+
+## الملحق: أمثلة إضافية
+
+### مثال ١: أخبار Quantum Computing (Y=0.6)
+
+![Quantum News Compressed](/static/images/blog/vision-compression/news_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+
+**نص المدخل** (1,442 حرف):
+> Scientists announced a major breakthrough in quantum computing this week, revealing a new error correction technique that could accelerate the development of practical quantum computers. The research team from MIT demonstrated that their novel approach reduces quantum bit errors by up to 90 percent compared to traditional methods...
+
+**نسخ Gemini** (دقة 99.6%):
+> Scientists announced a major breakthrough in quantum computing this week, revealing a new error correction technique that could accelerate the development of practical quantum computers. The research team from MIT demonstrated that their novel approach reduces quantum bit errors by up to 90 percent compared to traditional methods...
+
+**الأخطاء**: فروقات بسيطة بوضع الفواصل و "for" مقابل "to" (تغيير كلمة واحدة).
+
+**Tokens**: 53 مقابل ~360 نص عادي = توفير 85%
+
+---
+
+### مثال ٢: مراجعة MacBook Pro (Y=0.6)
+
+**نص المدخل** (1,287 حرف):
+> The new MacBook Pro with M3 chip represents a significant upgrade in laptop computing. After extensive testing across video editing, software development, and machine learning workflows, the performance improvements are remarkable...
+
+**نسخ Gemini** (دقة 99.5%):
+> The new MacBook Pro with M3 chip represents a significant upgrade in laptop computing. After extensive testing across video editing, software development, and machine learning workflows, the performance improvements are remarkable...
+
+**الأخطاء**: "500K" → "500k" (أحرف كبيرة بس)
+
+**Tokens**: 40 مقابل ~321 نص عادي = توفير 87%
+
+---
+
+*نُشر: أكتوبر 2025*
+*البحث أُجري باستخدام Gemini 2.5 Flash عبر OpenRouter API*
