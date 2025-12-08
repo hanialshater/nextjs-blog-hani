@@ -10,8 +10,11 @@ export async function generateStaticParams() {
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const sortedPosts = sortPosts(allBlogs)
-  // Filter posts by language (default to 'en' if not specified)
-  const filteredPosts = sortedPosts.filter((post) => (post.language || 'en') === locale)
+  const isDev = process.env.NODE_ENV === 'development'
+  // Filter posts by language and draft status (show drafts only in dev)
+  const filteredPosts = sortedPosts.filter(
+    (post) => (post.language || 'en') === locale && (isDev || !post.draft)
+  )
   const posts = allCoreContent(filteredPosts)
   return <Main posts={posts} />
 }

@@ -19,8 +19,12 @@ export default async function FreeWritingPage({
   searchParams: Promise<{ page: string }>
 }) {
   const { locale } = await params
+  const isDev = process.env.NODE_ENV === 'development'
   const freeWritingPosts = allBlogs.filter(
-    (post) => post.path.startsWith('free-writing-blog') && (post.language || 'en') === locale
+    (post) =>
+      post.path.startsWith('free-writing-blog') &&
+      (post.language || 'en') === locale &&
+      (isDev || !post.draft)
   )
   const posts = allCoreContent(sortPosts(freeWritingPosts))
   const pageNumber = 1

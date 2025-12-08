@@ -20,8 +20,11 @@ export default async function BlogPage({
 }) {
   const { locale } = await params
   const allPosts = sortPosts(allBlogs)
-  // Filter posts by language
-  const filteredPosts = allPosts.filter((post) => (post.language || 'en') === locale)
+  const isDev = process.env.NODE_ENV === 'development'
+  // Filter posts by language and draft status (show drafts only in dev)
+  const filteredPosts = allPosts.filter(
+    (post) => (post.language || 'en') === locale && (isDev || !post.draft)
+  )
   const posts = allCoreContent(filteredPosts)
   const pageNumber = 1
   const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
