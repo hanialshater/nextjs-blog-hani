@@ -10,6 +10,7 @@ import type { Authors, Blog } from 'contentlayer/generated'
 import PostSimple from '@/layouts/PostSimple'
 import PostLayout from '@/layouts/PostLayout'
 import PostBanner from '@/layouts/PostBanner'
+import RelatedPosts from '@/components/RelatedPosts'
 import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { notFound } from 'next/navigation'
@@ -114,6 +115,13 @@ export default async function Page(props: { params: Promise<{ slug: string[] }> 
       />
       <Layout content={mainContent} authorDetails={authorDetails} next={next} prev={prev}>
         <MDXLayoutRenderer code={post.body.code} components={components} toc={post.toc} />
+        {mainContent.tags && (
+          <RelatedPosts
+            currentSlug={slug}
+            currentTags={mainContent.tags}
+            allPosts={sortedCoreContents}
+          />
+        )}
       </Layout>
     </>
   )
