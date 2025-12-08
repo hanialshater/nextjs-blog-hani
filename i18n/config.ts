@@ -12,11 +12,22 @@ export const localeDirection: Record<Locale, 'ltr' | 'rtl'> = {
   ar: 'rtl',
 }
 
+// Navigation link keys mapped to translation keys
+export const navLinkTranslationKeys: Record<string, string> = {
+  Home: 'nav.home',
+  Blog: 'nav.blog',
+  'Free Writing': 'nav.freeWriting',
+  Tags: 'nav.tags',
+  Projects: 'nav.projects',
+  About: 'nav.about',
+}
+
 // UI translations
 export const translations: Record<Locale, Record<string, string>> = {
   en: {
     'nav.home': 'Home',
     'nav.blog': 'Blog',
+    'nav.freeWriting': 'Free Writing',
     'nav.tags': 'Tags',
     'nav.projects': 'Projects',
     'nav.about': 'About',
@@ -37,6 +48,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   ar: {
     'nav.home': 'الرئيسية',
     'nav.blog': 'المدونة',
+    'nav.freeWriting': 'كتابة حرة',
     'nav.tags': 'الوسوم',
     'nav.projects': 'المشاريع',
     'nav.about': 'عني',

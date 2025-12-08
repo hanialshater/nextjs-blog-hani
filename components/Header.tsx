@@ -9,9 +9,10 @@ import ThemeSwitch from './ThemeSwitch'
 import SearchButton from './SearchButton'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useLocale } from '@/i18n/LocaleContext'
+import { navLinkTranslationKeys } from '@/i18n/config'
 
 const Header = () => {
-  const { locale } = useLocale()
+  const { locale, t, dir } = useLocale()
 
   let headerClass = 'flex items-center w-full bg-white dark:bg-gray-950 justify-between py-10'
   if (siteMetadata.stickyNav) {
@@ -26,11 +27,17 @@ const Header = () => {
     return href
   }
 
+  // Get translated nav title
+  const getNavTitle = (title: string) => {
+    const translationKey = navLinkTranslationKeys[title]
+    return translationKey ? t(translationKey) : title
+  }
+
   return (
     <header className={headerClass}>
       <Link href={localizeHref('/')} aria-label={siteMetadata.headerTitle}>
         <div className="flex items-center justify-between">
-          <div className="mr-3">
+          <div className={dir === 'rtl' ? 'ml-3' : 'mr-3'}>
             <Logo />
           </div>
           {typeof siteMetadata.headerTitle === 'string' ? (
@@ -42,7 +49,9 @@ const Header = () => {
           )}
         </div>
       </Link>
-      <div className="flex items-center space-x-4 leading-5 sm:-mr-6 sm:space-x-6">
+      <div
+        className={`flex items-center leading-5 ${dir === 'rtl' ? 'flex-row-reverse gap-x-4 sm:-ml-6 sm:gap-x-6' : 'space-x-4 sm:-mr-6 sm:space-x-6'}`}
+      >
         <div className="no-scrollbar hidden max-w-40 items-center gap-x-4 overflow-x-auto sm:flex md:max-w-72 lg:max-w-96">
           {headerNavLinks
             .filter((link) => link.href !== '/')
@@ -50,9 +59,9 @@ const Header = () => {
               <Link
                 key={link.title}
                 href={localizeHref(link.href)}
-                className="hover:text-primary-500 dark:hover:text-primary-400 m-1 font-medium text-gray-900 dark:text-gray-100"
+                className="hover:text-primary-500 dark:hover:text-primary-400 m-1 font-medium whitespace-nowrap text-gray-900 dark:text-gray-100"
               >
-                {link.title}
+                {getNavTitle(link.title)}
               </Link>
             ))}
         </div>

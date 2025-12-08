@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode } from 'react'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog, Authors } from 'contentlayer/generated'
@@ -10,6 +12,7 @@ import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
+import { useLocale } from '@/i18n/LocaleContext'
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
   weekday: 'long',
@@ -27,9 +30,23 @@ interface LayoutProps {
 }
 
 export default function PostLayout({ content, authorDetails, next, prev, children }: LayoutProps) {
+  const { locale, t, dir } = useLocale()
+  const isRTL = dir === 'rtl'
+
   const { path, slug, date, title, tags, readingTime } = content
   const basePath = path.split('/')[0]
-  const postUrl = `${siteMetadata.siteUrl}/blog/${slug}`
+  const postUrl = `${siteMetadata.siteUrl}/${locale}/blog/${slug}`
+
+  // Get locale for date formatting
+  const dateLocale = locale === 'ar' ? 'ar-SA' : 'en-US'
+
+  // Prefix links with locale
+  const localizeHref = (href: string) => {
+    if (href.startsWith('/')) {
+      return `/${locale}${href}`
+    }
+    return href
+  }
 
   return (
     <SectionContainer>
@@ -41,13 +58,17 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
             <div className="space-y-1 text-center">
               <dl className="space-y-10">
                 <div>
-                  <dt className="sr-only">Published on</dt>
+                  <dt className="sr-only">{t('blog.publishedOn')}</dt>
                   <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
                     <time dateTime={date}>
-                      {new Date(date).toLocaleDateString(siteMetadata.locale, postDateTemplate)}
+                      {new Date(date).toLocaleDateString(dateLocale, postDateTemplate)}
                     </time>
                     {readingTime && <span className="mx-2">·</span>}
-                    {readingTime && <span>{Math.ceil(readingTime.minutes)} min read</span>}
+                    {readingTime && (
+                      <span>
+                        {Math.ceil(readingTime.minutes)} {t('blog.minRead')}
+                      </span>
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -56,13 +77,22 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
               </div>
             </div>
           </header>
-          <div className="grid-rows-[auto_1fr] divide-y divide-gray-200 pb-8 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:divide-y-0 dark:divide-gray-700">
-            <dl className="pt-6 pb-10 xl:border-b xl:border-gray-200 xl:pt-11 xl:dark:border-gray-700">
+          <div
+            className={`grid-rows-[auto_1fr] divide-y divide-gray-200 pb-8 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:divide-y-0 dark:divide-gray-700 ${isRTL ? 'xl:direction-rtl' : ''}`}
+          >
+            <dl
+              className={`pt-6 pb-10 xl:border-b xl:border-gray-200 xl:pt-11 xl:dark:border-gray-700 ${isRTL ? 'xl:col-start-4' : ''}`}
+            >
               <dt className="sr-only">Authors</dt>
               <dd>
-                <ul className="flex flex-wrap justify-center gap-4 sm:space-x-12 xl:block xl:space-y-8 xl:space-x-0">
+                <ul
+                  className={`flex flex-wrap justify-center gap-4 sm:gap-x-12 xl:block xl:space-y-8 ${isRTL ? 'xl:text-right' : ''}`}
+                >
                   {authorDetails.map((author) => (
-                    <li className="flex items-center space-x-2" key={author.name}>
+                    <li
+                      className={`flex items-center gap-x-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+                      key={author.name}
+                    >
                       {author.avatar && (
                         <Image
                           src={author.avatar}
@@ -72,7 +102,9 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                           className="h-10 w-10 rounded-full"
                         />
                       )}
-                      <dl className="text-sm leading-5 font-medium whitespace-nowrap">
+                      <dl
+                        className={`text-sm leading-5 font-medium whitespace-nowrap ${isRTL ? 'text-right' : ''}`}
+                      >
                         <dt className="sr-only">Name</dt>
                         <dd className="text-gray-900 dark:text-gray-100">{author.name}</dd>
                         <dt className="sr-only">Twitter</dt>
@@ -94,9 +126,11 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                 </ul>
               </dd>
             </dl>
-            <div className="divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700">
+            <div
+              className={`divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700 ${isRTL ? 'xl:col-start-1 xl:col-end-4' : ''}`}
+            >
               <div className="prose dark:prose-invert max-w-none pt-10 pb-8">{children}</div>
-              <div className="flex justify-end pt-6 pb-6">
+              <div className={`flex pt-6 pb-6 ${isRTL ? 'justify-start' : 'justify-end'}`}>
                 <ShareButtons url={postUrl} title={title} />
               </div>
               {siteMetadata.comments && (
@@ -108,18 +142,18 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                 </div>
               )}
             </div>
-            <footer>
-              <div className="divide-gray-200 text-sm leading-5 font-medium xl:col-start-1 xl:row-start-2 xl:divide-y dark:divide-gray-700">
+            <footer className={isRTL ? 'xl:col-start-4 xl:row-start-2' : ''}>
+              <div className="divide-gray-200 text-sm leading-5 font-medium xl:divide-y dark:divide-gray-700">
                 {tags && (
-                  <div className="py-4 xl:py-8">
+                  <div className={`py-4 xl:py-8 ${isRTL ? 'text-right' : ''}`}>
                     <h2 className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                      Tags
+                      {t('blog.tags')}
                     </h2>
-                    <div className="flex flex-wrap">
+                    <div className={`flex flex-wrap ${isRTL ? 'justify-end' : ''}`}>
                       {tags.map((tag) => (
                         <span
                           key={tag}
-                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 mr-3 text-sm font-medium uppercase"
+                          className={`text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-sm font-medium uppercase ${isRTL ? 'ml-3' : 'mr-3'}`}
                         >
                           {tag.split(' ').join('-')}
                         </span>
@@ -128,37 +162,39 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                   </div>
                 )}
                 {(next || prev) && (
-                  <div className="flex justify-between py-4 xl:block xl:space-y-8 xl:py-8">
+                  <div
+                    className={`flex justify-between py-4 xl:block xl:space-y-8 xl:py-8 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                  >
                     {prev && prev.slug && (
                       <div>
                         <h2 className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                          Previous Article
+                          {t('blog.previousArticle')}
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/blog/${prev.slug}`}>{prev.title}</Link>
+                          <Link href={localizeHref(`/blog/${prev.slug}`)}>{prev.title}</Link>
                         </div>
                       </div>
                     )}
                     {next && next.slug && (
                       <div>
                         <h2 className="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                          Next Article
+                          {t('blog.nextArticle')}
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/blog/${next.slug}`}>{next.title}</Link>
+                          <Link href={localizeHref(`/blog/${next.slug}`)}>{next.title}</Link>
                         </div>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              <div className="pt-4 xl:pt-8">
+              <div className={`pt-4 xl:pt-8 ${isRTL ? 'text-right' : ''}`}>
                 <Link
-                  href={`/${basePath}`}
+                  href={localizeHref(`/${basePath}`)}
                   className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                  aria-label="Back to the blog"
+                  aria-label={t('blog.backToBlog')}
                 >
-                  &larr; Back to the blog
+                  {isRTL ? <>{t('blog.backToBlog')} &rarr;</> : <>&larr; {t('blog.backToBlog')}</>}
                 </Link>
               </div>
             </footer>
