@@ -2,83 +2,49 @@
 
 Translate the specified blog post to Levantine Arabic (عربي شامي - Jordanian/Palestinian dialect).
 
-## CRITICAL: Cultural Adaptation, NOT Literal Translation
+## THE ONLY RULE: Think in Arabic
 
-**DO NOT translate literally.** This is about cultural adaptation. The goal is to write as if the post was originally written in Levantine Arabic by someone who thinks in that language and culture.
+You are NOT translating. You are RE-WRITING the post as if you were the author, thinking in Arabic from the start.
 
-### Bad (Still thinking in English):
-- "بالشغل، الضغط اشي طبيعي" (At work, pressure is normal - English structure)
-- "غلطة ما بترجع" (mistake that doesn't come back - poetic but unnatural)
-- "دعم الكود الأحمر" (Code Red Support - literal)
+### The Test
+Read your Arabic sentence. Does it sound like something you'd hear in Amman or Ramallah? Or does it sound like Google Translate with dialect words?
 
-### Good (Thinking in Arabic):
-- "اشي طبيعي انك تنضغط بالشغل" (natural Arabic sentence flow)
-- "غلطة كبيرة" (what people actually say)
-- "الك ولا للذيب" (real expression)
+### Examples
+
+| English | ❌ Still thinking in English | ✅ Thinking in Arabic |
+|---------|------------------------------|----------------------|
+| "At work, pressure is normal" | "بالشغل، الضغط اشي طبيعي" | "اشي طبيعي انك تنضغط بالشغل" |
+| "a mistake you can't undo" | "غلطة ما بترجع" (poetic, nobody says this) | "غلطة كبيرة" |
+| "Code Red Support" | "دعم الكود الأحمر" | "الك ولا للذيب" |
+| "Timeline Readjustment Lever" | "رافعة تعديل الجدول الزمني" | "الديدلاين مش قرآن" |
 
 ## Instructions
 
-1. Read the blog post file at: `data/free-writing-blog/$ARGUMENTS.mdx` or `data/blog/$ARGUMENTS.mdx`
+1. Read the blog post at: `data/free-writing-blog/$ARGUMENTS.mdx` or `data/blog/$ARGUMENTS.mdx`
 
-2. Create a new translated file with `.ar.mdx` extension
+2. Create `.ar.mdx` version
 
-3. **Writing Style Guidelines:**
-   - **THINK IN ARABIC, not English.** Sentence structure must be Arabic, not English sentences with Arabic words.
-   - Conversational Levantine dialect, NOT formal/corporate Arabic
-   - Dark humor and philosophical depth
-   - Use what people ACTUALLY SAY, not creative translations of English idioms
-   - Simple, common expressions > poetic/clever but unnatural phrases
-   - **IMPORTANT: Use masculine forms by default** (Arabic convention). Don't use feminine verb forms like "صحّي، فرشي، افتحي، بتشوفي" - use masculine "فيق، فرش، افتح، بتشوف"
+3. **Style:**
+   - Levantine dialect, conversational
+   - Arabic sentence structure (not English with Arabic words)
+   - What people ACTUALLY SAY > clever/poetic inventions
+   - Masculine forms by default (فيق، فرش، افتح، بتشوف - not صحّي، فرشي، افتحي، بتشوفي)
 
-4. **Voice Examples - Natural Arabic Flow:**
+4. **Common expressions:**
+   - يعني، هاي/هاد، شو، ليش، هلق، كتير، منيح، مزبوط، بيزبط، اشي، هيك
+
+5. **Frontmatter:**
+   ```yaml
+   title: 'عنوان جذاب بالعربي'
+   date: '2024-01-01'  # same date
+   tags: ['keep', 'english', 'tags']
+   draft: false
+   summary: 'ملخص طبيعي'
+   language: ar
+   translationOf: original-slug
    ```
-   اشي طبيعي انك تنضغط بالشغل. بس لما الضغط يتحول لخوف من غلطة كبيرة،
-   أو تحس حالك غرقان وما حدا رح يمد إيده—هون الموضوع بيتحول من تحدي لشلل.
 
-   المفارقة؟ لما الناس تعرف إنك موجود، نادراً بتحتاجك.
-
-   أسوأ اشي لما حدا يكمل بمشروع فاشل لأنه خايف يعترف إنه مش ماشي.
-   ```
-
-5. **Common Levantine expressions:**
-   - "يعني" (I mean / meaning)
-   - "هاي/هاد" (this)
-   - "شو" (what)
-   - "ليش" (why)
-   - "هلق" (now)
-   - "كتير" (very)
-   - "منيح" (good)
-   - "مزبوط" (right/correct)
-   - "بيزبط/ما بيزبط" (works/doesn't work)
-   - "اشي" (thing)
-   - "هيك" (like this)
-
-6. **Update the frontmatter:**
-   - Keep the same date
-   - Translate the title naturally (make it catchy, not literal)
-   - Translate the summary
-   - Add `language: ar`
-   - Add `translationOf: [original-slug]`
-   - Keep tags in English
-
-7. **Preserve:**
-   - Code blocks exactly as-is
-   - URLs and links
-   - Technical terms that don't have good Arabic equivalents
-
-## Example frontmatter:
-
-```yaml
----
-title: 'زر الطوارئ اللي ما حدا بيضغطه'
-date: '2024-01-01'
-tags: ['leadership', 'psychology']
-draft: false
-summary: 'ليش مجرد وجود مخرج طوارئ بيخلي الناس تشتغل أحسن، حتى لو عمرهم ما استخدموه.'
-language: ar
-translationOf: panic-button-principle
----
-```
+6. **Keep as-is:** Code blocks, URLs, technical terms without good Arabic equivalents
 
 ## Usage
 
