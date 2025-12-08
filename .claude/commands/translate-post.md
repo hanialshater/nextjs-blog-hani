@@ -6,13 +6,15 @@ Translate the specified blog post to Levantine Arabic (عربي شامي - Jorda
 
 **DO NOT translate literally.** This is about cultural adaptation. The goal is to write as if the post was originally written in Levantine Arabic by someone who thinks in that language and culture.
 
-### Bad (Literal):
-- "دعم الكود الأحمر" (Code Red Support)
-- "رافعة تعديل الجدول الزمني" (Timeline Readjustment Lever)
+### Bad (Still thinking in English):
+- "بالشغل، الضغط اشي طبيعي" (At work, pressure is normal - English structure)
+- "غلطة ما بترجع" (mistake that doesn't come back - poetic but unnatural)
+- "دعم الكود الأحمر" (Code Red Support - literal)
 
-### Good (Cultural):
-- "الك ولا للذيب" (you've got backup)
-- "الديدلاين مش قرآن" (deadlines aren't sacred)
+### Good (Thinking in Arabic):
+- "اشي طبيعي انك تنضغط بالشغل" (natural Arabic sentence flow)
+- "غلطة كبيرة" (what people actually say)
+- "الك ولا للذيب" (real expression)
 
 ## Instructions
 
@@ -21,23 +23,21 @@ Translate the specified blog post to Levantine Arabic (عربي شامي - Jorda
 2. Create a new translated file with `.ar.mdx` extension
 
 3. **Writing Style Guidelines:**
+   - **THINK IN ARABIC, not English.** Sentence structure must be Arabic, not English sentences with Arabic words.
    - Conversational Levantine dialect, NOT formal/corporate Arabic
    - Dark humor and philosophical depth
-   - Real-world cultural references (not Western corporate jargon)
-   - Natural flow as if talking to a friend
-   - Use expressions people actually say
-   - When a concept doesn't have a cultural equivalent, explain it naturally instead of inventing awkward translations
+   - Use what people ACTUALLY SAY, not creative translations of English idioms
+   - Simple, common expressions > poetic/clever but unnatural phrases
    - **IMPORTANT: Use masculine forms by default** (Arabic convention). Don't use feminine verb forms like "صحّي، فرشي، افتحي، بتشوفي" - use masculine "فيق، فرش، افتح، بتشوف"
 
-4. **Voice Examples from the Author:**
+4. **Voice Examples - Natural Arabic Flow:**
    ```
-   بالشغل، الضغط اشي طبيعي. بس لما الضغط بيتحول لخوف من غلطة ما بترجع،
-   أو إحساس إنك غرقان وما في حدا رح يمد إيده، الموضوع بيتحول من تحدي لشلل.
+   اشي طبيعي انك تنضغط بالشغل. بس لما الضغط يتحول لخوف من غلطة كبيرة،
+   أو تحس حالك غرقان وما حدا رح يمد إيده—هون الموضوع بيتحول من تحدي لشلل.
 
-   المفارقة؟ لما الناس بتعرف إنك موجود، نادراً بتحتاجك.
-   مجرد المعرفة بتشيل نص القلق.
+   المفارقة؟ لما الناس تعرف إنك موجود، نادراً بتحتاجك.
 
-   أسوأ اشي لما الناس تكمل بمشروع فاشل لأنها خايفة تعترف إنه مش ماشي.
+   أسوأ اشي لما حدا يكمل بمشروع فاشل لأنه خايف يعترف إنه مش ماشي.
    ```
 
 5. **Common Levantine expressions:**
