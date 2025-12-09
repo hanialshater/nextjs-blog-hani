@@ -16,8 +16,8 @@ const projectsData: Project[] = [
       ar: 'الفيراري بفرامل دراجة',
     },
     description: {
-      en: 'Explorations in philosophy, game theory, and the nature of reality',
-      ar: 'استكشافات في الفلسفة ونظرية الألعاب وطبيعة الواقع',
+      en: 'How advanced technology meets outdated human systems. Can AI complexity transcend modern and postmodern philosophy?',
+      ar: 'كيف تلتقي التكنولوجيا المتقدمة بالأنظمة البشرية العتيقة. هل يمكن لتعقيد الذكاء الاصطناعي أن يتجاوز الفلسفة الحديثة وما بعد الحداثة؟',
     },
     icon: '🏎️',
     imgSrc: '/static/images/projects/philosophy.png',
