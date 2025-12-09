@@ -19,6 +19,7 @@ const projectsData: Project[] = [
       en: 'Explorations in philosophy, game theory, and the nature of reality',
       ar: 'استكشافات في الفلسفة ونظرية الألعاب وطبيعة الواقع',
     },
+    icon: '🏎️',
     imgSrc: '/static/images/projects/philosophy.png',
     featured: true,
     order: 1,

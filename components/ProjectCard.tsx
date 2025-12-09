@@ -36,7 +36,10 @@ export default function ProjectCard({ project, postCount }: ProjectCardProps) {
         )}
         <div className="p-6">
           <h2 className="mb-3 text-2xl leading-8 font-bold tracking-tight">
-            <Link href={`/${locale}/projects/${project.slug}`}>{localized.title}</Link>
+            <Link href={`/${locale}/projects/${project.slug}`}>
+              {project.icon && <span className="mr-2">{project.icon}</span>}
+              {localized.title}
+            </Link>
           </h2>
           <p className="prose mb-3 max-w-none text-gray-500 dark:text-gray-400">
             {localized.description}

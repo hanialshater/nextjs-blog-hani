@@ -156,6 +156,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                     href={`/${locale}/projects/${project}`}
                     className="font-medium underline hover:no-underline"
                   >
+                    {projectData?.icon && <span className="mr-1">{projectData.icon}</span>}
                     {localizedProject.title}
                   </Link>
                 </div>
