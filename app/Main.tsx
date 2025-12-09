@@ -1,91 +1,97 @@
+'use client'
+
 import Link from '@/components/Link'
-import siteMetadata from '@/data/siteMetadata'
-import { formatDate } from 'pliny/utils/formatDate'
-import NewsletterForm from 'pliny/ui/NewsletterForm'
-import { CoreContent } from 'pliny/utils/contentlayer'
-import type { Blog } from 'contentlayer/generated'
+import Image from '@/components/Image'
+import { useLocale } from '@/i18n/LocaleContext'
 
-const MAX_DISPLAY = 5
-
-interface HomeProps {
-  posts: CoreContent<Blog>[]
+interface Spark {
+  id: string
+  text: string
+  source?: string
 }
 
-export default function Home({ posts }: HomeProps) {
+interface HomeProps {
+  spark: Spark
+  authorName: string
+  authorOccupation: string
+  authorAvatar: string
+}
+
+export default function Home({ spark, authorName, authorOccupation, authorAvatar }: HomeProps) {
+  const { locale, t, dir } = useLocale()
+  const isRTL = dir === 'rtl'
+
   return (
-    <>
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-          <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
-            Latest
-          </h1>
-          <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            {siteMetadata.description}
-          </p>
-        </div>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-          {!posts.length && 'No posts found.'}
-          {posts.slice(0, MAX_DISPLAY).map((post) => {
-            const { slug, date, title, summary, tags } = post
-            return (
-              <li key={slug} className="py-12">
-                <article>
-                  <div className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
-                    <dl>
-                      <dt className="sr-only">Published on</dt>
-                      <dd className="text-base leading-6 font-medium text-gray-500 dark:text-gray-400">
-                        <time dateTime={date}>{formatDate(date, siteMetadata.locale)}</time>
-                      </dd>
-                    </dl>
-                    <div className="space-y-5 xl:col-span-3">
-                      <div className="space-y-6">
-                        <div>
-                          <h2 className="text-2xl leading-8 font-bold tracking-tight">
-                            <Link
-                              href={`/blog/${slug}`}
-                              className="text-gray-900 dark:text-gray-100"
-                            >
-                              {title}
-                            </Link>
-                          </h2>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
-                      </div>
-                      <div className="text-base leading-6 font-medium">
-                        <Link
-                          href={`/blog/${slug}`}
-                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                          aria-label={`Read more: "${title}"`}
-                        >
-                          Read more &rarr;
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-      {posts.length > MAX_DISPLAY && (
-        <div className="flex justify-end text-base leading-6 font-medium">
+    <div className={`flex flex-col items-center ${isRTL ? 'text-right' : 'text-left'}`}>
+      {/* Hero Section */}
+      <div className="flex w-full max-w-2xl flex-col items-center py-12 md:py-16">
+        <Image
+          src={authorAvatar}
+          alt={authorName}
+          width={120}
+          height={120}
+          className="mb-6 rounded-full"
+        />
+        <h1 className="mb-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+          {authorName}
+        </h1>
+        <p className="mb-8 text-lg text-gray-600 dark:text-gray-400">{authorOccupation}</p>
+
+        {/* Navigation Links */}
+        <nav className="mb-12 flex flex-wrap justify-center gap-6 text-base">
           <Link
-            href="/blog"
-            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-            aria-label="All posts"
+            href={`/${locale}/blog`}
+            className="text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
           >
-            All Posts &rarr;
+            {t('nav.blog')}
           </Link>
-        </div>
-      )}
-      {siteMetadata.newsletter?.provider && (
-        <div className="flex items-center justify-center pt-4">
-          <NewsletterForm />
-        </div>
-      )}
-    </>
+          <Link
+            href={`/${locale}/free-writing`}
+            className="text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            {t('nav.freeWriting')}
+          </Link>
+          <Link
+            href={`/${locale}/projects`}
+            className="text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            {t('nav.projects')}
+          </Link>
+          <Link
+            href={`/${locale}/about`}
+            className="text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            {t('nav.about')}
+          </Link>
+        </nav>
+      </div>
+
+      {/* Spark/Quote Section */}
+      <div className="w-full max-w-2xl border-t border-gray-200 py-12 dark:border-gray-700">
+        <blockquote
+          className={`relative ${isRTL ? 'pr-8 text-right' : 'pl-8 text-left'}`}
+          dir={dir}
+        >
+          <span
+            className={`absolute top-0 text-6xl leading-none text-gray-300 dark:text-gray-600 ${isRTL ? 'right-0' : 'left-0'}`}
+          >
+            &ldquo;
+          </span>
+          <p className="text-xl leading-relaxed text-gray-700 italic dark:text-gray-300">
+            {spark.text}
+          </p>
+          {spark.source && (
+            <footer className="mt-4">
+              <Link
+                href={`/${locale}/free-writing/${spark.source}`}
+                className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-sm"
+              >
+                {t('home.readMore')} &rarr;
+              </Link>
+            </footer>
+          )}
+        </blockquote>
+      </div>
+    </div>
   )
 }
