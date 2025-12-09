@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
-import siteMetadata from '@/data/siteMetadata'
 import { useLocale } from '@/i18n/LocaleContext'
+import { getTagConfig } from '@/data/tagIcons'
 
 interface PaginationProps {
   totalPages: number
@@ -81,14 +81,39 @@ export default function ListLayout({
   const dateLocale = locale === 'ar' ? 'ar-SA' : 'en-US'
 
   const [searchValue, setSearchValue] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+
+  // Extract all unique tags with counts
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    posts.forEach((post) => {
+      post.tags?.forEach((tag) => {
+        counts[tag] = (counts[tag] || 0) + 1
+      })
+    })
+    return counts
+  }, [posts])
+
+  // Sort tags by count (descending)
+  const sortedTags = useMemo(() => {
+    return Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag]) => tag)
+  }, [tagCounts])
+
+  // Filter posts by search and tag
   const filteredBlogPosts = posts.filter((post) => {
     const searchContent = post.title + post.summary + post.tags?.join(' ')
-    return searchContent.toLowerCase().includes(searchValue.toLowerCase())
+    const matchesSearch = searchContent.toLowerCase().includes(searchValue.toLowerCase())
+    const matchesTag = !selectedTag || post.tags?.includes(selectedTag)
+    return matchesSearch && matchesTag
   })
 
-  // If initialDisplayPosts exist, display it if no searchValue is specified
+  // If initialDisplayPosts exist, display it if no searchValue or tag filter is specified
   const displayPosts =
-    initialDisplayPosts.length > 0 && !searchValue ? initialDisplayPosts : filteredBlogPosts
+    initialDisplayPosts.length > 0 && !searchValue && !selectedTag
+      ? initialDisplayPosts
+      : filteredBlogPosts
 
   return (
     <>
@@ -97,6 +122,38 @@ export default function ListLayout({
           <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
             {title}
           </h1>
+
+          {/* Tag Filter Bar */}
+          <div className={`flex flex-wrap gap-2 py-4 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+            <button
+              onClick={() => setSelectedTag(null)}
+              className={`rounded-md px-3 py-1 text-sm transition-colors ${
+                selectedTag === null
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+            >
+              {t('blog.allPosts')}
+            </button>
+            {sortedTags.map((tag) => {
+              const config = getTagConfig(tag)
+              const isSelected = selectedTag === tag
+              return (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(isSelected ? null : tag)}
+                  className={`rounded-md px-3 py-1 text-sm transition-colors ${
+                    isSelected
+                      ? 'bg-primary-500 text-white'
+                      : `bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 ${config?.color || 'text-gray-600 dark:text-gray-400'}`
+                  }`}
+                >
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+
           <div className="relative max-w-lg">
             <label>
               <span className="sr-only">{t('common.searchArticles')}</span>
@@ -150,14 +207,18 @@ export default function ListLayout({
                         </Link>
                       </h3>
                       <div className={`flex flex-wrap ${isRTL ? 'justify-end' : ''}`}>
-                        {tags?.map((tag) => (
-                          <span
-                            key={tag}
-                            className={`text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 text-sm font-medium uppercase ${isRTL ? 'ml-3' : 'mr-3'}`}
-                          >
-                            {tag.split(' ').join('-')}
-                          </span>
-                        ))}
+                        {tags?.map((tag) => {
+                          const config = getTagConfig(tag)
+                          return (
+                            <button
+                              key={tag}
+                              onClick={() => setSelectedTag(tag)}
+                              className={`text-sm font-medium uppercase ${isRTL ? 'ml-3' : 'mr-3'} ${config?.color || 'text-primary-500'} hover:underline`}
+                            >
+                              {tag.split(' ').join('-')}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                     <div className="prose max-w-none text-gray-500 dark:text-gray-400">
@@ -170,7 +231,7 @@ export default function ListLayout({
           })}
         </ul>
       </div>
-      {pagination && pagination.totalPages > 1 && !searchValue && (
+      {pagination && pagination.totalPages > 1 && !searchValue && !selectedTag && (
         <Pagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
