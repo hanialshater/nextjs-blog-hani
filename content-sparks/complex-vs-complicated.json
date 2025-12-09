@@ -1,0 +1,8 @@
+{
+  "id": "complex-vs-complicated",
+  "text": {
+    "en": "AI may solve complex problems—those with many moving parts but solvable with data. Complicated problems require ambiguity, nuanced context, and a unique perspective. AI can't touch those.",
+    "ar": "AI ممكن تحل مشاكل صعبة—اللي فيها أجزاء كتير متحركة بس بتنحل بالبيانات. المشاكل المعقدة بتتطلب غموض وسياق دقيق ومنظور فريد. AI ما بتقدر تقربهم."
+  },
+  "source": "agi-misunderstanding"
+}
