@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import Main from '../Main'
-import { Locale, locales } from '@/i18n/config'
+import { locales } from '@/i18n/config'
 import { allAuthors } from 'contentlayer/generated'
 
 interface Spark {
@@ -20,10 +20,6 @@ function loadSparks(): Spark[] {
   })
 }
 
-function getRandomSpark(sparks: Spark[]): Spark {
-  return sparks[Math.floor(Math.random() * sparks.length)]
-}
-
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
 }
@@ -31,14 +27,13 @@ export async function generateStaticParams() {
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
 
-  // Load sparks and get a random one
+  // Load all sparks and localize them
   const sparks = loadSparks()
-  const randomSpark = getRandomSpark(sparks)
-  const localizedSpark = {
-    id: randomSpark.id,
-    text: randomSpark.text[locale] || randomSpark.text['en'],
-    source: randomSpark.source,
-  }
+  const localizedSparks = sparks.map((spark) => ({
+    id: spark.id,
+    text: spark.text[locale] || spark.text['en'],
+    source: spark.source,
+  }))
 
   // Get author info
   const author =
@@ -47,7 +42,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
 
   return (
     <Main
-      spark={localizedSpark}
+      sparks={localizedSparks}
       authorName={author?.name || 'Hani Al-Shater'}
       authorOccupation={author?.occupation || 'Technical Leader'}
       authorAvatar={author?.avatar || '/static/images/avatar.png'}

@@ -7,7 +7,7 @@ import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
 import { useLocale } from '@/i18n/LocaleContext'
-import { getTagConfig } from '@/data/tagIcons'
+import { getTagConfig, getTagLabel } from '@/data/tagIcons'
 
 interface PaginationProps {
   totalPages: number
@@ -148,7 +148,7 @@ export default function ListLayout({
                       : `bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 ${config?.color || 'text-gray-600 dark:text-gray-400'}`
                   }`}
                 >
-                  {tag}
+                  {getTagLabel(tag, locale)}
                 </button>
               )
             })}
@@ -213,9 +213,9 @@ export default function ListLayout({
                             <button
                               key={tag}
                               onClick={() => setSelectedTag(tag)}
-                              className={`text-sm font-medium uppercase ${isRTL ? 'ml-3' : 'mr-3'} ${config?.color || 'text-primary-500'} hover:underline`}
+                              className={`text-sm font-medium ${isRTL ? 'ml-3' : 'mr-3'} ${config?.color || 'text-primary-500'} hover:underline`}
                             >
-                              {tag.split(' ').join('-')}
+                              {getTagLabel(tag, locale)}
                             </button>
                           )
                         })}
