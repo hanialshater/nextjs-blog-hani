@@ -35,8 +35,10 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
 
   const { path, slug, date, title, tags, readingTime, translationOf, originalLanguage, draft } =
     content
-  const basePath = path.split('/')[0]
-  const postUrl = `${siteMetadata.siteUrl}/${locale}/blog/${slug}`
+  // Map content path to URL path
+  const contentPath = path.split('/')[0]
+  const basePath = contentPath === 'free-writing-blog' ? 'free-writing' : 'blog'
+  const postUrl = `${siteMetadata.siteUrl}/${locale}/${basePath}/${slug}`
 
   // Get locale for date formatting
   const dateLocale = locale === 'ar' ? 'ar-SA' : 'en-US'
@@ -215,7 +217,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                           {t('blog.previousArticle')}
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={localizeHref(`/blog/${prev.slug}`)}>{prev.title}</Link>
+                          <Link href={localizeHref(`/${basePath}/${prev.slug}`)}>{prev.title}</Link>
                         </div>
                       </div>
                     )}
@@ -225,7 +227,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                           {t('blog.nextArticle')}
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={localizeHref(`/blog/${next.slug}`)}>{next.title}</Link>
+                          <Link href={localizeHref(`/${basePath}/${next.slug}`)}>{next.title}</Link>
                         </div>
                       </div>
                     )}

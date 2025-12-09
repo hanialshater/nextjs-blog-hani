@@ -35,18 +35,12 @@ const Header = () => {
 
   return (
     <header className={headerClass}>
-      <Link href={localizeHref('/')} aria-label={siteMetadata.headerTitle}>
+      <Link href={localizeHref('/')} aria-label={t('site.title')}>
         <div className="flex items-center justify-between">
           <div className={dir === 'rtl' ? 'ml-3' : 'mr-3'}>
             <Logo />
           </div>
-          {typeof siteMetadata.headerTitle === 'string' ? (
-            <div className="hidden h-6 text-2xl font-semibold sm:block">
-              {siteMetadata.headerTitle}
-            </div>
-          ) : (
-            siteMetadata.headerTitle
-          )}
+          <div className="hidden h-6 text-2xl font-semibold sm:block">{t('site.title')}</div>
         </div>
       </Link>
       <div

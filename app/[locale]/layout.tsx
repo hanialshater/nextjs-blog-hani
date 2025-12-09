@@ -4,7 +4,7 @@ import 'remark-github-blockquote-alert/alert.css'
 
 import { Space_Grotesk, Noto_Sans_Arabic } from 'next/font/google'
 import { Analytics, AnalyticsConfig } from 'pliny/analytics'
-import { SearchProvider, SearchConfig } from 'pliny/search'
+import LocalizedSearchProvider from '@/components/LocalizedSearchProvider'
 import Header from '@/components/Header'
 import SectionContainer from '@/components/SectionContainer'
 import Footer from '@/components/Footer'
@@ -125,10 +125,10 @@ export default async function LocaleLayout({
           <LocaleProvider locale={validLocale}>
             <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
             <SectionContainer>
-              <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+              <LocalizedSearchProvider>
                 <Header />
                 <main className="mb-auto">{children}</main>
-              </SearchProvider>
+              </LocalizedSearchProvider>
               <Footer />
             </SectionContainer>
           </LocaleProvider>

@@ -42,6 +42,7 @@ export default async function BlogPage({
       initialDisplayPosts={initialDisplayPosts}
       pagination={pagination}
       title={t('blog.allPosts')}
+      basePath="blog"
     />
   )
 }

@@ -2,7 +2,7 @@ import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
 import { genPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
-import { locales } from '@/i18n/config'
+import { Locale, locales, getTranslation } from '@/i18n/config'
 
 const POSTS_PER_PAGE = 5
 
@@ -35,12 +35,15 @@ export default async function FreeWritingPage({
     totalPages: totalPages,
   }
 
+  const t = (key: string) => getTranslation(locale as Locale, key)
+
   return (
     <ListLayout
       posts={posts}
       initialDisplayPosts={initialDisplayPosts}
       pagination={pagination}
-      title="Free Writing"
+      title={t('nav.freeWriting')}
+      basePath="free-writing"
     />
   )
 }
