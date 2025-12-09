@@ -118,6 +118,7 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
     translationOf: post.translationOf,
     originalLanguage: post.originalLanguage,
     draft: post.draft,
+    project: post.project,
   }
   const jsonLd = post.structuredData
   jsonLd['author'] = authorDetails.map((author) => {

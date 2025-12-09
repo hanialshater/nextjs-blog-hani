@@ -13,6 +13,7 @@ import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
 import { useLocale } from '@/i18n/LocaleContext'
+import { getProjectBySlug, getLocalizedProject } from '@/data/projectsData'
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
   weekday: 'long',
@@ -33,8 +34,22 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
   const { locale, t, dir } = useLocale()
   const isRTL = dir === 'rtl'
 
-  const { path, slug, date, title, tags, readingTime, translationOf, originalLanguage, draft } =
-    content
+  const {
+    path,
+    slug,
+    date,
+    title,
+    tags,
+    readingTime,
+    translationOf,
+    originalLanguage,
+    draft,
+    project,
+  } = content
+
+  // Get project data if post belongs to a project
+  const projectData = project ? getProjectBySlug(project) : undefined
+  const localizedProject = projectData ? getLocalizedProject(projectData, locale) : undefined
   // Map content path to URL path
   const contentPath = path.split('/')[0]
   const basePath = contentPath === 'free-writing-blog' ? 'free-writing' : 'blog'
@@ -118,6 +133,30 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                     className="font-medium underline hover:no-underline"
                   >
                     {t('blog.viewOriginal')}
+                  </Link>
+                </div>
+              )}
+              {localizedProject && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
+                  <span>{t('blog.partOfProject')}</span>
+                  <Link
+                    href={`/${locale}/projects/${project}`}
+                    className="font-medium underline hover:no-underline"
+                  >
+                    {localizedProject.title}
                   </Link>
                 </div>
               )}

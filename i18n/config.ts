@@ -57,6 +57,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'common.previous': 'Previous',
     'common.next': 'Next',
     'comments.loadComments': 'Load Comments',
+    'blog.partOfProject': 'Part of',
+    'blog.viewProject': 'View Project',
+    'project.posts': 'posts',
+    'project.noPostsYet': 'No posts in this project yet',
   },
   ar: {
     'site.title': 'مدونة هاني',
@@ -90,6 +94,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'common.previous': 'السابق',
     'common.next': 'التالي',
     'comments.loadComments': 'تحميل التعليقات',
+    'blog.partOfProject': 'جزء من',
+    'blog.viewProject': 'عرض المشروع',
+    'project.posts': 'مقالات',
+    'project.noPostsYet': 'لا توجد مقالات في هذا المشروع حتى الآن',
   },
 }
 

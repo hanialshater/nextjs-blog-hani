@@ -7,12 +7,21 @@ import { locales } from '@/i18n/config'
 
 export const metadata = genPageMetadata({ title: 'About' })
 
+interface PageProps {
+  params: Promise<{ locale: string }>
+}
+
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
 }
 
-export default function Page() {
-  const author = allAuthors.find((p) => p.slug === 'default') as Authors
+export default async function Page({ params }: PageProps) {
+  const { locale } = await params
+
+  // Find author by slug and language, fallback to default (English)
+  const author = (allAuthors.find((p) => p.slug === 'default' && (p.language || 'en') === locale) ||
+    allAuthors.find((p) => p.slug === 'default' && (p.language || 'en') === 'en')) as Authors
+
   const mainContent = coreContent(author)
 
   return (

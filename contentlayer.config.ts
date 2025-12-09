@@ -96,6 +96,7 @@ export const Blog = defineDocumentType(() => ({
     language: { type: 'enum', options: ['en', 'ar'], default: 'en' },
     translationOf: { type: 'string' }, // slug of the original post (for translations)
     originalLanguage: { type: 'enum', options: ['en', 'ar'], default: 'en' }, // language of the original post
+    project: { type: 'string' }, // slug of associated project
   },
   computedFields: {
     ...computedFields,
@@ -131,6 +132,7 @@ export const Authors = defineDocumentType(() => ({
     linkedin: { type: 'string' },
     github: { type: 'string' },
     layout: { type: 'string' },
+    language: { type: 'enum', options: ['en', 'ar'], default: 'en' },
   },
   computedFields,
 }))
