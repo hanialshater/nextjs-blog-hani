@@ -31,7 +31,10 @@ export async function generateMetadata(props: {
   const post = allBlogs.find((p) => p.slug === slug && (p.language || 'en') === params.locale)
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
-    const authorResults = allAuthors.find((p) => p.slug === author)
+    // Always use English version of author (no language field means English)
+    const authorResults =
+      allAuthors.find((p) => p.slug === author && !('language' in p)) ||
+      allAuthors.find((p) => p.slug === author)
     return coreContent(authorResults as Authors)
   })
   if (!post) {
@@ -110,7 +113,10 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
   const post = allBlogs.find((p) => p.slug === slug && (p.language || 'en') === locale) as Blog
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
-    const authorResults = allAuthors.find((p) => p.slug === author)
+    // Always use English version of author (no language field means English)
+    const authorResults =
+      allAuthors.find((p) => p.slug === author && !('language' in p)) ||
+      allAuthors.find((p) => p.slug === author)
     return coreContent(authorResults as Authors)
   })
   const mainContent = {

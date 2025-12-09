@@ -36,7 +36,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.about': 'About',
     'page.about': 'About',
     'page.projects': 'Projects',
-    'page.projects.description': 'Some things I have built',
+    'page.projects.description': 'Cool prototypes, weekend projects, and explorations',
     'page.tags': 'Tags',
     'blog.readMore': 'Read more',
     'blog.minRead': 'min read',
