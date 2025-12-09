@@ -23,6 +23,15 @@ export default function Home({ sparks, authorName, authorOccupation, authorAvata
   const isRTL = dir === 'rtl'
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Randomize starting spark on page load
+  useEffect(() => {
+    if (sparks.length > 1) {
+      setCurrentIndex(Math.floor(Math.random() * sparks.length))
+    }
+    setIsInitialized(true)
+  }, [sparks.length])
 
   const goToNext = useCallback(() => {
     if (isAnimating || sparks.length <= 1) return
@@ -92,7 +101,7 @@ export default function Home({ sparks, authorName, authorOccupation, authorAvata
         </nav>
 
         {/* Spark Carousel */}
-        {sparks.length > 0 && (
+        {sparks.length > 0 && isInitialized && (
           <div className="w-full">
             <div className="relative">
               {/* Navigation arrows */}

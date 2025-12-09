@@ -28,7 +28,7 @@ export default function ProjectCard({ project, postCount }: ProjectCardProps) {
             <Image
               alt={localized.title}
               src={project.imgSrc}
-              className="object-cover object-center md:h-36 lg:h-48"
+              className="h-auto w-full object-cover object-center"
               width={544}
               height={306}
             />
