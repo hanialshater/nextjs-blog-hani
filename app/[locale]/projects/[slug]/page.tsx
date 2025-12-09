@@ -7,7 +7,11 @@ import projectsData, { getLocalizedProject } from '@/data/projectsData'
 import siteMetadata from '@/data/siteMetadata'
 import TagCloud from '@/components/TagCloud'
 import Link from '@/components/Link'
+import Image from '@/components/Image'
 import { formatDate } from 'pliny/utils/formatDate'
+
+// Broad tags to filter out from project pages (already implied by project theme)
+const broadTags = ['philosophy', 'ai', 'technology', 'opinion']
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>
@@ -82,7 +86,9 @@ export default async function ProjectPage({ params }: PageProps) {
     {} as Record<string, number>
   )
 
+  // Filter out broad tags and keep specific ones
   const tags = Object.entries(tagCounts)
+    .filter(([name]) => !broadTags.includes(name.toLowerCase()))
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
 
@@ -90,18 +96,31 @@ export default async function ProjectPage({ params }: PageProps) {
     <div className={`divide-y divide-gray-200 dark:divide-gray-700 ${isRTL ? 'text-right' : ''}`}>
       {/* Project Header */}
       <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-        <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
-          {project.icon && <span className="mr-3">{project.icon}</span>}
-          {localized.title}
-        </h1>
-        <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-          {localized.description}
-        </p>
+        <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          {project.imgSrc && (
+            <Image
+              src={project.imgSrc}
+              alt={localized.title}
+              width={80}
+              height={80}
+              className="rounded-lg object-cover"
+            />
+          )}
+          <div>
+            <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-5xl md:leading-12 dark:text-gray-100">
+              {project.icon && <span className="mr-2">{project.icon}</span>}
+              {localized.title}
+            </h1>
+            <p className="mt-2 text-lg leading-7 text-gray-500 dark:text-gray-400">
+              {localized.description}
+            </p>
+          </div>
+        </div>
 
-        {/* Project Tags */}
+        {/* Project Tags - Specific tags only */}
         {tags.length > 0 && (
           <div className="pt-4">
-            <TagCloud tags={tags} showCounts={false} maxTags={10} />
+            <TagCloud tags={tags} showCounts={false} maxTags={6} />
           </div>
         )}
       </div>

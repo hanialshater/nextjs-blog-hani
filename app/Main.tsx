@@ -65,7 +65,7 @@ export default function Home({ sparks, authorName, authorOccupation, authorAvata
           alt={authorName}
           width={100}
           height={100}
-          className="mb-4 rounded-full"
+          className="mb-4 h-[100px] w-[100px] rounded-full object-cover"
         />
         <h1 className="mb-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           {authorName}
