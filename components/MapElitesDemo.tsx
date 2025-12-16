@@ -123,7 +123,7 @@ const generateForCell = (targetX: number, targetY: number) => {
 
   for (let i = radii.length - 1; i > 0; i--) {
     const j = (Math.random() * (i + 1)) | 0
-      ;[radii[i], radii[j]] = [radii[j], radii[i]]
+    ;[radii[i], radii[j]] = [radii[j], radii[i]]
   }
 
   const targetSum = 1.4 + Math.random() * 0.3
@@ -145,7 +145,7 @@ const generateForCell = (targetX: number, targetY: number) => {
 
 const mutateHC = (c: Circle[]) => {
   c = clone(c)
-  const num = 1 + (Math.random() * 2) | 0
+  const num = (1 + Math.random() * 2) | 0
   for (let m = 0; m < num; m++) {
     const i = (Math.random() * N) | 0
     c[i].x += (Math.random() - 0.5) * 0.05
@@ -171,8 +171,7 @@ const crossover = (p1: Circle[], p2: Circle[], numSwaps: number) => {
         bestJ = j
       }
     }
-    const pick =
-      Math.random() < 0.7 ? bestJ : (bestJ + ((Math.random() * 5) | 0) - 2 + N) % N
+    const pick = Math.random() < 0.7 ? bestJ : (bestJ + ((Math.random() * 5) | 0) - 2 + N) % N
     child[i].r = p2[pick].r
   }
   return child
@@ -191,7 +190,7 @@ const getBehavior = (c: Circle[]) => {
   const variance = sum2 / N - mean * mean
   return {
     x: Math.min(GRID - 1, (variance * 300 * GRID) | 0),
-    y: Math.min(GRID - 1, (numLarge / 10 * GRID) | 0),
+    y: Math.min(GRID - 1, ((numLarge / 10) * GRID) | 0),
   }
 }
 
@@ -308,7 +307,7 @@ export default function MapElitesDemo() {
 
     const circlesToDraw =
       viewingCellRef.current &&
-        archiveRef.current[viewingCellRef.current.x][viewingCellRef.current.y].length > 0
+      archiveRef.current[viewingCellRef.current.x][viewingCellRef.current.y].length > 0
         ? archiveRef.current[viewingCellRef.current.x][viewingCellRef.current.y][0].solution
         : bestSolutionRef.current || circlesRef.current
 
@@ -350,10 +349,10 @@ export default function MapElitesDemo() {
     // Shuffle
     for (let i = cellQueueRef.current.length - 1; i > 0; i--) {
       const j = (Math.random() * (i + 1)) | 0
-        ;[cellQueueRef.current[i], cellQueueRef.current[j]] = [
-          cellQueueRef.current[j],
-          cellQueueRef.current[i],
-        ]
+      ;[cellQueueRef.current[i], cellQueueRef.current[j]] = [
+        cellQueueRef.current[j],
+        cellQueueRef.current[i],
+      ]
     }
 
     startNextCell()
@@ -415,7 +414,7 @@ export default function MapElitesDemo() {
       if (arr.length >= 2) {
         const p1 = clone(arr[(Math.random() * arr.length) | 0].solution)
         const p2 = clone(arr[(Math.random() * arr.length) | 0].solution)
-        let child = crossover(p1, p2, 3 + (Math.random() * 5) | 0)
+        let child = crossover(p1, p2, (3 + Math.random() * 5) | 0)
         if (Math.random() < 0.5) child = mutateHC(child)
         child = applyVF(child)
         if (isValid(child)) addToArchive(child, focusCellRef.current)
@@ -540,7 +539,7 @@ export default function MapElitesDemo() {
             ref={canvasRef}
             className="h-full w-full rounded-lg border border-gray-700 bg-black"
           />
-          <div className="absolute top-2 left-2 text-xs font-mono text-cyan-400">
+          <div className="absolute top-2 left-2 font-mono text-xs text-cyan-400">
             {viewingCellRef.current
               ? `VIEW: Cell (${viewingCellRef.current.x}, ${viewingCellRef.current.y})`
               : 'VIEW: Global Best'}
@@ -558,8 +557,9 @@ export default function MapElitesDemo() {
             </button>
             <button
               onClick={toggleRun}
-              className={`min-w-[80px] rounded px-3 py-1 font-bold text-black transition-colors ${isRunning ? 'bg-orange-500 hover:bg-orange-400' : 'bg-cyan-500 hover:bg-cyan-400'
-                }`}
+              className={`min-w-[80px] rounded px-3 py-1 font-bold text-black transition-colors ${
+                isRunning ? 'bg-orange-500 hover:bg-orange-400' : 'bg-cyan-500 hover:bg-cyan-400'
+              }`}
             >
               {isRunning ? 'Stop' : 'Run'}
             </button>
@@ -578,18 +578,18 @@ export default function MapElitesDemo() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-gray-800 p-2 rounded border border-gray-700">
+            <div className="rounded border border-gray-700 bg-gray-800 p-2">
               <div className="text-gray-500">Global Best</div>
               <div className="text-xl font-bold text-cyan-400">{stats.bestR.toFixed(4)}</div>
             </div>
-            <div className="bg-gray-800 p-2 rounded border border-gray-700">
+            <div className="rounded border border-gray-700 bg-gray-800 p-2">
               <div className="text-gray-500">Archive</div>
               <div className="text-xl font-bold">
                 {stats.filledCells}
-                <span className="text-gray-600 text-sm">/100</span>
+                <span className="text-sm text-gray-600">/100</span>
               </div>
             </div>
-            <div className="col-span-2 bg-gray-800 p-2 rounded border border-gray-700 flex justify-between">
+            <div className="col-span-2 flex justify-between rounded border border-gray-700 bg-gray-800 p-2">
               <div>
                 <div className="text-gray-500">Steps</div>
                 <div>{stats.steps}</div>
@@ -597,8 +597,9 @@ export default function MapElitesDemo() {
               <div className="text-right">
                 <div className="text-gray-500">Phase</div>
                 <div
-                  className={`font-bold ${stats.phase === 'DONE' ? 'text-green-400' : 'text-yellow-400'
-                    }`}
+                  className={`font-bold ${
+                    stats.phase === 'DONE' ? 'text-green-400' : 'text-yellow-400'
+                  }`}
                 >
                   {stats.phase}{' '}
                   {stats.phase !== 'DONE' &&
@@ -611,19 +612,16 @@ export default function MapElitesDemo() {
 
           {/* Grid Viz */}
           <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-end">
+            <div className="flex items-end justify-between">
               <span className="text-xs text-gray-400">
                 Archive Grid <span className="text-gray-600">(Click cells to inspect)</span>
               </span>
-              <button
-                onClick={handleGlobalClick}
-                className="text-xs text-cyan-400 hover:underline"
-              >
+              <button onClick={handleGlobalClick} className="text-xs text-cyan-400 hover:underline">
                 View Global
               </button>
             </div>
             <div
-              className="grid gap-[1px] bg-gray-800 border border-gray-700"
+              className="grid gap-[1px] border border-gray-700 bg-gray-800"
               style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}
             >
               {(() => {
@@ -656,7 +654,7 @@ export default function MapElitesDemo() {
                             handleCellClick(x, y)
                           }
                         }}
-                        className={`aspect-square flex items-center justify-center text-[8px] cursor-pointer hover:bg-gray-600 ${bgClass}`}
+                        className={`flex aspect-square cursor-pointer items-center justify-center text-[8px] hover:bg-gray-600 ${bgClass}`}
                         title={`Cell (${x},${y}): ${count} solutions`}
                       >
                         {count > 0 ? count : ''}
