@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from '@/components/Link'
 import Image from '@/components/Image'
 import { useLocale } from '@/i18n/LocaleContext'
+import Card from '@/components/Card'
+import { CoreContent } from 'pliny/utils/contentlayer'
+import { Blog } from 'contentlayer/generated'
 
 interface Spark {
   id: string
@@ -16,9 +19,16 @@ interface HomeProps {
   authorName: string
   authorOccupation: string
   authorAvatar: string
+  featuredPosts: CoreContent<Blog>[]
 }
 
-export default function Home({ sparks, authorName, authorOccupation, authorAvatar }: HomeProps) {
+export default function Home({
+  sparks,
+  authorName,
+  authorOccupation,
+  authorAvatar,
+  featuredPosts,
+}: HomeProps) {
   const { locale, t, dir } = useLocale()
   const isRTL = dir === 'rtl'
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -188,6 +198,26 @@ export default function Home({ sparks, authorName, authorOccupation, authorAvata
           </div>
         )}
       </div>
+
+      {/* Featured Posts */}
+      {featuredPosts.length > 0 && (
+        <div className="container mx-auto px-4 py-12">
+          <h2 className="mb-8 text-center text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-5xl md:leading-14 dark:text-gray-100">
+            {t('home.featured')}
+          </h2>
+          <div className="flex flex-wrap justify-center gap-8">
+            {featuredPosts.map((post) => (
+              <Card
+                key={post.title}
+                title={post.title}
+                description={post.summary || ''}
+                imgSrc={post.images && post.images[0]}
+                href={`/${locale}/blog/${post.slug}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

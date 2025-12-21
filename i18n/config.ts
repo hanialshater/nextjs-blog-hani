@@ -62,6 +62,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'project.posts': 'posts',
     'project.noPostsYet': 'No posts in this project yet',
     'home.readMore': 'Read more',
+    'home.featured': 'Featured Posts',
   },
   ar: {
     'site.title': 'مدونة هاني',
@@ -100,6 +101,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'project.posts': 'مقالات',
     'project.noPostsYet': 'لا توجد مقالات في هذا المشروع حتى الآن',
     'home.readMore': 'اقرأ المزيد',
+    'home.featured': 'مقالات مختارة',
   },
 }
 

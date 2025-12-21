@@ -97,6 +97,7 @@ export const Blog = defineDocumentType(() => ({
     translationOf: { type: 'string' }, // slug of the original post (for translations)
     originalLanguage: { type: 'enum', options: ['en', 'ar'], default: 'en' }, // language of the original post
     project: { type: 'string' }, // slug of associated project
+    featured: { type: 'boolean', default: false },
   },
   computedFields: {
     ...computedFields,

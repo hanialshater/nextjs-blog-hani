@@ -4,6 +4,8 @@ const siteMetadata = {
   author: 'Hani Al-Shater',
   headerTitle: 'Hani\'s Blog',
   description: 'Technical insights on machine learning, product management, and leadership',
+  keywords: ['Machine Learning', 'Product Management', 'Leadership', 'Software Engineering'],
+  googleSiteVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://www.hani-alshater.com',

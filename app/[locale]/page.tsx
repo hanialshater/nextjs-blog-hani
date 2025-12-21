@@ -2,7 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import Main from '../Main'
 import { locales } from '@/i18n/config'
-import { allAuthors } from 'contentlayer/generated'
+import { allAuthors, allBlogs } from 'contentlayer/generated'
+import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 
 interface Spark {
   id: string
@@ -40,12 +41,16 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     allAuthors.find((a) => a.slug === 'default' && (a.language || 'en') === locale) ||
     allAuthors.find((a) => a.slug === 'default')
 
+  const posts = allCoreContent(sortPosts(allBlogs))
+  const featuredPosts = posts.filter((post) => (post.language || 'en') === locale && post.featured)
+
   return (
     <Main
       sparks={localizedSparks}
       authorName={author?.name || 'Hani Al-Shater'}
       authorOccupation={author?.occupation || 'Technical Leader'}
       authorAvatar={author?.avatar || '/static/images/avatar.png'}
+      featuredPosts={featuredPosts}
     />
   )
 }
