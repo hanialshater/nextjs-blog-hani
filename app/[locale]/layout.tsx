@@ -13,6 +13,7 @@ import { ThemeProviders } from '../theme-providers'
 import { Metadata } from 'next'
 import { locales, Locale, localeDirection } from '@/i18n/config'
 import { LocaleProvider } from '@/i18n/LocaleContext'
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -135,6 +136,7 @@ export default async function LocaleLayout({
               </LocalizedSearchProvider>
               <Footer />
             </SectionContainer>
+            <VercelAnalytics />
           </LocaleProvider>
         </ThemeProviders>
       </body>
