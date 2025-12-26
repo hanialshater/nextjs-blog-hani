@@ -7,6 +7,8 @@ import CustomLink from './Link'
 import TableWrapper from './TableWrapper'
 import Caption from './Caption'
 import MapElitesDemo from './MapElitesDemo'
+import AlgorithmDemos from './AlgorithmDemos'
+import EvolvedDemos from './EvolvedDemos'
 
 export const components: MDXComponents = {
   Image,
@@ -17,4 +19,7 @@ export const components: MDXComponents = {
   BlogNewsletterForm,
   Caption,
   MapElitesDemo,
+  AlgorithmDemos,
+  EvolvedDemos,
 }
+

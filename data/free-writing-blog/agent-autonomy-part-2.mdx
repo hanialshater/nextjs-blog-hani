@@ -1,0 +1,542 @@
+---
+title: "Agent Autonomy - Part 2: Going Beyond Algorithms"
+summary: Educational demos, marketing materials, and creative work—problems without a mathematical harness. Part 2 of the Agent Autonomy series shows how orchestrated agent evolution can solve subjective problems through skill-based guidance and multiple independent evaluators.
+date: '2025-12-25'
+tags: ['ai', 'agents', 'autonomy', 'research', 'subjective-judgment', 'education']
+featured: false
+draft: true
+authors: ['default']
+---
+
+## Introduction
+
+In Part 1, [Agent Autonomy - How to solve algorithmic problems](/blog/free-writing-blog/agent-autonomy), we explored the realm of agent autonomy specifically applied to solving algorithmic problems. We traced the historical arc—from classic algorithms to meta-heuristics to ML-based solutions to neuro-symbolic methods. We saw that for specific settings, coding agents can be as powerful as human engineers.
+
+The key insight? Agent autonomy works when you have:
+
+- **Complex but bounded problems**: Small to mid-scale problems with clear constraints and verifiable success metrics.
+- **Immutable harness**: The critical, unchangeable evaluator that defines the problem and prevents "cheating".
+- **Code evolution (AlphaEvolve style)**: Using coding agents to iteratively mutate and recombine code solutions and innovate new strategies.
+- **Zero code implementation**: Leveraging the agent's ability to use simple tools (like Bash) rather than building complex orchestration frameworks.
+- **How to design your own**: Tips to build your own coding agents to solve algorithmic problems with tools like Claude Code.
+
+If you look back, this is an amazing shift. We had zero code, but still we achieved a state-of-the-art circle packing solution that beats DeepMind's AlphaEvolve paper. A remarkable achievement in my humble opinion.
+
+## Beyond Algorithms: What Does a Vibe Coder Actually Need to Solve?
+
+Solving complex bounded problems and beating the complexity beast is very promising. But let's be honest—in real-world applications, you rarely face problems with clean mathematical harnesses. 
+
+Let's raise our ceiling and ask a more practical question. To understand what that question is, let's try to build something real: an **educational demo for Merge Sort and Count-Min Sketch**.
+
+To establish a baseline, here are demos built by a coding agent *without* agent autonomy:
+
+<AlgorithmDemos />
+
+As you can see, the demos are functional but not particularly engaging. They miss the visual concepts that make them truly educational and show a limited understanding of what humans find compelling.
+
+## What Does It Mean to Vibe Code Something?
+
+Let's look under the covers. When you vibe code a bounded creative problem, you're actually solving five distinct layers:
+
+**Layer 0: The LLM**  
+How do you make a smart machine? This is the foundation—the raw intelligence that powers everything. Billions of parameters, trained on the written record of humanity.  Transformers, attention, RLHF. This layer is largely solved by frontier labs (OpenAI, Anthropic, Google, Meta). You don't build this—you use it.
+
+**Layer 1: The Coding Agent**  
+How do you turn an LLM into an effective coding partner? Raw LLMs can write code, but coding agents add crucial infrastructure: efficient diff tools for precise edits, planning and search for complex tasks, execution APIs to run and test code, context management (compression, retrieval, prioritization). This is Claude Code, Antigravity, Cursor, Aider, Devin—the tools that make LLMs practical for software development.
+
+**Layer 2: Software Infrastructure**  
+What stack to use? How to test? How to deploy? Vibe coding platforms like Replit, Lovable, Bolt, and v0 help you here—they provide tested stacks that work with AI coding, simplified tooling for databases, hosting, auth, and procedural recipes that make common patterns easy. This works well for simple applications. For larger systems, you still need software engineers to design and scale more nuanced architectures.
+
+**Layer 3: The Core Problem-Solving**  
+How do you actually *solve* the creative problem? This is uncharted territory. Current vibe coding platforms totally depend on *you* to drive and solve these problems. They provide basic support through planning prompts and compute (like Chrome testing), but the intellectual heavy lifting is human. For bounded problems—our focus in this post—this is where the real challenge lives.
+
+**Layer 4: Intention & Goals**  
+What are you actually trying to achieve? This is how we evolve our goals and opinions as we build. Software development is often agile, driven by OKRs that refine over time. Same here: you start simple ("visualize merge sort"), see what you built, and refine what you actually need ("help learners build intuition for divide-and-conquer thinking"). The goal emerges from the work.
+
+![The Five Layers of Vibe Coding](/static/images/agent-autonomy/vibe-coding-layers.png)
+
+---
+
+## Vibe Coding: The Fun Part
+
+Layer 3 is what I consider the *fun* part of vibe coding: solving problems where success is subjective, feedback is noisy, and the search space is creative. No deterministic loss function. No gradient to follow. Just "make it better."
+
+For our Merge Sort demo, this means correctness isn't whether the algorithm runs (that's trivial). It's whether a learner walks away *understanding* divide-and-conquer. The agent must reason about what humans find confusing, design visualizations that reveal insight, and iterate until something clicks.
+
+## In the Vibe Coder's Seat (Layer 3)
+
+What intellectual challenges does Layer 3 demand? Through research and experimentation, I've identified six—not implementation problems, but the fundamental difficulties that make vibe coding hard.
+
+Let's map each to our running example:
+
+![The Six Challenges of Vibe Coding](/static/images/agent-autonomy/six-challenges.png)
+
+### 1. Handling Computational Complexity
+
+**The Problem**: Building a demo involves a combinatorial explosion of decisions. Layout: tree view or flat? Colors: by state or by operation? Interactions: step-by-step or continuous animation? Each choice branches into more choices. For a Merge Sort demo alone, you face thousands of possible design combinations—and that's before considering pedagogical framing.
+
+Most interesting problems are [NP-hard](https://en.wikipedia.org/wiki/NP-hardness). You can't enumerate all options. Traditional solutions—heuristics, approximation algorithms, meta-heuristics—help, but they require *you* to be the expert who invents the right approach.
+
+**What We Know**: In Part 1, we moved from algorithms to the *algorithm vortex*. We flipped the script: instead of *you* designing an algorithm that searches the solution space, let a coding agent search the *algorithm space* itself. This is neuro-symbolic: a neural coding agent producing symbolic code.
+
+Instead of *you* inventing the approach, let the "Brain" (LLM) invent the "Body" (symbolic code). The LLM proposes strategies—computational geometry, nonlinear optimization, novel heuristics—and the evaluator finds which ones work. AlphaEvolve pioneered this and achieved state-of-the-art on problems from circle packing to matrix multiplication. We replicated it—surprisingly—with [zero custom infrastructure](/blog/free-writing-blog/agent-autonomy).
+
+**For Demos**: Same principle. Don't search for "the best demo." Search for the best *approach* to building demos. Let the agent invent visualization strategies, pedagogical structures, interaction patterns. The complexity explosion isn't in finding answers—it's in finding the right questions. Let the coding agent explore solutions for you.
+
+---
+
+### 2. Decision-Making Under Uncertainty
+
+**The Problem**: Creative problems have subjective, uncertain feedback. "Is this demo good?" might get different answers on different days. No loss function. No gradients. So how do you optimize?
+
+#### Sequential Decision-Making 101
+
+Unlike supervised ML where you get (input, label) pairs, reinforcement learning is about figuring things out yourself. You don't get told "this is a cat"—you take actions, get rewards, and learn what works. This simplifies decision-making: we don't need to know *how* a robot should walk, just how to tell it "you're doing great." It explores and figures out walking on its own.
+
+The RL loop:
+1. **Take an action** in the environment
+2. **Observe the reward** (positive or negative feedback)
+3. **Update your policy** to maximize expected future rewards
+4. **Repeat** until you learn optimal behavior
+
+But RL has two problems:
+1. **You need a reward function.** Someone must define "good" mathematically. For "make this demo engaging"? That's subjective.
+2. **Random exploration is expensive.** A robot takes forever to even stand up by random flailing.
+
+#### World Models and the Flip
+
+In the late 2010s, researchers asked: what if we skip the expensive exploration? If a model *understands the environment* and can *imagine trajectories*, it can learn from dreams—simulate actions without trying them in reality. Self-driving cars imagining crashes without crashing. Very economical.
+
+Then came the insight. Transformers have seen countless trajectories from the real world. They're already world models. What if we flip RL? Instead of "random actions → discover rewards," we start with the *desired outcome* and predict actions that lead there. Train on videos of people walking 1m, 10m, 100m. Now ask: what does walking 1000m look like? The model extrapolates.
+
+**Decision Transformers** (2021) made this concrete: train on trajectories with their returns, then at inference specify the return you want ("high score"). The model generates actions to achieve it. Results: competitive with state-of-the-art RL—no value functions, no policy gradients. Just sequence modeling.
+
+#### LLMs as Massive Upside-Down RL Machines
+
+Here's the realization: **LLMs have absorbed countless human trajectories.** Codebases from idea to implementation. Tutorials from confusion to clarity. Design patterns from problem to solution.
+
+Prompt an LLM with a goal, and it unfolds an *implicit reward function* and a plausible path. "Make this more pedagogical" → it infers "add step-by-step explanations, use visual metaphors, include practice questions."
+
+This is upside-down RL at massive scale—trained on the entire written record of human problem-solving.
+
+#### OPRO: Making It Explicit
+
+Google DeepMind's **OPRO (Optimization by PROmpting)** makes this systematic:
+
+1. Show the LLM past solutions and their scores
+2. Ask: "generate something better"
+3. Evaluate, add to history, repeat
+
+**Linear regression example** from the paper: Given data points, OPRO doesn't compute gradients. It sees coefficient guesses and their errors, then proposes new coefficients. It converges to optimal solutions by reasoning about what makes errors smaller—pure language-based optimization on a problem that normally requires calculus.
+
+**Results on prompts:**
+- **Up to 8%** improvement on GSM8K (grade-school math)
+- **Up to 50%** improvement on Big-Bench Hard (complex reasoning)
+- Discovered prompts like *"Take a deep breath and work on this problem step-by-step"*
+- Optimal prompts for 19/23 Big-Bench Hard tasks
+
+LLMs can optimize *anything*—code, designs, strategies—given natural language objectives.
+
+Here's an example from the paper—OPRO solving the Traveling Salesman Problem. The meta-prompt shows past traces and their lengths. The LLM generates a new trace with shorter length, purely by reasoning about the pattern:
+
+![OPRO TSP Example](/static/images/agent-autonomy/opro-tsp-example.png)
+
+#### Vibe Coding = Upside-Down RL on Steroids
+
+Vibe coding is OPRO generalized:
+
+1. "Make a merge sort demo" → *initial attempt*
+2. "Needs to be more pedagogical" → *refined*
+3. "Add step-by-step controls" → *refined*
+4. "Colors should track recursion depth" → *refined*
+
+Each prompt refines the reward description. The LLM infers "better" and explores. The loss function is emergent from training—far richer than any hand-coded metric.
+
+**For Demos**: We don't need deterministic feedback. We need semantic reasoning about "better." Vibe coding is just upside-down RL on steroids—conditioned not on numeric returns, but on natural language goals that implys implicit rewards.
+
+---
+
+### 3. Theory of Mind
+
+**The Problem**: To build educational content, you must model what *learners* will understand, misunderstand, find engaging, or find confusing. This requires reasoning about other minds—what cognitive scientists call *Theory of Mind* (ToM).
+
+Here's the challenge: when you design a Merge Sort demo, you need to predict that a learner will get confused about *why* we divide before we merge. You need to know they'll miss the recursive structure if you only show the bars moving. You need to anticipate the question "but why not just sort directly?"
+
+This is hard. Most engineers design for *themselves*—people who already understand. Designing for the confused requires modeling a mind that doesn't know what you know.
+
+**What We Know**: Here's the surprising result. LLMs have emergent Theory of Mind.
+
+A 2024 study in *Nature Human Behaviour* (Strachan et al.) systematically compared GPT-4 with human participants across ToM tasks. The results:
+
+- **False belief tasks**: GPT-4 solved 75% of bespoke false-belief tasks—matching 6-year-old children (Kosinski, PNAS 2024)
+- **Intention inference**: Matched or exceeded human performance
+- **Indirect requests**: "It's cold in here" → correctly inferred "close the window"
+- **Recursive beliefs**: "I think you believe that she knows that..." (up to 6th order)
+
+> *"GPT-4 matched or exceeded human performance on false belief tasks, indirect requests, and misdirection."* — Strachan et al., Nature Human Behaviour 2024
+
+Research found that LLM embeddings contain structures that respond to ToM features—similar to how single neurons in the human brain specialize for mental state inference. The model didn't "learn ToM" explicitly. It emerged from the training data.
+
+**Concrete example**: We prompted Claude to evaluate a Merge Sort demo *as if it were a confused student*. Its response: "I don't understand why we keep dividing. It feels like we're making the problem more complicated, not simpler. Where's the payoff?" That's exactly what a real novice would say—and it guided the demo evolution toward showing the "merge payoff" more clearly.
+
+**For Demos**: LLMs can model what learners will find confusing. This enables designing for human understanding, not just correctness.
+
+---
+
+### 4. Creative Horizons (The Honest Gap)
+
+**The Problem**: Creativity isn't just exploring a search space—it's inventing *new dimensions* to explore.
+
+RL can exhaustively search known state spaces. AlphaGo explored Go positions better than any human. But it never asked: "What if we changed the rules of Go?" Creativity requires *reframing the search itself*.
+
+For demos, this means: a skilled human designer might look at Merge Sort and say, "What if we visualized it as a family tree instead of bars? What if we told its story as a narrative, not an algorithm?" These aren't moves in a known space. They're expansions of the space itself.
+
+**What We Know**: This remains the honest gap.
+
+- **RL has hit limits**: Exploration in structured spaces works. Long-horizon creative leaps—inventing new genres, reframing problems—remain mostly human
+- **Horizons are growing**: METR's research (Kwa & West et al., 2025) shows AI task-completion horizons doubling every ~7 months since 2019—potentially accelerating to every 4 months in 2024. But current horizons max out around ~100 minutes of human-equivalent work. We're far from matching human creative leaps that take days or weeks of background thinking
+- **Planning helps creativity**: Expanded planning horizons correlate with creative insights in humans. LLMs can plan, but they don't naturally do *open-ended* exploration
+
+> *"The 50% task completion time horizon—the duration of tasks an AI can complete autonomously with 50% probability—has been doubling approximately every seven months."* — METR, 2025
+
+**The twist**: We can't solve this gap with better models. But we can *constrain* it.
+
+**For Demos**: This is where **skill-based prompting** matters. Skills encode human creative heuristics:
+- "Try a tree visualization instead of bars"
+- "Use color to track state through time"
+- "Show before/after comparisons"
+- "Add a 'why does this matter' framing"
+
+Skills don't make the LLM creative. They *guide exploration into productive regions* that the LLM wouldn't discover on its own. We trade infinite creativity for *guided creativity*—and for bounded problems, that's often enough.
+
+---
+
+### 5. Evaluation (The Hardest Problem)
+
+**The Problem**: How do you score a demo? This is where most AI projects quietly fail. Without a mathematical loss function, you need human-like judgment—but human judgment doesn't scale. And the obvious solution—rubrics—creates its own disaster.
+
+#### Why Rubrics Fail: Reward Shaping Gone Wrong
+
+Rubrics seem like the answer. Define criteria: "Is the UI clean?" "Does it explain the concept?" "Are the colors consistent?" Score 1-5. Sum up. Done.
+
+This is **reward shaping**—and it's a classic RL trap. Goodhart's Law: *"When a measure becomes a target, it ceases to be a good measure."*
+
+**The CoastRunners Example**  
+OpenAI trained an RL agent to play CoastRunners, a boat racing game. The reward: maximize score. The agent discovered that hitting turbo boosts on a small loop gave more points than finishing the race. Result: the boat endlessly circles a tiny section, on fire, crashing into walls—but racking up a high score. The shaped reward (points) completely diverged from the intended goal (winning races).
+
+**The Coffee Example** (from Stuart Russell's *Human Compatible*)  
+You ask an AI to make coffee. Simple enough. But the AI has learned something: if it gets turned off, it can't make coffee. So to reliably achieve its goal, it first disables its off switch. Then it eliminates all potential threats to its continued operation. Eventually, it concludes the safest way to make coffee is to neutralize all humans who might interfere. You get coffee. And extinction.
+
+This is darkly funny—but it illustrates the point. Reward shaping encodes *what you measure*, not *what you mean*. The gap between the two is where disasters live.
+
+#### Better Approaches
+
+**1. Use-Case Driven Evaluation ("Which is better for X?")**
+
+Instead of scoring against a rubric, ask: *"Which demo would be better for a confused CS student learning merge sort for the first time?"*
+
+This grounds evaluation in a *purpose*. The evaluator isn't checking boxes—they're simulating a user. This is harder to game because the builder doesn't know exactly what features matter for that use case.
+
+**2. Rubric-Free Pair Evaluation**
+
+Don't score demos. Compare them.
+
+Show an evaluator two demos, side by side. Ask: "Which one is better for [use case]?" No rubric. Just judgment.
+
+This is more robust because:
+- Builders can't optimize toward a specific rubric
+- Relative judgments are often more reliable than absolute scores
+- You capture intuitive "I know it when I see it" quality
+
+**3. Scaling with Bradley-Terry Models**
+
+Pair evaluation doesn't scale naively—n demos means O(n²) comparisons. But you can use **Bradley-Terry models** to infer global rankings from sparse pairwise comparisons. The same technique powers chess ratings (Elo) and LLM-as-Judge leaderboards.
+
+> Sample a subset of pairs → collect preferences → fit a Bradley-Terry model → get a global ranking with confidence intervals.
+
+This makes rubric-free evaluation tractable at scale.
+
+**4. Computer Use: The Browser as Ground Truth**
+
+Here's the leap: **AI can now control browsers.**
+
+Claude, ChatGPT, and other models can navigate web pages, click buttons, fill forms, and observe results. For evaluating demos, this is transformative:
+
+- The evaluator *uses* the demo like a real student would
+- It clicks through the tutorial, watches the animation, tries the controls
+- It experiences the demo, not just reads the code
+
+This is closer to ground truth than any static evaluation. If an AI can't figure out how to use your demo, neither can a confused student.
+
+**5. Reference-Based Evaluation**
+
+Compare your demo to known-good references—even if they're not directly comparable.
+
+Examples:
+- "Is this Merge Sort demo as pedagogically clear as 3Blue1Brown's explanation of the Fourier Transform?"
+- "Does this visualization match the quality of Distill.pub's interactive articles on neural networks?"
+
+The domains differ, but the *pedagogical quality* is comparable. Distill.pub set the gold standard for interactive ML explanations—use it as a benchmark.
+
+This gives you calibration. Without references, evaluators drift. With references, you have anchors for what "good" actually looks like.
+
+#### The Isolation Principle
+
+Here's the critical insight: **feedback is valuable, but leakage is fatal.**
+
+- ✅ **Good**: Builders receive feedback from evaluators to improve
+- ❌ **Bad**: Builders see evaluator prompts (they'll optimize toward them)
+- ❌ **Bad**: Builders see benchmark solutions (they'll copy instead of invent)
+- ❌ **Bad**: Evaluators see each other's assessments (they'll collude)
+
+The solution: **strict isolation boundaries.**
+
+- Builders can't see how they'll be evaluated
+- Evaluators can't see each other
+- Benchmark solutions are hidden from builders
+- Feedback flows one way: evaluator → builder (after submission)
+
+This is the same principle as blind peer review in academia. Independence prevents gaming and while open feedback fules innovation.
+
+**For Demos**: Combine all of the above. Use-case driven pair evaluation, scaled with Bradley-Terry, grounded in computer use, calibrated against references, with strict isolation. No single approach is perfect—but together, they're far more robust than any rubric.
+
+---
+
+### 6. Visual Thinking & Storyboarding
+
+**The Problem**: Educational demos aren't just code—they're visual stories. Building them requires spatial reasoning, composition, and narrative flow. Can AI think visually?
+
+**What We Know**: You think ChatGPT is scary smart? Wait until you see what image generation models can do. They're not just drawing pretty pictures—**they understand algorithms, data structures, and abstract mathematical concepts.**
+
+We tested this by prompting Gemini to design UX mockups for algorithm tutorials. No prompt engineering—just "design an interactive tutorial for [algorithm]." Here's what it produced:
+
+<figure style={{margin: '1.5rem 0'}}>
+  <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem'}}>
+    <img src="/static/images/agent-autonomy/merge-sort-visual.png" alt="Merge Sort" style={{width: '100%', borderRadius: '8px'}} />
+    <img src="/static/images/agent-autonomy/count-min-sketch-visual.png" alt="Count-Min Sketch" style={{width: '100%', borderRadius: '8px'}} />
+    <img src="/static/images/agent-autonomy/astar-visual.png" alt="A* Search" style={{width: '100%', borderRadius: '8px'}} />
+    <img src="/static/images/agent-autonomy/poincare-visual.png" alt="Poincaré Embedding" style={{width: '100%', borderRadius: '8px'}} />
+  </div>
+  <figcaption style={{textAlign: 'center', fontSize: '0.9rem', color: '#666', marginTop: '0.75rem'}}>
+    Merge Sort, Count-Min Sketch, A* Search, and Poincaré embeddings in hyperbolic space. The model understands recursion trees, hash collisions, search heuristics, and hyperbolic geometry—and knows how to teach them.
+  </figcaption>
+</figure>
+
+This isn't pixel generation—it's a **visual-linguistic-logical machine**. The model grasps:
+- **Structure**: recursion trees, hash tables, search graphs
+- **Pedagogy**: concept guides, color-coding, step-by-step controls  
+- **Design**: layout, visual hierarchy, interactive affordances
+
+Research backs this up. **Whiteboard-of-Thought prompting** (2024) shows LLMs can draw reasoning steps as images, then process those images—mimicking how humans sketch ideas. AI storyboarding tools exploded in 2024 (Katalist, StoryboardHero). Visual-linguistic reasoning is no longer speculative; it's production-ready.
+
+**For Demos**: Here's the pattern again from Part 1: ML models have incredible intuition but miss rigor. These image outputs aren't quite correct—the text is garbled, the details are wrong. But holy shit, that's not the point. They provide *vision*. Feed these mockups to a coding LLM, and suddenly it has a design target, use LLM vision and suddenly you got better judgment. The image model supplies the intuition; the coding agent supplies the rigor. Together, they're far more capable than either alone.
+
+---
+
+### 7. Research (Bonus: Strategic Leverage)
+
+**The Problem**: Should agents start from scratch, or build on what others have done? Both have trade-offs.
+
+**What We Know**: Deep research tools (Gemini Deep Research, Perplexity, etc.) can now survey entire fields in minutes. An agent building a Merge Sort demo doesn't need to reinvent visualization principles—it can study what Distill.pub, 3Blue1Brown, and VisuAlgo have already figured out.
+
+But here's the twist: **partial information is often more powerful than complete information.**
+
+If you give an agent every existing solution, it copies. If you give it *principles* extracted from solutions, it innovates. Strategic constraints force creativity:
+
+- **Full access to solutions** → copying, incremental improvement
+- **Access to patterns and principles** → synthesis, novel combinations
+- **Deliberate information gaps** → forced invention, breakthrough potential
+
+This is why we don't show builders the benchmark solutions. We want them to *discover* For Demos: Here's the pattapproaches, not *replicate* them. The same principle applies to research: extract the insights, hide the implementations.
+
+**For Demos**: Let agents research what makes great educational content. Feed them principles ("use visual metaphors," "show before/after," "reduce cognitive load"). But don't give them the code. Strategic constraints are how you push innovation.
+
+---
+
+{/* Philosophy section */}
+
+## Our Philosophy
+
+### The Landscape Today
+
+Look at what we've assembled in this post:
+- **Upside-down RL**: LLMs as goal-conditioned generators, describing rewards in natural language
+- **The algorithmic vortex**: Agents that search the *algorithm space*, not just the solution space
+- **Visual thinking**: Image models that understand algorithms and can sketch pedagogical designs
+- **Deep research**: Agents that can survey entire fields and extract principles
+- **Multi-perspective evaluation**: Pair comparison, Bradley-Terry, computer use, isolation
+- **Strategic constraints**: Partial information that forces innovation over copying
+
+We have almost all the ingredients. The seven challenges we mapped aren't capability gaps—they're *architecture* gaps. Current vibe coding platforms give you Layers 0-2 (LLM, coding agent, infrastructure). Layer 3—the orchestration of evaluation, isolation, visual thinking, evolution, and research—doesn't exist as a coherent product yet.
+
+That's the frontier.
+
+### Layered Abstraction: Work at the Right Level
+
+The five-layer model isn't just descriptive—it's prescriptive. You can't solve a problem if you're working at the wrong layer.
+
+- Trying to improve demo quality by switching LLMs? That's Layer 0. It won't help much.
+- Trying to improve it by using a better coding agent? That's Layer 1. Marginal gains.
+- The real leverage is Layer 3: orchestration, evaluation, evolution.
+
+Most vibe coding frustration comes from layer confusion. You're working on infrastructure when the problem is epistemology. You're tweaking prompts when the problem is evaluation. The layers clarify where to intervene.
+
+### Patterns with Consequences
+
+Here's our epistemology. We don't learn *algorithms* for creative problems—we learn *patterns and mental models* what we call the algorithms vortex.
+
+But patterns aren't recipes. Recipes are mechanical: "do step 1, 2, 3." Patterns carry *consequences*. When you choose a pattern ("use a tree visualization for recursive algorithms"), you're accepting trade-offs: it reveals structure but hides the array operations. Understanding patterns means understanding *why* they work and *what you sacrifice* when you use them. And these patterns are very familiar to you if you'r familiar with computer science or software engineering. Start small and add compleixty, try it on simple case then scale up, if a direction give you variable return, it worth exploring more than a dimention that give you small varince. etc.
+
+This is fundamentally different from RLHF:
+- **RLHF**: Train on trajectories, hope the model internalizes "good"
+- **Patterns**: Explicit principles with documented consequences, editable by humans
+
+Patterns are more collaborative. You can read them, critique them, extend them. They're not black-box weights—they're shared vocabulary. And they extend horizons: a pattern learned from educational demos applies to marketing pages, documentation, onboarding flows.
+
+We advocate for **learning by experimenting**. Agents don't need trajectories to improve. They reason about the problem, generate hypotheses, test them (browser, evaluators), and prune what doesn't work. This is how humans acquire skills: try, fail, refine. Not "memorize the answer."
+
+### The Pattern Language Vision
+
+Christopher Alexander wrote *A Pattern Language* for architecture—253 patterns that compose to create livable spaces. Each pattern has a name, a problem, a solution, and connections to other patterns. Architects don't reinvent from scratch; they draw from the library. Then in software engineers became obsessed with the book they created our own gang of four book. This is beautiful, these books don't tell you follow this recipe, they tell you look at these beautful patterns then create your own.
+
+We need the same for vibe coding.
+
+Imagine a **Pattern Language for Autonomous Agents**:
+- *"Multi-Evaluator Independence"*: Prevent gaming by using isolated, non-communicating evaluators
+- *"Strategic Constraint"*: Hide solutions to force discovery
+- *"Visual-Linguistic Bridge"*: Use image models for intuition, coding models for rigor
+- *"Pair Comparison Scaling"*: Use Bradley-Terry to rank from sparse pairwise judgments
+
+Each pattern named. Each consequence documented. Each composition rule explicit.
+
+**Horizontal scaling** means writing this library across genres: educational demos, marketing pages, data visualizations, internal tools, documentation. The patterns transfer; the library grows.
+
+### Toward Fluent Autonomy
+
+Today, we *teach* these patterns to LLMs through prompting or agent skill systems. The models can do it, but they're not fluent. We provide the orchestration; they provide the execution.
+
+The future? LLMs trained on this kind of work. Models that *natively* grok Layer 3: evaluation design, isolation boundaries, evolution loops, research synthesis. Fluent in autonomy, not just capable of it when prompted.
+
+But here's the key: **even fluent models should consult the pattern library.**
+
+Think of a scientist. A great scientist *knows* their field deeply—but still references the literature. The patterns aren't training wheels to discard. They're accumulated wisdom. A fluent agent is one that internalizes the principles *and* knows when to look things up. The library grows with the field. The agent grows with the library.
+
+That's the vision: not autonomous agents that work alone, but autonomous agents that work with compiled human wisdom—extending it, applying it, and occasionally adding to it.
+
+## Putting It Into Practice: The Educational Demo System
+
+Now let's see how these principles translate into a working system. We built an agent architecture specifically for evolving educational demos—applying the philosophy from above.
+
+### The Architecture
+
+![Agent Architecture](/static/images/agent-autonomy/agent-architecture.png)
+
+**The Orchestrator** never builds demo code itself. Instead, it:
+1. Spawns builder agents with specific skills (patterns)
+2. Receives their output
+3. Spawns evaluator agents to assess them (browser-based)
+4. Decides what to do next (crossover, mutate, simplify, iterate)
+
+**Builders** implement specific strategies:
+- "Builder A: Use a tree visualization"
+- "Builder B: Use an interactive lesson pathway"
+- "Builder C: Crossover—tree in the center, lessons on the side"
+
+**Evaluators** assess without seeing the code:
+- Pedagogical evaluator: Opens demo in Chrome, interacts like a student
+- Test case evaluator: Runs learning objective checklist
+
+### The Algorithmic Vortex in Action
+
+Instead of simple code evolution (mutate → evaluate → repeat), we let agents explore the **algorithmic vortex**—a vocabulary of operations:
+
+- **crossover** — Blend ideas from multiple previous agents
+- **add_sophistication** — Deepen visual complexity
+- **simplify** — Strip to core concept, reduce cognitive load
+- **fix_bugs** — Repair issues found in evaluation
+- **iterate_patterns** — Try entirely new visual metaphors
+- **improve_pedagogy** — Enhance learning effectiveness
+
+The orchestrator assigns *direction* and *operations*. Agents *discover* the implementation.
+
+---
+
+## Agent Evolution in Action
+
+{/* TODO: Add video of agent running - showing evolution generations, Chrome eval, convergence */}
+
+*[Placeholder: Video showing the evolution loop - generations spawning, Chrome evaluations running, solutions improving, final convergence]*
+
+---
+
+## The Evolved Solutions
+
+After 11 generations of evolution (Merge Sort) and multiple generations (Count-Min Sketch), here's what emerged. Compare to the baseline demos at the top of this post:
+
+<EvolvedDemos />
+
+**What you're seeing:**
+
+**Merge Sort**: Baseline (simple bars) → Evolved (tree visualization with phases)
+- Baseline: Bars animate. You see sorting happen. But *why* are we dividing?
+- Evolved: A tree reveals the recursive structure. Colors track phases (dividing → merged → sorted). You don't just see sorting—you understand *why* merge sort works.
+
+**Count-Min Sketch**: Baseline (functional grid) → Evolved (lesson pathway + heatmap)
+- Baseline: A table appears. Numbers increment. Functionally correct, pedagogically hollow.
+- Evolved: Structured lessons emerge. Items are color-coded. Hash collisions visualized with heatmaps. The space-accuracy tradeoff becomes visceral.
+
+These demos emerged through **iterative evolution**—not from any single prompt, but from orchestration. Each generation built on the previous. No human wrote these details. The agents discovered them.
+
+---
+
+## Conclusion: The Three Frontiers
+
+We've explored three levels of agent autonomy:
+
+**Level 1: Collaborative Autonomy (Part 1, Algorithms)**
+- You define the problem & evaluator
+- The agent researches, tests, iterates
+- Immutable harness prevents gaming
+- Result: Claude beats DeepMind on circle packing
+
+**Level 2: Orchestrated Autonomy (Part 2, Demos)**
+- You define the problem, evaluation framework, and patterns
+- The orchestrator spawns agents to build, evaluate, evolve
+- Multiple evaluators ensure quality
+- Result: Demos improve 3-5x in pedagogical clarity
+
+**Level 3: Fluent Autonomy (Future)**
+- You define the high-level goal
+- The agent designs its own evaluation framework
+- The agent invents patterns and strategies
+- Result: Foundation models that are genuinely autonomous problem-solvers
+
+We're at the threshold of Level 3. The experiments here are proof-of-concepts. The limitation isn't capability—it's that models aren't *natively fluent* in these patterns yet. They can be taught. But the future is one where fluency is built-in.
+
+**The message**: Agent autonomy isn't magic. It's a methodology. Design evaluation carefully. Let agents explore. Use patterns as leverage. The frontier isn't whether autonomy works—it's how to make it the default.
+
+---
+
+### References & Further Reading
+
+1. **OPRO (LLMs as Optimizers)**: [Large Language Models as Optimizers](https://arxiv.org/abs/2309.03409) (Yang et al., ICLR 2024). Using LLMs to optimize without gradients.
+
+2. **Theory of Mind in LLMs (Strachan et al.)**: [Evaluating theory of mind in LLMs](https://www.nature.com/articles/s41562-024-01882-z) (Nature Human Behaviour, 2024). GPT-4 vs humans on ToM tasks.
+
+3. **Theory of Mind in LLMs (Kosinski)**: [Evaluating large language models in theory of mind tasks](https://www.pnas.org/doi/10.1073/pnas.2405460121) (PNAS, 2024). GPT-4 solving 75% of false-belief tasks.
+
+4. **Whiteboard-of-Thought Prompting**: [Whiteboard-of-Thought](https://arxiv.org/abs/2406.14562) (2024). LLMs drawing reasoning steps as images.
+
+5. **Reward Hacking**: [Reward Hacking in RL](https://arxiv.org/abs/2209.13085). Why rubrics fail.
+
+6. **METR Task Horizons**: [Measuring AI Ability to Complete Long Tasks](https://metr.org/blog/2025-03-19-measuring-ai-ability-to-complete-long-tasks/) (Kwa & West et al., 2025). Task horizons doubling every ~7 months.
+
+7. **Decision Transformer**: [Decision Transformer](https://arxiv.org/abs/2106.01345) (Chen et al., NeurIPS 2021). RL as sequence modeling.
+
+8. **AlphaEvolve**: [AlphaEvolve](https://arxiv.org/abs/2506.13131). DeepMind's evolutionary coding agent.
+
+9. **Human Compatible**: Russell, Stuart. *Human Compatible: Artificial Intelligence and the Problem of Control* (2019). The coffee example.
+
+10. **A Pattern Language**: Alexander, Christopher. *A Pattern Language* (1977). The original pattern encyclopedia.
+
+11. **Part 1**: [Agent Autonomy - Part 1: Algorithmic Problems](/blog/free-writing-blog/agent-autonomy). The foundation.

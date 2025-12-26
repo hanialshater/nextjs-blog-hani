@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merge Sort - Recursive Tree Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            max-width: 1260px;
+            height: 780px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        button.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: #5568d3;
+        }
+
+        button.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        button.secondary:hover {
+            background: #d0d0d0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .status-bar {
+            background: #f5f5f5;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #333;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .visualization-area {
+            flex: 1;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            padding: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #tree-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .legend {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .capture-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        .capture-indicator.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Merge Sort - Recursive Tree Visualization</h1>
+            <p class="subtitle">Watch the divide-and-conquer strategy in action</p>
+        </div>
+
+        <div class="controls">
+            <button class="primary" id="playBtn">Play</button>
+            <button class="secondary" id="pauseBtn" disabled>Pause</button>
+            <button class="secondary" id="stepBtn">Step</button>
+            <button class="secondary" id="resetBtn">Reset</button>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <span>Comparisons:</span>
+                    <span class="stat-value" id="comparisons">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Merges:</span>
+                    <span class="stat-value" id="merges">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Phase:</span>
+                    <span class="stat-value" id="phase">Ready</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+            Click Play to start the merge sort visualization
+        </div>
+
+        <div class="visualization-area">
+            <canvas id="tree-canvas"></canvas>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Dividing</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Merging</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fbbf24;"></div>
+                    <span>Sorted</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Comparing</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="capture-indicator" id="captureIndicator">✓ Captured</div>
+
+    <script>
+        // ============================================
+        // SCREENSHOT CAPTURE SYSTEM
+        // ============================================
+        class ScreenshotManager {
+            constructor() {
+                this.screenshots = new Map();
+                this.counter = 0;
+            }
+
+            async captureState(label = null) {
+                const finalLabel = label || `capture_${++this.counter}`;
+                try {
+                    const canvas = await html2canvas(document.body, {
+                        allowTaint: true,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                    });
+                    const dataUrl = canvas.toDataURL('image/png');
+                    this.screenshots.set(finalLabel, dataUrl);
+                    this.showIndicator(finalLabel);
+                    return finalLabel;
+                } catch (error) {
+                    console.error('Screenshot capture failed:', error);
+                }
+            }
+
+            showIndicator(label) {
+                const indicator = document.getElementById('captureIndicator');
+                indicator.textContent = `✓ ${label}`;
+                indicator.classList.add('show');
+                setTimeout(() => indicator.classList.remove('show'), 2000);
+            }
+
+            getScreenshots() {
+                return Object.fromEntries(this.screenshots);
+            }
+        }
+
+        window.screenshotManager = new ScreenshotManager();
+
+        // ============================================
+        // MERGE SORT VISUALIZATION
+        // ============================================
+
+        class TreeNode {
+            constructor(array, start, end, depth, index) {
+                this.array = array.slice(start, end);
+                this.start = start;
+                this.end = end;
+                this.depth = depth;
+                this.index = index;
+                this.state = 'pending'; // pending, dividing, divided, merging, merged, sorted
+                this.left = null;
+                this.right = null;
+                this.x = 0;
+                this.y = 0;
+                this.compareIndices = null; // For showing comparisons during merge
+            }
+        }
+
+        class MergeSortVisualizer {
+            constructor() {
+                this.canvas = document.getElementById('tree-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.array = [];
+                this.root = null;
+                this.steps = [];
+                this.currentStep = 0;
+                this.isPlaying = false;
+                this.comparisons = 0;
+                this.merges = 0;
+                this.animationSpeed = 500;
+
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.generateArray();
+                this.setupControls();
+            }
+
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+                this.draw();
+            }
+
+            generateArray() {
+                this.array = [];
+                for (let i = 0; i < 8; i++) {
+                    this.array.push(Math.floor(Math.random() * 90) + 10);
+                }
+                this.buildTree();
+                this.generateSteps();
+                this.draw();
+            }
+
+            buildTree() {
+                this.root = this.buildTreeRecursive(0, this.array.length, 0, 0);
+                this.calculatePositions();
+            }
+
+            buildTreeRecursive(start, end, depth, index) {
+                if (start >= end) return null;
+
+                const node = new TreeNode(this.array, start, end, depth, index);
+
+                if (end - start > 1) {
+                    const mid = Math.floor((start + end) / 2);
+                    node.left = this.buildTreeRecursive(start, mid, depth + 1, index * 2);
+                    node.right = this.buildTreeRecursive(mid, end, depth + 1, index * 2 + 1);
+                }
+
+                return node;
+            }
+
+            calculatePositions() {
+                const maxDepth = this.getMaxDepth(this.root);
+                const nodeWidth = 100;
+                const nodeHeight = 60;
+                const horizontalGap = 10;
+                const verticalGap = 80;
+
+                const positions = new Map();
+
+                // Calculate positions level by level
+                const calculateLevel = (node, depth) => {
+                    if (!node) return;
+
+                    if (!positions.has(depth)) {
+                        positions.set(depth, []);
+                    }
+                    positions.get(depth).push(node);
+
+                    calculateLevel(node.left, depth + 1);
+                    calculateLevel(node.right, depth + 1);
+                };
+
+                calculateLevel(this.root, 0);
+
+                // Position nodes
+                positions.forEach((nodes, depth) => {
+                    const totalWidth = nodes.length * nodeWidth + (nodes.length - 1) * horizontalGap;
+                    const startX = (this.canvas.width - totalWidth) / 2;
+
+                    nodes.forEach((node, i) => {
+                        node.x = startX + i * (nodeWidth + horizontalGap) + nodeWidth / 2;
+                        node.y = 50 + depth * verticalGap;
+                    });
+                });
+            }
+
+            getMaxDepth(node) {
+                if (!node) return 0;
+                return 1 + Math.max(this.getMaxDepth(node.left), this.getMaxDepth(node.right));
+            }
+
+            generateSteps() {
+                this.steps = [];
+                this.comparisons = 0;
+                this.merges = 0;
+
+                // Phase 1: Division steps
+                const divisionSteps = [];
+                this.generateDivisionSteps(this.root, divisionSteps);
+                this.steps.push(...divisionSteps);
+
+                // Phase 2: Merge steps
+                const mergeSteps = [];
+                this.generateMergeSteps(this.root, mergeSteps);
+                this.steps.push(...mergeSteps);
+            }
+
+            generateDivisionSteps(node, steps) {
+                if (!node || node.array.length === 1) {
+                    if (node) {
+                        steps.push({
+                            type: 'single',
+                            node: node,
+                            message: `Single element [${node.array[0]}] - base case reached`
+                        });
+                    }
+                    return;
+                }
+
+                steps.push({
+                    type: 'divide',
+                    node: node,
+                    message: `Dividing [${node.array.join(', ')}] into two halves`
+                });
+
+                if (node.left) this.generateDivisionSteps(node.left, steps);
+                if (node.right) this.generateDivisionSteps(node.right, steps);
+            }
+
+            generateMergeSteps(node, steps) {
+                if (!node) return [];
+
+                if (!node.left && !node.right) {
+                    return [node.array[0]];
+                }
+
+                const leftSorted = node.left ? this.generateMergeSteps(node.left, steps) : [];
+                const rightSorted = node.right ? this.generateMergeSteps(node.right, steps) : [];
+
+                // Generate detailed merge steps
+                const merged = [];
+                let i = 0, j = 0;
+
+                while (i < leftSorted.length && j < rightSorted.length) {
+                    steps.push({
+                        type: 'compare',
+                        node: node,
+                        leftIndex: i,
+                        rightIndex: j,
+                        leftValue: leftSorted[i],
+                        rightValue: rightSorted[j],
+                        message: `Comparing ${leftSorted[i]} and ${rightSorted[j]}`
+                    });
+
+                    if (leftSorted[i] <= rightSorted[j]) {
+                        merged.push(leftSorted[i]);
+                        steps.push({
+                            type: 'place',
+                            node: node,
+                            value: leftSorted[i],
+                            from: 'left',
+                            merged: [...merged],
+                            message: `Placing ${leftSorted[i]} (from left)`
+                        });
+                        i++;
+                    } else {
+                        merged.push(rightSorted[j]);
+                        steps.push({
+                            type: 'place',
+                            node: node,
+                            value: rightSorted[j],
+                            from: 'right',
+                            merged: [...merged],
+                            message: `Placing ${rightSorted[j]} (from right)`
+                        });
+                        j++;
+                    }
+                }
+
+                while (i < leftSorted.length) {
+                    merged.push(leftSorted[i]);
+                    steps.push({
+                        type: 'place',
+                        node: node,
+                        value: leftSorted[i],
+                        from: 'left',
+                        merged: [...merged],
+                        message: `Placing remaining ${leftSorted[i]} (from left)`
+                    });
+                    i++;
+                }
+
+                while (j < rightSorted.length) {
+                    merged.push(rightSorted[j]);
+                    steps.push({
+                        type: 'place',
+                        node: node,
+                        value: rightSorted[j],
+                        from: 'right',
+                        merged: [...merged],
+                        message: `Placing remaining ${rightSorted[j]} (from right)`
+                    });
+                    j++;
+                }
+
+                steps.push({
+                    type: 'merge_complete',
+                    node: node,
+                    merged: merged,
+                    message: `Merge complete: [${merged.join(', ')}]`
+                });
+
+                return merged;
+            }
+
+            executeStep() {
+                if (this.currentStep >= this.steps.length) {
+                    this.isPlaying = false;
+                    this.updateControls();
+                    document.getElementById('statusBar').textContent = 'Sorting complete!';
+                    document.getElementById('phase').textContent = 'Complete';
+                    return;
+                }
+
+                const step = this.steps[this.currentStep];
+
+                // Update state
+                switch (step.type) {
+                    case 'divide':
+                        step.node.state = 'dividing';
+                        document.getElementById('phase').textContent = 'Divide';
+                        break;
+                    case 'single':
+                        step.node.state = 'divided';
+                        break;
+                    case 'compare':
+                        step.node.state = 'merging';
+                        step.node.compareIndices = { left: step.leftIndex, right: step.rightIndex };
+                        this.comparisons++;
+                        document.getElementById('comparisons').textContent = this.comparisons;
+                        document.getElementById('phase').textContent = 'Merge';
+                        break;
+                    case 'place':
+                        step.node.array = step.merged;
+                        step.node.compareIndices = null;
+                        break;
+                    case 'merge_complete':
+                        step.node.state = 'sorted';
+                        step.node.array = step.merged;
+                        this.merges++;
+                        document.getElementById('merges').textContent = this.merges;
+                        break;
+                }
+
+                document.getElementById('statusBar').textContent = step.message;
+                this.draw();
+                this.currentStep++;
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                if (this.root) {
+                    this.drawConnections(this.root);
+                    this.drawNode(this.root);
+                }
+            }
+
+            drawConnections(node) {
+                if (!node) return;
+
+                this.ctx.strokeStyle = '#d0d0d0';
+                this.ctx.lineWidth = 2;
+
+                if (node.left) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(node.x, node.y + 25);
+                    this.ctx.lineTo(node.left.x, node.left.y - 25);
+                    this.ctx.stroke();
+                    this.drawConnections(node.left);
+                }
+
+                if (node.right) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(node.x, node.y + 25);
+                    this.ctx.lineTo(node.right.x, node.right.y - 25);
+                    this.ctx.stroke();
+                    this.drawConnections(node.right);
+                }
+            }
+
+            drawNode(node) {
+                if (!node) return;
+
+                const width = 90;
+                const height = 50;
+                const x = node.x - width / 2;
+                const y = node.y - height / 2;
+
+                // Determine color based on state
+                let color = '#e0e0e0';
+                if (node.state === 'dividing') color = '#3b82f6';
+                else if (node.state === 'divided') color = '#93c5fd';
+                else if (node.state === 'merging') color = '#10b981';
+                else if (node.state === 'sorted') color = '#fbbf24';
+
+                // Draw node box
+                this.ctx.fillStyle = color;
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.roundRect(x, y, width, height, 6);
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                // Draw array values
+                this.ctx.fillStyle = '#000';
+                this.ctx.font = '12px monospace';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+
+                const text = node.array.length > 4 ?
+                    `[${node.array.slice(0, 3).join(',')}...]` :
+                    `[${node.array.join(',')}]`;
+                this.ctx.fillText(text, node.x, node.y);
+
+                // Recursively draw children
+                if (node.left) this.drawNode(node.left);
+                if (node.right) this.drawNode(node.right);
+            }
+
+            play() {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                this.updateControls();
+                this.playLoop();
+            }
+
+            playLoop() {
+                if (!this.isPlaying || this.currentStep >= this.steps.length) {
+                    this.isPlaying = false;
+                    this.updateControls();
+                    return;
+                }
+
+                this.executeStep();
+                setTimeout(() => this.playLoop(), this.animationSpeed);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                this.updateControls();
+            }
+
+            step() {
+                if (this.isPlaying) return;
+                this.executeStep();
+            }
+
+            reset() {
+                this.isPlaying = false;
+                this.currentStep = 0;
+                this.comparisons = 0;
+                this.merges = 0;
+                document.getElementById('comparisons').textContent = '0';
+                document.getElementById('merges').textContent = '0';
+                document.getElementById('phase').textContent = 'Ready';
+                document.getElementById('statusBar').textContent = 'Click Play to start the merge sort visualization';
+                this.generateArray();
+                this.updateControls();
+            }
+
+            updateControls() {
+                document.getElementById('playBtn').disabled = this.isPlaying || this.currentStep >= this.steps.length;
+                document.getElementById('pauseBtn').disabled = !this.isPlaying;
+                document.getElementById('stepBtn').disabled = this.isPlaying || this.currentStep >= this.steps.length;
+            }
+
+            setupControls() {
+                document.getElementById('playBtn').addEventListener('click', () => this.play());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('stepBtn').addEventListener('click', () => this.step());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+            }
+        }
+
+        // Initialize
+        const visualizer = new MergeSortVisualizer();
+    </script>
+</body>
+
+</html>

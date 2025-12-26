@@ -85,6 +85,17 @@ module.exports = () => {
     async headers() {
       return [
         {
+          // Allow iframes for demos folder
+          source: '/demos/:path*',
+          headers: [
+            ...securityHeaders.filter(h => h.key !== 'X-Frame-Options'),
+            {
+              key: 'X-Frame-Options',
+              value: 'SAMEORIGIN',
+            },
+          ],
+        },
+        {
           source: '/(.*)',
           headers: securityHeaders,
         },

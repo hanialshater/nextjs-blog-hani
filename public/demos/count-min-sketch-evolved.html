@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Count-Min Sketch: Interactive Educational Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            background: #faf8f5;
+            color: #5a4a3a;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%);
+            border-bottom: 3px solid #d4a574;
+            box-shadow: 0 2px 8px rgba(90, 74, 58, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #5a4a3a;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #8b7355;
+            font-style: italic;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            padding: 15px;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        /* Lessons Sidebar */
+        .lessons-sidebar {
+            width: 30%;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(90, 74, 58, 0.08);
+            border: 1px solid #eddcd2;
+        }
+
+        .lessons-sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .lessons-sidebar::-webkit-scrollbar-track {
+            background: #f5ebe0;
+            border-radius: 10px;
+        }
+
+        .lessons-sidebar::-webkit-scrollbar-thumb {
+            background: #d4a574;
+            border-radius: 10px;
+        }
+
+        .lessons-sidebar h2 {
+            font-size: 18px;
+            color: #5a4a3a;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #d4a574;
+            font-weight: 600;
+        }
+
+        .lesson-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .lesson-section:hover {
+            background: #faf8f5;
+            border-color: #eddcd2;
+        }
+
+        .lesson-section.active {
+            background: linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%);
+            border-color: #d4a574;
+            box-shadow: 0 4px 12px rgba(212, 165, 116, 0.2);
+        }
+
+        .lesson-section h3 {
+            font-size: 16px;
+            color: #5a4a3a;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lesson-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #d4a574 0%, #b8956a 100%);
+            color: white;
+            border-radius: 50%;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .lesson-section p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #5a4a3a;
+            margin-bottom: 10px;
+        }
+
+        .lesson-insight {
+            background: linear-gradient(135deg, #faf8f5 0%, #f5ebe0 100%);
+            border-left: 4px solid #d4a574;
+            padding: 10px 12px;
+            margin: 12px 0;
+            font-size: 13px;
+            font-style: italic;
+            color: #6b5847;
+        }
+
+        .lesson-diagram {
+            background: white;
+            border: 2px solid #d4a574;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+            font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .lesson-steps {
+            margin: 12px 0;
+            padding-left: 8px;
+        }
+
+        .lesson-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            background: #d4a574;
+            color: white;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdara, sans-serif;
+        }
+
+        .try-it-button {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #e07a5f 0%, #cd5c5c 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            transition: all 0.3s ease;
+        }
+
+        .try-it-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .comparison-table-lesson {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        .comparison-table-lesson th,
+        .comparison-table-lesson td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #eddcd2;
+        }
+
+        .comparison-table-lesson th {
+            background: #f5ebe0;
+            font-weight: 600;
+            color: #5a4a3a;
+        }
+
+        .comparison-table-lesson td {
+            color: #6b5847;
+        }
+
+        .comparison-table-lesson tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Center Panel - Visualization */
+        .center-panel {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Item Chips Section */
+        .items-box {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(90, 74, 58, 0.08);
+            border: 1px solid #eddcd2;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+        .items-box h3 {
+            font-size: 14px;
+            color: #5a4a3a;
+            margin-bottom: 10px;
+            font-weight: 600;
+            border-bottom: 2px solid #d4a574;
+            padding-bottom: 5px;
+        }
+
+        .items-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .item-chip {
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            border: 2px solid transparent;
+        }
+
+        .item-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .item-chip.selected {
+            transform: scale(1.08);
+            border-color: #5a4a3a;
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.3);
+        }
+
+        /* Flow and Grid Panel */
+        .visualization-panel {
+            flex: 1;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(90, 74, 58, 0.08);
+            border: 1px solid #eddcd2;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            background: linear-gradient(135deg, #faf8f5 0%, #f5ebe0 100%);
+            border: 2px solid #d4a574;
+            border-radius: 10px;
+            padding: 12px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flow-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .flow-label {
+            font-size: 10px;
+            color: #8b7355;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .flow-input-box {
+            background: white;
+            border: 2px solid #d4a574;
+            border-radius: 8px;
+            padding: 8px 12px;
+            min-width: 80px;
+            text-align: center;
+            font-weight: 600;
+            color: #5a4a3a;
+            font-size: 13px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .flow-input-box.active {
+            border-color: #8b4513;
+            box-shadow: 0 0 15px rgba(139, 69, 19, 0.4);
+            transform: scale(1.05);
+        }
+
+        .flow-hash-container {
+            display: flex;
+            gap: 6px;
+        }
+
+        .flow-hash-box {
+            background: white;
+            border: 2px solid #d4a574;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-weight: 600;
+            color: #5a4a3a;
+            font-size: 11px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .flow-hash-box.active {
+            background: linear-gradient(135deg, #d4a574 0%, #b8956a 100%);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(212, 165, 116, 0.6);
+        }
+
+        .flow-positions-container {
+            display: flex;
+            gap: 6px;
+        }
+
+        .flow-position-box {
+            background: white;
+            border: 2px solid #d4a574;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-weight: 700;
+            color: #5a4a3a;
+            font-size: 11px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .flow-position-box.active {
+            background: linear-gradient(135deg, #e07a5f 0%, #cd5c5c 100%);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(224, 122, 95, 0.6);
+        }
+
+        .flow-arrow {
+            font-size: 20px;
+            color: #d4a574;
+            font-weight: bold;
+            margin: 0 4px;
+        }
+
+        .flow-arrow.active {
+            color: #8b4513;
+            animation: arrowPulse 0.5s ease;
+        }
+
+        @keyframes arrowPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.3);
+            }
+        }
+
+        /* Grid Section */
+        .grid-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .grid-header {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .grid-title {
+            font-size: 16px;
+            color: #5a4a3a;
+            font-weight: 600;
+        }
+
+        .grid-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .grid-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .row-label {
+            width: 30px;
+            text-align: center;
+            font-weight: 600;
+            color: #8b7355;
+            font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .grid-cells {
+            display: flex;
+            gap: 5px;
+            flex: 1;
+        }
+
+        .cell {
+            flex: 1;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%);
+            border: 2px solid #d4a574;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #5a4a3a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(90, 74, 58, 0.08);
+        }
+
+        .cell:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(90, 74, 58, 0.15);
+            z-index: 10;
+        }
+
+        .cell.highlighted {
+            border-width: 3px;
+            border-color: #8b4513;
+            box-shadow: 0 0 20px rgba(139, 69, 19, 0.4);
+            transform: scale(1.1);
+        }
+
+        .cell.animated {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+            }
+        }
+
+        .cell.collision-flash {
+            animation: collisionPulse 0.6s ease-out;
+        }
+
+        @keyframes collisionPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(205, 92, 92, 0);
+            }
+
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 0 25px rgba(205, 92, 92, 0.8);
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: #5a4a3a;
+            color: #faf8f5;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .right-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .right-panel::-webkit-scrollbar-track {
+            background: #f5ebe0;
+            border-radius: 10px;
+        }
+
+        .right-panel::-webkit-scrollbar-thumb {
+            background: #d4a574;
+            border-radius: 10px;
+        }
+
+        .control-box {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(90, 74, 58, 0.08);
+            border: 1px solid #eddcd2;
+        }
+
+        .control-box h3 {
+            font-size: 14px;
+            color: #5a4a3a;
+            margin-bottom: 10px;
+            font-weight: 600;
+            border-bottom: 2px solid #d4a574;
+            padding-bottom: 5px;
+        }
+
+        /* Accuracy Gauge */
+        .accuracy-gauge {
+            position: relative;
+            height: 22px;
+            background: linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 2px solid #d4a574;
+        }
+
+        .accuracy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #cd5c5c 0%, #e07a5f 30%, #f2a365 60%, #81b29a 100%);
+            border-radius: 10px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .accuracy-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .accuracy-value {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 6px;
+            background: linear-gradient(135deg, #d4a574, #b8956a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .comparison-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 8px;
+            padding: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #8b7355;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #d4a574;
+            margin-bottom: 6px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 8px;
+            padding: 8px;
+            background: #faf8f5;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+        }
+
+        .comparison-row.error-high {
+            border-left-color: #cd5c5c;
+            background: rgba(205, 92, 92, 0.08);
+        }
+
+        .comparison-row.error-medium {
+            border-left-color: #e07a5f;
+            background: rgba(224, 122, 95, 0.08);
+        }
+
+        .comparison-row.error-low {
+            border-left-color: #81b29a;
+            background: rgba(129, 178, 154, 0.08);
+        }
+
+        .comparison-item {
+            color: #5a4a3a;
+        }
+
+        .comparison-item.item-name {
+            font-weight: 600;
+        }
+
+        .comparison-item.true-count {
+            color: #6b8e7f;
+            font-weight: 600;
+        }
+
+        .comparison-item.estimate-count {
+            color: #d4a574;
+            font-weight: 600;
+        }
+
+        .comparison-item.error {
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #8b7355;
+            font-size: 12px;
+            padding: 25px 12px;
+            font-style: italic;
+        }
+
+        /* Controls */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            padding: 8px 12px;
+            border: 2px solid #d4a574;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #5a4a3a;
+            background: #faf8f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #b8956a;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
+        }
+
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #d4a574 0%, #b8956a 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #e07a5f 0%, #cd5c5c 100%);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #8b7355 0%, #6b5847 100%);
+        }
+
+        .result-display {
+            margin-top: 8px;
+            padding: 10px;
+            background: linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%);
+            border-radius: 8px;
+            border: 2px solid #d4a574;
+            font-size: 13px;
+            color: #5a4a3a;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Bottom Controls */
+        .bottom-controls {
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%);
+            border-top: 3px solid #d4a574;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 -2px 8px rgba(90, 74, 58, 0.1);
+        }
+
+        .bottom-controls button {
+            min-width: 130px;
+        }
+
+        /* Step Preview Box */
+        .step-preview {
+            background: linear-gradient(135deg, #faf8f5 0%, #f5ebe0 100%);
+            border: 2px solid #d4a574;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 13px;
+            color: #5a4a3a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .step-counter {
+            font-size: 12px;
+            color: #8b7355;
+            font-weight: 600;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5ebe0;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d4a574;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b8956a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Count-Min Sketch: Interactive Educational Demo</h1>
+        <p>Learn how this probabilistic data structure works through interactive lessons and live visualization.</p>
+    </div>
+
+    <div class="main-container">
+        <!-- Left Sidebar: Educational Lessons -->
+        <div class="lessons-sidebar">
+            <h2>Learning Guide</h2>
+
+            <!-- Lesson 1: What is CMS? -->
+            <div class="lesson-section" id="lesson1">
+                <h3><span class="lesson-number">1</span> What is Count-Min Sketch?</h3>
+                <p>Count-Min Sketch (CMS) is a probabilistic data structure that estimates the frequency of items in a
+                    data stream. Unlike exact counters, it uses fixed memory and trades perfect accuracy for space
+                    efficiency.</p>
+                <div class="lesson-insight">
+                    <strong>Key Insight:</strong> CMS never underestimates—it only overestimates. If the true count is
+                    5, CMS will return 5 or more, never 4.
+                </div>
+                <div class="lesson-diagram">
+                    <strong>Structure:</strong> A table with d rows (hash functions) × w columns (buckets)<br>
+                    <strong>Our Demo:</strong> 4 rows × 10 columns = 40 counters total
+                </div>
+            </div>
+
+            <!-- Lesson 2: Adding Items -->
+            <div class="lesson-section" id="lesson2">
+                <h3><span class="lesson-number">2</span> Adding Items</h3>
+                <p>When you add an item to the sketch, it follows a simple flow:</p>
+                <div class="lesson-steps">
+                    <div class="lesson-step">
+                        <span class="step-number">1</span>
+                        <span>Item enters the system (e.g., "apple")</span>
+                    </div>
+                    <div class="lesson-step">
+                        <span class="step-number">2</span>
+                        <span>Each hash function computes a position (0-9)</span>
+                    </div>
+                    <div class="lesson-step">
+                        <span class="step-number">3</span>
+                        <span>Four positions are determined (one per row)</span>
+                    </div>
+                    <div class="lesson-step">
+                        <span class="step-number">4</span>
+                        <span>Increment the counter at each position</span>
+                    </div>
+                </div>
+                <button class="try-it-button" onclick="demoAddItem()">Try It: Add "demo"</button>
+            </div>
+
+            <!-- Lesson 3: Understanding Collisions -->
+            <div class="lesson-section" id="lesson3">
+                <h3><span class="lesson-number">3</span> Understanding Collisions</h3>
+                <p>Collisions occur when different items hash to the same position. This is why counts can inflate—a
+                    counter might be shared by multiple items.</p>
+                <div class="lesson-diagram">
+                    <strong>Example:</strong><br>
+                    • "apple" hashes to position 3 in row 1<br>
+                    • "banana" also hashes to position 3 in row 1<br>
+                    • Counter at [1,3] now reflects BOTH items<br>
+                    • This causes overestimation for both
+                </div>
+                <div class="lesson-insight">
+                    <strong>Why It Works:</strong> With multiple rows using different hash functions, it's unlikely ALL
+                    rows will collide for the same pair of items.
+                </div>
+                <button class="try-it-button" onclick="demoCollision()">Try It: See a Collision</button>
+            </div>
+
+            <!-- Lesson 4: Query = Minimum -->
+            <div class="lesson-section" id="lesson4">
+                <h3><span class="lesson-number">4</span> Query = Minimum</h3>
+                <p>To query an item's frequency, we hash it to get positions in all rows, then take the MINIMUM of those
+                    counters.</p>
+                <div class="lesson-steps">
+                    <div class="lesson-step">
+                        <span class="step-number">1</span>
+                        <span>Hash item to get 4 positions</span>
+                    </div>
+                    <div class="lesson-step">
+                        <span class="step-number">2</span>
+                        <span>Read counter values at those positions</span>
+                    </div>
+                    <div class="lesson-step">
+                        <span class="step-number">3</span>
+                        <span>Return min(row1, row2, row3, row4)</span>
+                    </div>
+                </div>
+                <div class="lesson-insight">
+                    <strong>Why Minimum?</strong> If a position has collisions, its count is inflated. The minimum is
+                    most likely the row with fewest collisions, giving the best estimate.
+                </div>
+                <button class="try-it-button" onclick="demoQuery()">Try It: Query Items</button>
+            </div>
+
+            <!-- Lesson 5: No Deletion -->
+            <div class="lesson-section" id="lesson5">
+                <h3><span class="lesson-number">5</span> No Deletion</h3>
+                <p>Count-Min Sketch does not support deletion. Once an item is added, you cannot remove it without
+                    potentially corrupting other counts.</p>
+                <div class="lesson-diagram">
+                    <strong>Why Deletion Fails:</strong><br>
+                    If "apple" and "banana" collide at position [2,5]:<br>
+                    • Counter = 2 (both contributed)<br>
+                    • Decrementing for "apple" would affect "banana"<br>
+                    • You'd undercount "banana" incorrectly
+                </div>
+                <div class="lesson-insight">
+                    <strong>Solution:</strong> Use Count-Min Sketch with Conservative Update, or consider alternative
+                    structures like Count Sketch if you need deletions.
+                </div>
+            </div>
+
+            <!-- Lesson 6: When to Use -->
+            <div class="lesson-section" id="lesson6">
+                <h3><span class="lesson-number">6</span> When to Use CMS</h3>
+                <p>Count-Min Sketch excels in scenarios where approximate counts are acceptable and memory is limited.
+                </p>
+                <table class="comparison-table-lesson">
+                    <thead>
+                        <tr>
+                            <th>Use Case</th>
+                            <th>CMS Good?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Network traffic analysis</td>
+                            <td>✓ Excellent</td>
+                        </tr>
+                        <tr>
+                            <td>Top-K heavy hitters</td>
+                            <td>✓ Very Good</td>
+                        </tr>
+                        <tr>
+                            <td>Stream processing</td>
+                            <td>✓ Excellent</td>
+                        </tr>
+                        <tr>
+                            <td>Financial transactions</td>
+                            <td>✗ Need exact counts</td>
+                        </tr>
+                        <tr>
+                            <td>Database join estimates</td>
+                            <td>✓ Good</td>
+                        </tr>
+                        <tr>
+                            <td>Click stream analytics</td>
+                            <td>✓ Excellent</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="lesson-insight">
+                    <strong>Rule of Thumb:</strong> If you can tolerate 1-5% error and need to process millions of items
+                    with limited memory, CMS is ideal.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Center Panel: Visualization -->
+        <div class="center-panel">
+            <!-- Items Display -->
+            <div class="items-box">
+                <h3>Added Items</h3>
+                <div class="items-container" id="itemsContainer">
+                    <div class="empty-state" style="width: 100%; padding: 10px;">No items added yet</div>
+                </div>
+            </div>
+
+            <!-- Flow Diagram + Grid -->
+            <div class="visualization-panel">
+                <!-- Flow Diagram -->
+                <div class="flow-diagram">
+                    <div class="flow-stage">
+                        <div class="flow-label">Input</div>
+                        <div class="flow-input-box" id="flowInput">—</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow1">→</div>
+
+                    <div class="flow-stage">
+                        <div class="flow-label">Hash Functions</div>
+                        <div class="flow-hash-container">
+                            <div class="flow-hash-box" id="hash1">h1</div>
+                            <div class="flow-hash-box" id="hash2">h2</div>
+                            <div class="flow-hash-box" id="hash3">h3</div>
+                            <div class="flow-hash-box" id="hash4">h4</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow2">→</div>
+
+                    <div class="flow-stage">
+                        <div class="flow-label">Positions</div>
+                        <div class="flow-positions-container">
+                            <div class="flow-position-box" id="pos1">—</div>
+                            <div class="flow-position-box" id="pos2">—</div>
+                            <div class="flow-position-box" id="pos3">—</div>
+                            <div class="flow-position-box" id="pos4">—</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow3">↓</div>
+                </div>
+
+                <!-- Grid Section -->
+                <div class="grid-section">
+                    <div class="grid-header">
+                        <div class="grid-title">Hash Table (4 × 10)</div>
+                    </div>
+                    <div class="grid-container" id="gridContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Metrics & Controls -->
+        <div class="right-panel">
+            <!-- Accuracy Gauge -->
+            <div class="control-box">
+                <h3>Accuracy Gauge</h3>
+                <div class="accuracy-gauge">
+                    <div class="accuracy-fill" id="accuracyFill" style="width: 100%;"></div>
+                </div>
+                <div class="accuracy-value" id="accuracyValue">100%</div>
+            </div>
+
+            <!-- Comparison Table -->
+            <div class="control-box" style="flex: 1; display: flex; flex-direction: column;">
+                <h3>True Count vs Estimate</h3>
+                <div class="comparison-header">
+                    <div>Item</div>
+                    <div>True</div>
+                    <div>Est.</div>
+                    <div>Error</div>
+                </div>
+                <div class="comparison-table" id="comparisonTable">
+                    <div class="empty-state">Query items to see comparison data</div>
+                </div>
+            </div>
+
+            <!-- Add Item -->
+            <div class="control-box">
+                <h3>Add Item</h3>
+                <div class="input-group">
+                    <input type="text" id="addInput" placeholder="Enter item name..." />
+                    <button class="btn-primary" onclick="addItem()">Add to Sketch</button>
+                </div>
+            </div>
+
+            <!-- Query Item -->
+            <div class="control-box">
+                <h3>Query Item</h3>
+                <div class="input-group">
+                    <input type="text" id="queryInput" placeholder="Enter item to query..." />
+                    <button class="btn-secondary" onclick="queryItem()">Query Count</button>
+                </div>
+                <div class="result-display" id="queryResult">Enter an item to query its frequency</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-controls">
+        <div class="step-counter" id="stepCounter">Click "Next Step" to begin the guided demo</div>
+        <div class="step-preview" id="stepPreview">Step 1: Add 'apple'</div>
+        <button class="btn-primary" id="nextStepBtn" onclick="nextStep()">Next Step</button>
+        <button class="btn-reset" onclick="resetSketch()">Reset All</button>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Count-Min Sketch Configuration
+        const ROWS = 4;
+        const COLS = 10;
+        const sketch = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        const itemColors = {};
+        const itemCounts = {};
+        const cellContributions = Array(ROWS).fill(null).map(() =>
+            Array(COLS).fill(null).map(() => ({}))
+        );
+
+        // Warm color palette
+        const colorPalette = [
+            '#cd5c5c', '#e07a5f', '#f2a365', '#d4a574', '#b8956a',
+            '#a67c52', '#8b7355', '#c97064', '#e8a87c', '#d2691e',
+            '#bc8f8f', '#daa520', '#cd853f', '#c19a6b', '#cc7a3d'
+        ];
+        let colorIndex = 0;
+        let selectedItem = null;
+        let queryResults = [];
+
+        // Guided Demo State
+        let currentStep = 0;
+        const demoSteps = [
+            { action: 'add', item: 'apple', description: 'Add "apple"' },
+            { action: 'add', item: 'apple', description: 'Add "apple" again' },
+            { action: 'add', item: 'banana', description: 'Add "banana"' },
+            { action: 'add', item: 'apple', description: 'Add "apple" (3rd time)' },
+            { action: 'add', item: 'cherry', description: 'Add "cherry"' },
+            { action: 'add', item: 'banana', description: 'Add "banana" again' },
+            { action: 'add', item: 'date', description: 'Add "date"' },
+            { action: 'add', item: 'apple', description: 'Add "apple" (4th time)' },
+            { action: 'add', item: 'cherry', description: 'Add "cherry" again' },
+            { action: 'add', item: 'banana', description: 'Add "banana" (3rd time)' },
+            { action: 'query', item: 'apple', description: 'Query "apple"' },
+            { action: 'query', item: 'banana', description: 'Query "banana"' },
+            { action: 'query', item: 'cherry', description: 'Query "cherry"' },
+            { action: 'query', item: 'date', description: 'Query "date"' }
+        ];
+
+        // Hash functions for Count-Min Sketch
+        function hash1(str) {
+            let hash = 5381;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) + hash) + str.charCodeAt(i);
+            }
+            return Math.abs(hash) % COLS;
+        }
+
+        function hash2(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash = hash & hash;
+            }
+            return Math.abs(hash) % COLS;
+        }
+
+        function hash3(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return Math.abs(hash) % COLS;
+        }
+
+        function hash4(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 4) + hash) + char;
+            }
+            return Math.abs(hash) % COLS;
+        }
+
+        const hashFunctions = [hash1, hash2, hash3, hash4];
+
+        // Flow diagram animation
+        async function animateFlow(item, positions) {
+            // Reset all flow elements
+            document.getElementById('flowInput').classList.remove('active');
+            ['hash1', 'hash2', 'hash3', 'hash4'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+            ['pos1', 'pos2', 'pos3', 'pos4'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+            ['arrow1', 'arrow2', 'arrow3'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+
+            // Step 1: Show input
+            document.getElementById('flowInput').textContent = item;
+            document.getElementById('flowInput').classList.add('active');
+            await sleep(300);
+
+            // Step 2: Animate arrow and hash functions
+            document.getElementById('arrow1').classList.add('active');
+            await sleep(200);
+
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`hash${i + 1}`).classList.add('active');
+                await sleep(100);
+            }
+            await sleep(200);
+
+            // Step 3: Animate arrow and show positions
+            document.getElementById('arrow2').classList.add('active');
+            await sleep(200);
+
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`pos${i + 1}`).textContent = positions[i].col;
+                document.getElementById(`pos${i + 1}`).classList.add('active');
+                await sleep(100);
+            }
+            await sleep(200);
+
+            // Step 4: Animate arrow to grid
+            document.getElementById('arrow3').classList.add('active');
+            await sleep(300);
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize grid
+        function initGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+
+            for (let row = 0; row < ROWS; row++) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'grid-row';
+
+                const label = document.createElement('div');
+                label.className = 'row-label';
+                label.textContent = `h${row + 1}`;
+                rowDiv.appendChild(label);
+
+                const cellsDiv = document.createElement('div');
+                cellsDiv.className = 'grid-cells';
+
+                for (let col = 0; col < COLS; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = '0';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.addEventListener('mouseenter', showTooltip);
+                    cell.addEventListener('mouseleave', hideTooltip);
+                    cellsDiv.appendChild(cell);
+                }
+
+                rowDiv.appendChild(cellsDiv);
+                container.appendChild(rowDiv);
+            }
+        }
+
+        // Get item color
+        function getItemColor(item) {
+            if (!itemColors[item]) {
+                itemColors[item] = colorPalette[colorIndex % colorPalette.length];
+                colorIndex++;
+            }
+            return itemColors[item];
+        }
+
+        // Update cell display with warm gradient
+        function updateCell(row, col) {
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            const count = sketch[row][col];
+            cell.textContent = count;
+
+            const contributions = cellContributions[row][col];
+            const items = Object.keys(contributions);
+
+            if (items.length > 0) {
+                if (count === 0) {
+                    cell.style.background = 'linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%)';
+                    cell.style.color = '#5a4a3a';
+                } else if (count === 1) {
+                    const color = getItemColor(items[0]);
+                    cell.style.background = color;
+                    cell.style.color = 'white';
+                } else {
+                    // Create warm gradient from beige → coral → red based on count
+                    const intensity = Math.min(count / 5, 1);
+                    if (intensity < 0.33) {
+                        const alpha = intensity * 3;
+                        cell.style.background = `rgba(242, 163, 101, ${0.4 + alpha * 0.3})`;
+                    } else if (intensity < 0.66) {
+                        const alpha = (intensity - 0.33) * 3;
+                        cell.style.background = `rgba(224, 122, 95, ${0.5 + alpha * 0.3})`;
+                    } else {
+                        const alpha = (intensity - 0.66) * 3;
+                        cell.style.background = `rgba(205, 92, 92, ${0.6 + alpha * 0.4})`;
+                    }
+                    cell.style.color = 'white';
+                }
+            } else {
+                cell.style.background = 'linear-gradient(135deg, #f5ebe0 0%, #eddcd2 100%)';
+                cell.style.color = '#5a4a3a';
+            }
+        }
+
+        // Add item
+        async function addItem() {
+            const input = document.getElementById('addInput');
+            const item = input.value.trim().toLowerCase();
+
+            if (!item) return;
+
+            // Update counts
+            itemCounts[item] = (itemCounts[item] || 0) + 1;
+
+            // Check for collisions
+            const positions = [];
+            let hasCollision = false;
+
+            for (let row = 0; row < ROWS; row++) {
+                const col = hashFunctions[row](item);
+                const oldValue = sketch[row][col];
+
+                sketch[row][col]++;
+                cellContributions[row][col][item] = (cellContributions[row][col][item] || 0) + 1;
+                positions.push({ row, col });
+
+                if (oldValue > 0 && Object.keys(cellContributions[row][col]).length > 1) {
+                    hasCollision = true;
+                }
+            }
+
+            // Animate flow diagram
+            await animateFlow(item, positions);
+
+            // Update cells with animation
+            positions.forEach(({ row, col }) => {
+                updateCell(row, col);
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (hasCollision) {
+                    cell.classList.add('collision-flash');
+                    setTimeout(() => cell.classList.remove('collision-flash'), 600);
+                } else {
+                    cell.classList.add('animated');
+                    setTimeout(() => cell.classList.remove('animated'), 500);
+                }
+            });
+
+            // Update items list
+            updateItemsList();
+            updateAccuracy();
+
+            input.value = '';
+        }
+
+        // Update items list
+        function updateItemsList() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+
+            const sortedItems = Object.entries(itemCounts)
+                .sort((a, b) => b[1] - a[1]);
+
+            if (sortedItems.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="width: 100%; padding: 10px;">No items added yet</div>';
+                return;
+            }
+
+            sortedItems.forEach(([item, count]) => {
+                const chip = document.createElement('div');
+                chip.className = 'item-chip';
+                chip.style.background = getItemColor(item);
+                chip.textContent = `${item} (${count})`;
+                chip.onclick = () => toggleItemHighlight(item, chip);
+
+                if (selectedItem === item) {
+                    chip.classList.add('selected');
+                }
+
+                container.appendChild(chip);
+            });
+        }
+
+        // Toggle item highlight
+        function toggleItemHighlight(item, chip) {
+            document.querySelectorAll('.cell.highlighted').forEach(cell => {
+                cell.classList.remove('highlighted');
+            });
+
+            document.querySelectorAll('.item-chip.selected').forEach(c => {
+                c.classList.remove('selected');
+            });
+
+            if (selectedItem === item) {
+                selectedItem = null;
+            } else {
+                selectedItem = item;
+                chip.classList.add('selected');
+
+                for (let row = 0; row < ROWS; row++) {
+                    const col = hashFunctions[row](item);
+                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    cell.classList.add('highlighted');
+                }
+            }
+        }
+
+        // Query item
+        function queryItem() {
+            const input = document.getElementById('queryInput');
+            const item = input.value.trim().toLowerCase();
+            const result = document.getElementById('queryResult');
+
+            if (!item) {
+                result.textContent = 'Enter an item to query its frequency';
+                return;
+            }
+
+            const estimates = [];
+            for (let row = 0; row < ROWS; row++) {
+                const col = hashFunctions[row](item);
+                estimates.push(sketch[row][col]);
+
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                cell.classList.add('highlighted');
+                setTimeout(() => cell.classList.remove('highlighted'), 1500);
+            }
+
+            const estimate = Math.min(...estimates);
+            const actual = itemCounts[item] || 0;
+            const error = Math.abs(estimate - actual);
+            const errorPercent = actual > 0 ? ((error / actual) * 100).toFixed(1) : (estimate > 0 ? '∞' : '0');
+
+            result.textContent = `"${item}": Estimate = ${estimate}, Actual = ${actual}`;
+
+            // Update comparison table
+            const existingIndex = queryResults.findIndex(r => r.item === item);
+            if (existingIndex >= 0) {
+                queryResults[existingIndex] = { item, trueCount: actual, estimate, errorPercent };
+            } else {
+                queryResults.unshift({ item, trueCount: actual, estimate, errorPercent });
+            }
+
+            if (queryResults.length > 12) queryResults.pop();
+
+            updateComparisonTable();
+            updateAccuracy();
+            input.value = '';
+        }
+
+        // Update comparison table
+        function updateComparisonTable() {
+            const table = document.getElementById('comparisonTable');
+
+            if (queryResults.length === 0) {
+                table.innerHTML = '<div class="empty-state">Query items to see comparison data</div>';
+                return;
+            }
+
+            table.innerHTML = queryResults.map(r => {
+                const errorClass = r.errorPercent === '∞' || parseFloat(r.errorPercent) > 50 ? 'error-high' :
+                    parseFloat(r.errorPercent) > 20 ? 'error-medium' : 'error-low';
+
+                return `
+                    <div class="comparison-row ${errorClass}">
+                        <div class="comparison-item item-name">${r.item}</div>
+                        <div class="comparison-item true-count">${r.trueCount}</div>
+                        <div class="comparison-item estimate-count">${r.estimate}</div>
+                        <div class="comparison-item error">${r.errorPercent}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update accuracy
+        function updateAccuracy() {
+            if (Object.keys(itemCounts).length === 0) {
+                document.getElementById('accuracyFill').style.width = '100%';
+                document.getElementById('accuracyValue').textContent = '100%';
+                return;
+            }
+
+            let totalError = 0;
+            let totalQueries = 0;
+
+            for (const item in itemCounts) {
+                const estimates = [];
+                for (let row = 0; row < ROWS; row++) {
+                    const col = hashFunctions[row](item);
+                    estimates.push(sketch[row][col]);
+                }
+                const estimate = Math.min(...estimates);
+                const trueCount = itemCounts[item];
+                const error = Math.abs(estimate - trueCount);
+                totalError += error;
+                totalQueries += trueCount;
+            }
+
+            const accuracy = totalQueries > 0 ? Math.max(0, 100 - (totalError / totalQueries * 100)) : 100;
+            const accuracyPercent = Math.round(accuracy);
+
+            document.getElementById('accuracyFill').style.width = accuracyPercent + '%';
+            document.getElementById('accuracyValue').textContent = accuracyPercent + '%';
+        }
+
+        // Tooltip
+        function showTooltip(e) {
+            const cell = e.target;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            const contributions = cellContributions[row][col];
+
+            const items = Object.entries(contributions);
+            if (items.length === 0) return;
+
+            const tooltip = document.getElementById('tooltip');
+            const lines = items.map(([item, count]) => `${item} (${count})`).join(', ');
+            tooltip.innerHTML = `<strong>Items:</strong> ${lines}`;
+
+            const rect = cell.getBoundingClientRect();
+            tooltip.style.left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 'px';
+            tooltip.style.top = rect.top - tooltip.offsetHeight - 10 + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        // Guided Step-by-Step Demo
+        async function nextStep() {
+            if (currentStep >= demoSteps.length) {
+                return;
+            }
+
+            const step = demoSteps[currentStep];
+
+            if (step.action === 'add') {
+                document.getElementById('addInput').value = step.item;
+                await addItem();
+            } else if (step.action === 'query') {
+                document.getElementById('queryInput').value = step.item;
+                queryItem();
+            }
+
+            currentStep++;
+            updateStepUI();
+        }
+
+        function updateStepUI() {
+            const stepCounter = document.getElementById('stepCounter');
+            const stepPreview = document.getElementById('stepPreview');
+            const nextStepBtn = document.getElementById('nextStepBtn');
+
+            if (currentStep >= demoSteps.length) {
+                stepCounter.textContent = 'Demo Complete!';
+                stepPreview.textContent = 'Try Your Own! Use the controls above';
+                nextStepBtn.disabled = true;
+            } else {
+                stepCounter.textContent = `Step ${currentStep + 1} of ${demoSteps.length}`;
+                stepPreview.textContent = `Next: ${demoSteps[currentStep].description}`;
+                nextStepBtn.disabled = false;
+            }
+        }
+
+        // Reset sketch
+        function resetSketch() {
+            sketch.forEach((row, i) => row.forEach((_, j) => sketch[i][j] = 0));
+            Object.keys(itemCounts).forEach(key => delete itemCounts[key]);
+            Object.keys(itemColors).forEach(key => delete itemColors[key]);
+            cellContributions.forEach((row, i) => row.forEach((_, j) => cellContributions[i][j] = {}));
+            colorIndex = 0;
+            selectedItem = null;
+            queryResults = [];
+            currentStep = 0;
+
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    updateCell(i, j);
+                }
+            }
+
+            // Reset flow diagram
+            document.getElementById('flowInput').textContent = '—';
+            ['pos1', 'pos2', 'pos3', 'pos4'].forEach(id => {
+                document.getElementById(id).textContent = '—';
+            });
+
+            updateItemsList();
+            updateComparisonTable();
+            updateAccuracy();
+            updateStepUI();
+            document.getElementById('queryResult').textContent = 'Enter an item to query its frequency';
+
+            // Clear lesson highlights
+            document.querySelectorAll('.lesson-section').forEach(section => {
+                section.classList.remove('active');
+            });
+        }
+
+        // Lesson interaction functions
+        function demoAddItem() {
+            document.getElementById('lesson2').classList.add('active');
+            setTimeout(() => document.getElementById('lesson2').classList.remove('active'), 3000);
+
+            document.getElementById('addInput').value = 'demo';
+            addItem();
+        }
+
+        function demoCollision() {
+            document.getElementById('lesson3').classList.add('active');
+            setTimeout(() => document.getElementById('lesson3').classList.remove('active'), 4000);
+
+            // Add items that will likely collide
+            const collisionItems = ['alpha', 'beta', 'gamma', 'delta', 'alpha', 'beta'];
+            let idx = 0;
+            const interval = setInterval(async () => {
+                if (idx >= collisionItems.length) {
+                    clearInterval(interval);
+                    return;
+                }
+                document.getElementById('addInput').value = collisionItems[idx];
+                await addItem();
+                idx++;
+            }, 800);
+        }
+
+        function demoQuery() {
+            document.getElementById('lesson4').classList.add('active');
+            setTimeout(() => document.getElementById('lesson4').classList.remove('active'), 3000);
+
+            // Query all current items
+            const items = Object.keys(itemCounts);
+            if (items.length > 0) {
+                items.forEach((item, i) => {
+                    setTimeout(() => {
+                        document.getElementById('queryInput').value = item;
+                        queryItem();
+                    }, i * 500);
+                });
+            } else {
+                // If no items, run a quick demo first
+                const quickDemo = ['test1', 'test2', 'test3'];
+                let idx = 0;
+                const addInterval = setInterval(async () => {
+                    if (idx >= quickDemo.length) {
+                        clearInterval(addInterval);
+                        setTimeout(() => {
+                            quickDemo.forEach((item, i) => {
+                                setTimeout(() => {
+                                    document.getElementById('queryInput').value = item;
+                                    queryItem();
+                                }, i * 500);
+                            });
+                        }, 500);
+                        return;
+                    }
+                    document.getElementById('addInput').value = quickDemo[idx];
+                    await addItem();
+                    idx++;
+                }, 600);
+            }
+        }
+
+        // Lesson section click handlers
+        document.querySelectorAll('.lesson-section').forEach(section => {
+            section.addEventListener('click', (e) => {
+                // Don't trigger if clicking a button
+                if (e.target.tagName === 'BUTTON') return;
+
+                // Toggle active state
+                const wasActive = section.classList.contains('active');
+                document.querySelectorAll('.lesson-section').forEach(s => s.classList.remove('active'));
+                if (!wasActive) {
+                    section.classList.add('active');
+                }
+            });
+        });
+
+        // Event listeners
+        document.getElementById('addInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addItem();
+        });
+
+        document.getElementById('queryInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') queryItem();
+        });
+
+        // Initialize
+        initGrid();
+        updateStepUI();
+    </script>
+</body>
+
+</html>
