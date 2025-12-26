@@ -22,4 +22,3 @@ export const components: MDXComponents = {
   AlgorithmDemos,
   EvolvedDemos,
 }
-
