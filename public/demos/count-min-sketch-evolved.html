@@ -16,10 +16,14 @@
             font-family: Georgia, 'Times New Roman', serif;
             background: #faf8f5;
             color: #5a4a3a;
-            height: 100vh;
-            overflow: hidden;
+            height: 100%;
+            overflow: auto;
             display: flex;
             flex-direction: column;
+        }
+
+        html {
+            height: 100%;
         }
 
         .header {
@@ -49,7 +53,7 @@
             display: flex;
             padding: 15px;
             gap: 15px;
-            overflow: hidden;
+            overflow: auto;
         }
 
         /* Lessons Sidebar */
@@ -626,23 +630,6 @@
             position: relative;
         }
 
-        .accuracy-fill::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
-        }
 
         .accuracy-value {
             font-size: 24px;

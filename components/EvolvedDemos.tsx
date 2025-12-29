@@ -37,70 +37,46 @@ const EvolvedDemos = () => {
   }, [])
 
   return (
-    <div className="my-8 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+    <div className="h-full flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
       {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800 flex-shrink-0">
         <button
           onClick={() => setActiveTab('mergesort')}
-          className={`m-1 flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-bold transition-all ${
-            activeTab === 'mergesort'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
-          }`}
+          className={`m-1 flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-bold transition-all ${activeTab === 'mergesort'
+            ? 'bg-emerald-600 text-white shadow-md'
+            : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
+            }`}
         >
           🌳 Merge Sort (Gen 1)
         </button>
         <button
           onClick={() => setActiveTab('cms')}
-          className={`m-1 flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-bold transition-all ${
-            activeTab === 'cms'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
-          }`}
+          className={`m-1 flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-bold transition-all ${activeTab === 'cms'
+            ? 'bg-emerald-600 text-white shadow-md'
+            : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
+            }`}
         >
           📊 Count-Min Sketch (Gen 11)
         </button>
       </div>
 
-      {/* Demo Container - using scale transform to fit content */}
-      <div
-        className="relative overflow-hidden bg-slate-100 dark:bg-slate-800"
-        style={{ height: '700px' }}
-      >
-        <div
-          style={{
-            transform: 'scale(0.85)',
-            transformOrigin: 'top left',
-            width: '117.6%', // 1/0.85 to maintain full width
-            height: '117.6%',
-          }}
-        >
-          {activeTab === 'mergesort' ? (
-            mergeSortHtml ? (
-              <iframe
-                srcDoc={mergeSortHtml}
-                className="w-full border-0"
-                style={{ height: '900px' }}
-                title="Merge Sort Evolved Demo (Generation 1, Agent 1)"
-                sandbox="allow-scripts"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-slate-500">
-                Loading...
-              </div>
-            )
-          ) : cmsHtml ? (
-            <iframe
-              srcDoc={cmsHtml}
-              className="w-full border-0"
-              style={{ height: '950px' }}
-              title="Count-Min Sketch Evolved Demo (Generation 11, Agent 3)"
-              sandbox="allow-scripts"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-slate-500">Loading...</div>
-          )}
-        </div>
+      {/* Demo Container - simple full-height iframe */}
+      <div className="flex-1 relative overflow-hidden bg-slate-100 dark:bg-slate-800">
+        {activeTab === 'mergesort' ? (
+          <iframe
+            src="/demos/merge-sort-evolved.html"
+            className="w-full h-full border-0"
+            title="Merge Sort Evolved Demo"
+            sandbox="allow-scripts"
+          />
+        ) : (
+          <iframe
+            src="/demos/count-min-sketch-evolved.html"
+            className="w-full h-full border-0"
+            title="Count-Min Sketch Evolved Demo"
+            sandbox="allow-scripts"
+          />
+        )}
       </div>
 
       {/* Caption */}
