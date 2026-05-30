@@ -23,7 +23,6 @@ const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof Pos
   PostBanner,
 }
 
-// Filter to only free-writing posts
 const freeWritingPosts = allBlogs.filter((p) => p.path.startsWith('free-writing-blog'))
 
 export async function generateMetadata(props: {
@@ -36,7 +35,6 @@ export async function generateMetadata(props: {
   )
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
-    // Always use English version of author (no language field means English)
     const authorResults =
       allAuthors.find((p) => p.slug === author && !('language' in p)) ||
       allAuthors.find((p) => p.slug === author)
@@ -58,10 +56,14 @@ export async function generateMetadata(props: {
       url: img && img.includes('http') ? img : siteMetadata.siteUrl + img,
     }
   })
+  const canonicalUrl = `${siteMetadata.siteUrl}/${params.locale}/free-writing/${post.slug}`
 
   return {
     title: post.title,
     description: post.summary,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title: post.title,
       description: post.summary,
@@ -70,7 +72,7 @@ export async function generateMetadata(props: {
       type: 'article',
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
-      url: `${siteMetadata.siteUrl}/${params.locale}/free-writing/${post.slug}`,
+      url: canonicalUrl,
       images: ogImages,
       authors: authors.length > 0 ? authors : [siteMetadata.author],
     },
@@ -103,7 +105,6 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
   const { locale } = params
   const slug = decodeURI(params.slug.join('/'))
 
-  // Filter posts by locale for navigation (only free-writing posts)
   const allLocalePosts = freeWritingPosts.filter((p) => (p.language || 'en') === locale)
   const sortedCoreContents = allCoreContent(sortPosts(allLocalePosts))
   const postIndex = sortedCoreContents.findIndex((p) => p.slug === slug)
@@ -119,7 +120,6 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
   ) as Blog
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
-    // Always use English version of author (no language field means English)
     const authorResults =
       allAuthors.find((p) => p.slug === author && !('language' in p)) ||
       allAuthors.find((p) => p.slug === author)
