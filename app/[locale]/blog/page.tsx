@@ -3,6 +3,7 @@ import { allBlogs } from 'contentlayer/generated'
 import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
 import { Locale, locales, getTranslation } from '@/i18n/config'
+import { isBlogPost, isPostInLocale, isPublishedPost } from '@/lib/content/postRoutes'
 
 const POSTS_PER_PAGE = 5
 
@@ -22,10 +23,11 @@ export default async function BlogPage({
   searchParams: Promise<{ page: string }>
 }) {
   const { locale } = await params
-  const allPosts = sortPosts(allBlogs)
   const isDev = process.env.NODE_ENV === 'development'
-  const filteredPosts = allPosts.filter(
-    (post) => (post.language || 'en') === locale && (isDev || !post.draft)
+  const filteredPosts = sortPosts(
+    allBlogs.filter(
+      (post) => isBlogPost(post) && isPostInLocale(post, locale) && isPublishedPost(post, isDev)
+    )
   )
   const posts = allCoreContent(filteredPosts)
   const pageNumber = 1
