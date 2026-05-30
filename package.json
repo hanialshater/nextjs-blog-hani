@@ -8,9 +8,9 @@
     "start": "next start",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
-    "lint": "eslint pages app components lib layouts scripts --max-warnings=0",
-    "lint:fix": "eslint pages app components lib layouts scripts --fix",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint app components lib layouts scripts tests --max-warnings=0",
+    "lint:fix": "eslint app components lib layouts scripts tests --fix",
+    "typecheck": "contentlayer2 build && tsc --noEmit",
     "test": "playwright test",
     "check": "yarn typecheck && yarn lint && yarn build && yarn test",
     "prepare": "husky"

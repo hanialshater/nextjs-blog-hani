@@ -1,33 +1,40 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Navigation and Free Writing Page', () => {
-  test('should have "Free Writing" link in header pointing to /free-writing', async ({ page }) => {
-    await page.goto('/')
-    const freeWritingLink = page.getByRole('link', { name: 'Free Writing' })
-    await expect(freeWritingLink).toBeVisible()
-    await expect(freeWritingLink).toHaveAttribute('href', '/free-writing')
+test.describe('Navigation and localized content pages', () => {
+  test('should have localized header links for writing, projects, and demos', async ({ page }) => {
+    await page.goto('/en')
+
+    const header = page.locator('header')
+    await expect(header.getByRole('link', { name: 'Free Writing' })).toHaveAttribute(
+      'href',
+      '/en/free-writing'
+    )
+    await expect(header.getByRole('link', { name: 'Projects' })).toHaveAttribute(
+      'href',
+      '/en/projects'
+    )
+    await expect(header.getByRole('link', { name: 'Demos' })).toHaveAttribute('href', '/en/demos')
   })
 
-  test('should load /free-writing page and display correct title', async ({ page }) => {
-    await page.goto('/free-writing')
-    await expect(page).toHaveTitle(/Free Writing/)
-    const pageTitle = page.getByRole('heading', { name: 'Free Writing' })
-    await expect(pageTitle).toBeVisible()
-  })
-
-  test('/free-writing page should list sample free writing post and not a blog post', async ({
+  test('should load the localized free-writing page and display current posts', async ({
     page,
   }) => {
-    await page.goto('/free-writing')
+    await page.goto('/en/free-writing')
 
-    // Check for the sample free writing post
-    const samplePostTitle = 'My First Free Writing Post'
-    const samplePostLink = page.getByRole('link', { name: samplePostTitle })
-    await expect(samplePostLink).toBeVisible()
+    await expect(page).toHaveTitle(/Free Writing/)
+    await expect(page.getByRole('heading', { name: 'Free Writing' })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Agent Autonomy - Part 2/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'The Time Machine' })).not.toBeVisible()
+  })
 
-    // Check that a regular blog post is NOT listed
-    const regularBlogPostTitle = 'The Time Machine' // Title of a known blog post
-    const regularPostLink = page.getByRole('link', { name: regularBlogPostTitle })
-    await expect(regularPostLink).not.toBeVisible()
+  test('should list standalone mini demos and open an individual demo shell', async ({ page }) => {
+    await page.goto('/en/demos')
+
+    await expect(page.getByRole('heading', { name: 'Demos', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Algorithm Playground' })).toBeVisible()
+
+    await page.getByRole('link', { name: 'Algorithm Playground' }).first().click()
+    await expect(page).toHaveURL(/\/en\/demos\/algorithm-playground$/)
+    await expect(page.getByRole('heading', { name: 'Algorithm Playground' })).toBeVisible()
   })
 })

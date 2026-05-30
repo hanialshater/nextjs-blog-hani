@@ -1,29 +1,13 @@
-import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
-import { allBlogs } from 'contentlayer/generated'
 import { genPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
 import { Locale, locales, getTranslation } from '@/i18n/config'
 import { notFound } from 'next/navigation'
-
-const POSTS_PER_PAGE = 5
+import { getPaginatedPosts, getPaginatedStaticParams } from '@/lib/content/posts'
 
 export const metadata = genPageMetadata({ title: 'Free Writing' })
 
 export async function generateStaticParams() {
-  const params: { locale: string; num: string }[] = []
-
-  for (const locale of locales) {
-    const freeWritingPosts = allBlogs.filter(
-      (post) => post.path.startsWith('free-writing-blog') && (post.language || 'en') === locale
-    )
-    const totalPages = Math.ceil(freeWritingPosts.length / POSTS_PER_PAGE)
-
-    for (let i = 1; i <= totalPages; i++) {
-      params.push({ locale, num: String(i) })
-    }
-  }
-
-  return params
+  return getPaginatedStaticParams('free-writing', locales)
 }
 
 export default async function FreeWritingPageNum({
@@ -38,26 +22,15 @@ export default async function FreeWritingPageNum({
     return notFound()
   }
 
-  const isDev = process.env.NODE_ENV === 'development'
-  const freeWritingPosts = allBlogs.filter(
-    (post) =>
-      post.path.startsWith('free-writing-blog') &&
-      (post.language || 'en') === locale &&
-      (isDev || !post.draft)
+  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts(
+    'free-writing',
+    locale,
+    pageNumber
   )
-  const posts = allCoreContent(sortPosts(freeWritingPosts))
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
+  const { totalPages } = pagination
 
   if (pageNumber > totalPages) {
     return notFound()
-  }
-
-  const startIndex = (pageNumber - 1) * POSTS_PER_PAGE
-  const endIndex = startIndex + POSTS_PER_PAGE
-  const initialDisplayPosts = posts.slice(startIndex, endIndex)
-  const pagination = {
-    currentPage: pageNumber,
-    totalPages: totalPages,
   }
 
   const t = (key: string) => getTranslation(locale as Locale, key)
