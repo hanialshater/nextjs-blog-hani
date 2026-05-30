@@ -27,7 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: 'blog', priority: 0.9, changeFrequency: 'weekly' as const },
     { path: 'free-writing', priority: 0.8, changeFrequency: 'weekly' as const },
     { path: 'projects', priority: 0.8, changeFrequency: 'monthly' as const },
-    { path: 'tags', priority: 0.5, changeFrequency: 'monthly' as const },
+    { path: 'about', priority: 0.7, changeFrequency: 'monthly' as const },
   ]
 
   const routes = staticRoutes.flatMap((route) =>
