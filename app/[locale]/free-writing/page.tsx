@@ -25,7 +25,8 @@ export default async function FreeWritingPage({
   const { locale } = await params
   const isDev = process.env.NODE_ENV === 'development'
   const freeWritingPosts = allBlogs.filter(
-    (post) => isFreeWritingPost(post) && isPostInLocale(post, locale) && isPublishedPost(post, isDev)
+    (post) =>
+      isFreeWritingPost(post) && isPostInLocale(post, locale) && isPublishedPost(post, isDev)
   )
   const posts = allCoreContent(sortPosts(freeWritingPosts))
   const pageNumber = 1
