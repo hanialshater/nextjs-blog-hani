@@ -23,6 +23,25 @@ const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof Pos
   PostBanner,
 }
 
+function getLanguageAlternates(post: Blog, routeType: 'blog' | 'free-writing') {
+  const translationKey = post.translationOf || post.slug
+  const relatedPosts = allBlogs.filter(
+    (candidate) =>
+      (candidate.translationOf || candidate.slug) === translationKey || candidate.slug === translationKey
+  )
+
+  return Object.fromEntries(
+    locales
+      .map((locale) => {
+        const localizedPost = relatedPosts.find((candidate) => (candidate.language || 'en') === locale)
+        return localizedPost
+          ? [locale, `${siteMetadata.siteUrl}/${locale}/${routeType}/${localizedPost.slug}`]
+          : null
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry))
+  )
+}
+
 export async function generateMetadata(props: {
   params: Promise<{ locale: string; slug: string[] }>
 }): Promise<Metadata | undefined> {
@@ -53,10 +72,16 @@ export async function generateMetadata(props: {
       url: img && img.includes('http') ? img : siteMetadata.siteUrl + img,
     }
   })
+  const canonicalUrl = `${siteMetadata.siteUrl}/${params.locale}/blog/${post.slug}`
+  const languageAlternates = getLanguageAlternates(post, 'blog')
 
   return {
     title: post.title,
     description: post.summary,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: languageAlternates,
+    },
     openGraph: {
       title: post.title,
       description: post.summary,
@@ -65,7 +90,7 @@ export async function generateMetadata(props: {
       type: 'article',
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
-      url: `${siteMetadata.siteUrl}/${params.locale}/blog/${post.slug}`,
+      url: canonicalUrl,
       images: ogImages,
       authors: authors.length > 0 ? authors : [siteMetadata.author],
     },
