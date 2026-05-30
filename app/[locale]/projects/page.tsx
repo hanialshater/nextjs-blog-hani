@@ -1,11 +1,14 @@
 import { allBlogs } from 'contentlayer/generated'
-import { genPageMetadata } from 'app/seo'
+import { genLocalizedPageMetadata } from 'app/seo'
 import { locales } from '@/i18n/config'
 import projectsData from '@/data/projectsData'
 import ProjectCard from '@/components/ProjectCard'
 import ProjectsLayout from '@/layouts/ProjectsLayout'
 
-export const metadata = genPageMetadata({ title: 'Projects' })
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  return genLocalizedPageMetadata({ title: 'Projects', locale, path: 'projects' })
+}
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
