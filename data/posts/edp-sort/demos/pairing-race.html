@@ -113,5 +113,15 @@ function mountPairingRace(root,opts){
 
 mountPairingRace(document.getElementById('pairRace'),{seed:7});
 </script>
+<script>
+/* report content height to the embedding page so the iframe can auto-size */
+(function(){
+  if(window.parent===window)return;
+  function postHeight(){var h=Math.ceil(document.documentElement.getBoundingClientRect().height);window.parent.postMessage({type:'demo-height',height:h},'*');}
+  window.addEventListener('load',function(){postHeight();setTimeout(postHeight,250);setTimeout(postHeight,700);});
+  window.addEventListener('resize',postHeight);
+  if(window.ResizeObserver){try{new ResizeObserver(postHeight).observe(document.body);}catch(e){}}
+})();
+</script>
 </body>
 </html>
