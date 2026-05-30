@@ -9,15 +9,17 @@ export const dynamic = 'force-static'
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = siteMetadata.siteUrl
 
-  const blogRoutes = allBlogs.filter((post) => isPublishedPost(post)).map((post) => {
-    const section = getPostSection(post)
-    return {
-      url: `${siteUrl}${getPostRoutePath(post, post.language || 'en')}`,
-      lastModified: post.lastmod || post.date,
-      changeFrequency: 'monthly' as const,
-      priority: section === 'free-writing' ? 0.6 : 0.7,
-    }
-  })
+  const blogRoutes = allBlogs
+    .filter((post) => isPublishedPost(post))
+    .map((post) => {
+      const section = getPostSection(post)
+      return {
+        url: `${siteUrl}${getPostRoutePath(post, post.language || 'en')}`,
+        lastModified: post.lastmod || post.date,
+        changeFrequency: 'monthly' as const,
+        priority: section === 'free-writing' ? 0.6 : 0.7,
+      }
+    })
 
   const staticRoutes = [
     { path: '', priority: 1.0, changeFrequency: 'weekly' as const },
