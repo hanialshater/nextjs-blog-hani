@@ -86,7 +86,7 @@ function mountPitchMatch(root, opts){
   let R, players, trueSkill, trueRank, wins, games, totGames, estSkill, estRank, lastRank;
   let nMatches=0, tauHist=[], revealed=false, playing=false, policy=opts.policy||'ladder';
   let anim=null;            // {i,j,winner, t0, dur, committed}
-  let speed=1.4, raf=null, lastWhy='';
+  let speed=1.0, raf=null, lastWhy='';
   let selected=[];          // scout mode: clicked players awaiting a match
   let lockTarget=1, lockedPick=null;  // your nominated top-k at lock time
 
@@ -164,9 +164,6 @@ function mountPitchMatch(root, opts){
          <option value="active">active (boundary)</option>
        </select>
      </label>
-     <label>find <select data-c="target"><option value="1">the #1</option><option value="3">top 3</option></select></label>
-     <button data-c="lock">lock my pick</button>
-     <label>speed <input type="range" min="0.5" max="4" step="0.1" value="1.4" data-c="speed" style="width:80px"></label>
    </div>
    <div class="pm-why" data-c="why"></div>
    <canvas class="pm-tau"></canvas>`;
@@ -354,9 +351,6 @@ function mountPitchMatch(root, opts){
   $('reveal').onclick=()=>{revealed=!revealed;$('reveal').textContent=revealed?'hide true skill':'reveal true skill';buildBoard();};
   $('reset').onclick=()=>{playing=false;$('play').textContent='▶ play';reset((Date.now()&0xffff)+1);if(policy==='manual')manualHint();};
   $('policy').onchange=e=>{policy=e.target.value;playing=false;$('play').textContent='▶ play';selected=[];lockedPick=null;if(anim)finishMatch();buildBoard();if(policy==='manual')manualHint();else $('why').innerHTML='';};
-  $('target').onchange=e=>{lockTarget=parseInt(e.target.value);};
-  $('lock').onclick=()=>{if(anim)finishMatch();scoutVerdict();};
-  $('speed').oninput=e=>{speed=parseFloat(e.target.value);};
   window.addEventListener('resize',()=>{buildBoard&&drawTau();});
 
   reset(seed0);
@@ -366,7 +360,7 @@ function mountPitchMatch(root, opts){
   return {api:{reset,instant,scout:onScoutClick,lock:scoutVerdict,play:()=>{if(policy!=='manual'&&!playing){playing=true;$('play').textContent='⏸ pause';if(!anim)startMatch();}},state:()=>({nMatches,tau:curTau(),estRank,trueRank,lockedPick})}};
 }
 
-mountPitchMatch(document.getElementById('sortHero'),{autoplay:true,seed:7});
+mountPitchMatch(document.getElementById('sortHero'),{autoplay:false,seed:7});
 </script>
 <script>
 /* report content height to the embedding page so the iframe can auto-size */

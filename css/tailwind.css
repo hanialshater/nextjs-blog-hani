@@ -1,4 +1,13 @@
 @import 'tailwindcss';
+
+/* Keep math (KaTeX) left-to-right even inside RTL (Arabic) prose */
+.katex,
+.katex-display {
+  direction: ltr;
+}
+.katex-display {
+  text-align: center;
+}
 @plugin "@tailwindcss/forms";
 @plugin '@tailwindcss/typography';
 @source '../node_modules/pliny';
