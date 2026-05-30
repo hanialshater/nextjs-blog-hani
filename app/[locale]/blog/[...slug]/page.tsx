@@ -15,6 +15,12 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { notFound } from 'next/navigation'
 import { locales } from '@/i18n/config'
+import {
+  getPostCanonicalUrl,
+  getPostRoutePath,
+  isBlogPost,
+  isPostInLocale,
+} from '@/lib/content/postRoutes'
 
 const defaultLayout = 'PostLayout'
 const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof PostBanner> = {
@@ -23,9 +29,11 @@ const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof Pos
   PostBanner,
 }
 
-function getLanguageAlternates(post: Blog, routeType: 'blog' | 'free-writing') {
+const blogPosts = allBlogs.filter(isBlogPost)
+
+function getLanguageAlternates(post: Blog) {
   const translationKey = post.translationOf || post.slug
-  const relatedPosts = allBlogs.filter(
+  const relatedPosts = blogPosts.filter(
     (candidate) =>
       (candidate.translationOf || candidate.slug) === translationKey ||
       candidate.slug === translationKey
@@ -34,11 +42,9 @@ function getLanguageAlternates(post: Blog, routeType: 'blog' | 'free-writing') {
   return Object.fromEntries(
     locales
       .map((locale) => {
-        const localizedPost = relatedPosts.find(
-          (candidate) => (candidate.language || 'en') === locale
-        )
+        const localizedPost = relatedPosts.find((candidate) => isPostInLocale(candidate, locale))
         return localizedPost
-          ? [locale, `${siteMetadata.siteUrl}/${locale}/${routeType}/${localizedPost.slug}`]
+          ? [locale, `${siteMetadata.siteUrl}${getPostRoutePath(localizedPost, locale)}`]
           : null
       })
       .filter((entry): entry is [string, string] => Boolean(entry))
@@ -50,7 +56,7 @@ export async function generateMetadata(props: {
 }): Promise<Metadata | undefined> {
   const params = await props.params
   const slug = decodeURI(params.slug.join('/'))
-  const post = allBlogs.find((p) => p.slug === slug && (p.language || 'en') === params.locale)
+  const post = blogPosts.find((p) => p.slug === slug && isPostInLocale(p, params.locale))
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     // Always use English version of author (no language field means English)
@@ -75,8 +81,8 @@ export async function generateMetadata(props: {
       url: img && img.includes('http') ? img : siteMetadata.siteUrl + img,
     }
   })
-  const canonicalUrl = `${siteMetadata.siteUrl}/${params.locale}/blog/${post.slug}`
-  const languageAlternates = getLanguageAlternates(post, 'blog')
+  const canonicalUrl = getPostCanonicalUrl(post, params.locale)
+  const languageAlternates = getLanguageAlternates(post)
 
   return {
     title: post.title,
@@ -109,9 +115,9 @@ export async function generateMetadata(props: {
 export const generateStaticParams = async () => {
   const params: { locale: string; slug: string[] }[] = []
   for (const locale of locales) {
-    for (const post of allBlogs) {
+    for (const post of blogPosts) {
       // Only generate params for posts matching the locale
-      if ((post.language || 'en') === locale) {
+      if (isPostInLocale(post, locale)) {
         params.push({
           locale,
           slug: post.slug.split('/').map((name) => decodeURI(name)),
@@ -128,7 +134,7 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
   const slug = decodeURI(params.slug.join('/'))
 
   // Filter posts by locale for navigation
-  const allLocalePosts = allBlogs.filter((p) => (p.language || 'en') === locale)
+  const allLocalePosts = blogPosts.filter((p) => isPostInLocale(p, locale))
   const sortedCoreContents = allCoreContent(sortPosts(allLocalePosts))
   const postIndex = sortedCoreContents.findIndex((p) => p.slug === slug)
 
@@ -138,7 +144,7 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
 
   const prev = sortedCoreContents[postIndex + 1]
   const next = sortedCoreContents[postIndex - 1]
-  const post = allBlogs.find((p) => p.slug === slug && (p.language || 'en') === locale) as Blog
+  const post = blogPosts.find((p) => p.slug === slug && isPostInLocale(p, locale)) as Blog
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     // Always use English version of author (no language field means English)
