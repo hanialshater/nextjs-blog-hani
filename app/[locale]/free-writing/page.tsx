@@ -1,12 +1,15 @@
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
-import { genPageMetadata } from 'app/seo'
+import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
 import { Locale, locales, getTranslation } from '@/i18n/config'
 
 const POSTS_PER_PAGE = 5
 
-export const metadata = genPageMetadata({ title: 'Free Writing' })
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  return genLocalizedPageMetadata({ title: 'Free Writing', locale, path: 'free-writing' })
+}
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
