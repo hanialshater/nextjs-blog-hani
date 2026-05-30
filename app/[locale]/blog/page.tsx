@@ -1,12 +1,15 @@
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
 import { allBlogs } from 'contentlayer/generated'
-import { genPageMetadata } from 'app/seo'
+import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
 import { Locale, locales, getTranslation } from '@/i18n/config'
 
 const POSTS_PER_PAGE = 5
 
-export const metadata = genPageMetadata({ title: 'Blog' })
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  return genLocalizedPageMetadata({ title: 'Blog', locale, path: 'blog' })
+}
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
@@ -21,7 +24,6 @@ export default async function BlogPage({
   const { locale } = await params
   const allPosts = sortPosts(allBlogs)
   const isDev = process.env.NODE_ENV === 'development'
-  // Filter posts by language and draft status (show drafts only in dev)
   const filteredPosts = allPosts.filter(
     (post) => (post.language || 'en') === locale && (isDev || !post.draft)
   )
