@@ -3,6 +3,7 @@ import { allBlogs } from 'contentlayer/generated'
 import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
 import { Locale, locales, getTranslation } from '@/i18n/config'
+import { isFreeWritingPost, isPostInLocale, isPublishedPost } from '@/lib/content/postRoutes'
 
 const POSTS_PER_PAGE = 5
 
@@ -24,10 +25,7 @@ export default async function FreeWritingPage({
   const { locale } = await params
   const isDev = process.env.NODE_ENV === 'development'
   const freeWritingPosts = allBlogs.filter(
-    (post) =>
-      post.path.startsWith('free-writing-blog') &&
-      (post.language || 'en') === locale &&
-      (isDev || !post.draft)
+    (post) => isFreeWritingPost(post) && isPostInLocale(post, locale) && isPublishedPost(post, isDev)
   )
   const posts = allCoreContent(sortPosts(freeWritingPosts))
   const pageNumber = 1
