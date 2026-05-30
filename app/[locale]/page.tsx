@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import Main from '../Main'
+import { genLocalizedPageMetadata } from 'app/seo'
 import { locales } from '@/i18n/config'
 import { allAuthors, allBlogs } from 'contentlayer/generated'
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
@@ -19,6 +20,11 @@ function loadSparks(): Spark[] {
     const content = fs.readFileSync(path.join(sparksDir, file), 'utf-8')
     return JSON.parse(content) as Spark
   })
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  return genLocalizedPageMetadata({ title: "Hani's Blog", locale })
 }
 
 export async function generateStaticParams() {
