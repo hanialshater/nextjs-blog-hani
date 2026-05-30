@@ -1,0 +1,185 @@
+---
+title: 'Sorting things you cannot measure — only match'
+date: '2026-05-30'
+draft: false
+section: 'free-writing'
+summary: 'Eight players, no stats sheet — you can only stage matches and watch who wins, and a single match is a coin weighted by the skill gap. How many matches until the league table is right, and who should you schedule?'
+authors: ['default']
+layout: 'PostLayout'
+tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
+---
+
+Eight players, no stats sheet. You can't read anyone's skill; you can only make two of
+them play and watch who wins — and a single match is a coin weighted by the skill gap.
+How many matches until the league table is right, and who should you schedule?
+
+<Demo src="/demos/posts/edp-sort/pitch-match.html" title="A league table built from noisy 1v1 matches" height={660} />
+
+Hidden true skill on the left, the Bradley-Terry estimate on the right. Press **reveal
+true skill** any time to see how close the table is. Change the **scheduler** to decide
+who plays — or set it to **you scout** and run the matches yourself.
+
+This is sorting — but the comparison oracle is unreliable. In a textbook you sort by
+reading numbers. Here the only way to compare two players is to stage a match, and the
+better player merely _probably_ wins. Sorting under that oracle is the **noisy
+comparison** (or **dueling-bandit**) problem, and it turns "what is the order?" into
+"where do I spend my matches?"
+
+### Act 1 — Sort, when you can read the numbers
+
+Mergesort, quicksort, heapsort: $O(n \log n)$ comparisons against an exact oracle that
+says "x is larger" with certainty. The textbook closed this in 1962 and nobody reopened
+it. Every comparison is free of doubt, so you never ask the same one twice.
+
+### Act 2 — The oracle is a match, not a measurement
+
+Now the eight things are footballers, wines, ad creatives, chess players — anything with
+a real but unobservable quality. You can't measure skill; you can only run a comparison,
+and the comparison is noisy. A lopsided match goes the right way almost always; an even
+match is close to a coin flip. The model for that coin is exactly the **Bradley-Terry**
+law: the probability the stronger wins rises smoothly with the skill gap.
+
+The link to multi-armed bandits is direct: each of the $n(n-1)/2$ pairs is its own
+Bernoulli arm, and you are running them in parallel, asking not "which arm pays most" but
+"which side of each pair is the win on." Your budget is the total number of matches. The
+estimate you carry isn't a win count — it's a fitted skill per player (Bradley-Terry),
+and the order is just the players sorted by fitted skill.
+
+> **Math object**
+>
+> **Latent skill & true order:** $s_i \in \mathbb{R}$; the true order is the players
+> sorted by $s_i$ (descending). Every player has one hidden number you never see — the
+> league table is an attempt to recover the order those numbers imply.
+>
+> **Action:** play a pair $(i, j)$ and observe one bit: who won.
+>
+> **Match law (Bradley-Terry):** $P(i \succ j) = \sigma\!\big(\beta (s_i - s_j)\big)$.
+> The bigger the skill gap, the more lopsided the coin. At $s_i = s_j$ it is a fair flip;
+> $\beta$ sets how decisive matches are.
+>
+> **MM estimator (the widget):**
+> $p_i \leftarrow \dfrac{W_i + \tfrac12}{\sum_{j \ne i} n_{ij}/(p_i + p_j)}, \qquad \hat{s}_i = \ln p_i$.
+> Here $W_i$ is $i$'s total wins and $n_{ij}$ the games $i$ and $j$ played. A few
+> minorize-maximize passes fit the skills by maximum likelihood; the $+\tfrac12$ (Laplace)
+> smoothing keeps a player who has won or lost everything from flying off to $\pm\infty$.
+>
+> **Metric (Kendall $\tau$):**
+> $\tau = \dfrac{\#\text{concordant} - \#\text{discordant}}{\binom{n}{2}}$ — the fraction
+> of pairs your table orders the right way, rescaled to $[-1, 1]$. $\tau = 1$ is a perfect
+> table.
+>
+> **Comparison-sort budget:** exact oracle $\Theta(n \log n)$ vs. noisy oracle
+> $\Theta\!\big(\log(1/\delta)/\Delta^2\big)$ repeats per close pair. With a certain oracle
+> you never ask the same comparison twice. With a noisy oracle, a pair with skill gap
+> $\Delta$ needs $\Theta(\log(1/\delta)/\Delta^2)$ repeated matches to be sure at confidence
+> $1-\delta$ — close pairs (tiny $\Delta$) dominate the cost, which is exactly why _where_
+> you spend matches matters.
+
+### Act 3 — Where to spend the matches
+
+The table in the hero already gives you the whole loop: schedule a pair, play the match,
+refit the skills, repeat. What it leaves open is _who to schedule_. Four policies, same
+league, plotted on one chart below:
+
+- **Random** draws — pick any pair. Trivial, but spends as many matches confirming a
+  blowout as resolving a coin-flip.
+- **Round-robin** — everyone plays everyone equally: $(i, j) = \arg\min_{(i,j)} n_{ij}$.
+  Unbiased coverage, but wastes the budget on lopsided pairs whose order was never in doubt.
+- **Ladder (adjacent)** — only play players one rank apart on the current table. The order
+  is uncertain between neighbours, not between #1 and #8. Settles a correct table in ~1.5×
+  fewer matches than random, but trusts the current (noisy) ranking to define "adjacent."
+- **Active (boundary)** — play the closest, least-settled pair,
+  $\arg\max_{(i,j)}\big[\text{closeness}(|\hat{s}_i - \hat{s}_j|) + \text{uncertainty}(1/(1+n_{ij}))\big]$.
+  Information lives where two skills are nearly equal _and_ you have little data, so this
+  routes every match to the pair that buys the most table-correctness.
+
+The information you need lives at the _boundaries_ — pairs whose order is genuinely in
+doubt — and most pairs aren't close. Policies that aim at the boundary settle the table
+with far fewer matches.
+
+<Demo src="/demos/posts/edp-sort/pairing-race.html" title="Where to spend your matches" height={440} />
+
+Same hidden league for all four pairing policies. The curve is Kendall $\tau$ (table
+correctness) versus matches played; whichever reaches the top soonest settles the table
+first. Boundary-seeking policies (ladder, active) typically reach a correct table in ~1.5×
+fewer matches than random.
+
+### Now you be the scout
+
+Set the hero's _scheduler_ to **you scout (click 2)** and the matchmaking is yours: click
+any two players to stage a match, read the table, and decide who to test next. Pick a
+target — the **#1** or the **top 3** — and when you're sure, **lock my pick**: the widget
+freezes your current top-k and reveals whether you nailed it and how many matches it cost.
+Try to beat the active policy's budget. You'll feel the same pull the algorithms feel: the
+wasted matches are the lopsided ones; the matches that move you are the close calls near
+your cutoff.
+
+### Eight was the tutorial. Now ten thousand.
+
+With eight players you can almost play everyone. With **10,000** you cannot: comparing
+every pair is $n(n-1)/2 \approx 50$ million matches. And often you don't even want the full
+order — you want the **best 100** (a shortlist, a leaderboard, a qualifying round). So the
+question sharpens: _spend a limited match budget to recover the top-100, not to sort
+everyone._
+
+Two changes make this tractable. First the estimator: fitting Bradley-Terry over 10k
+players every match is too slow, so we use **Elo** — an online, $O(1)$-per-match update
+that is essentially streaming Bradley-Terry:
+
+$$E_i = \sigma\!\left(\frac{R_i - R_j}{s_{\text{elo}}}\right), \quad s_{\text{elo}} = \frac{400}{\ln 10}, \qquad R_i \leftarrow R_i + K\big(\mathbb{1}\{i \text{ wins}\} - E_i\big)$$
+
+The update is one SGD step on the same logistic likelihood; $s_{\text{elo}} = 400/\ln 10$
+just rescales it so a 400-point gap means a 10:1 odds favourite. Second the matchmaking:
+**random** pairings waste most matches on blowouts far from the cutoff, while an
+**adaptive** scheme concentrates matches near the current top-100 cutline — the boundary,
+at scale. The metric is **recall@100**: how much of the true top-100 your estimated
+top-100 has captured.
+
+<Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 players — find the best 100" height={500} />
+
+Hidden skills for 10k players; each match is one noisy Bradley-Terry duel, scored by Elo.
+Adaptive matchmaking (green) vs random (grey) race on recall@100. The scatter shows
+estimated rating vs true skill for a 2k sample with the top-100 cutline. All-pairs
+round-robin would be ~50 million matches; adaptive recovers most of the top-100 in tens of
+thousands.
+
+### Two solvers, one goal: Bradley-Terry vs the combinatorial bandit
+
+Finding the best K of N is a job two very different machines can do, and putting them side
+by side is the cleanest way to see what a _combinatorial bandit_ actually is. Both want the
+top-k; they differ in the feedback they consume:
+
+- **Bradley-Terry active sorting** asks for one _match_ per round, fits latent skills by
+  online logistic SGD, and reads the top-k off the sorted skills. Preference estimation →
+  ranking inference — the natural tool when all you can collect is "A beat B."
+- **Combinatorial-UCB** picks a top-k _slate_ directly each round and observes a noisy
+  _reward per selected item_ (semi-bandit feedback). It never models preferences; it
+  optimises the slate online.
+
+This is deliberately _not_ a fair race — Comb-UCB sees K reward samples per round, BT sees
+a single match bit — and that asymmetry is the lesson.
+
+<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Bradley-Terry vs combinatorial-UCB, top-k recovery" height={400} />
+
+Real averaged curves from a 40-run experiment (N=30, K=5, 1000 rounds). Toggle the metric;
+press replay to animate. Both converge to almost the same top-k accuracy by round 1000 — BT
+0.90, Comb-UCB 0.91 — but _how fast_ shows the feedback asymmetry. By round 100 Comb-UCB is
+at 0.80 while BT is at 0.59, and over the full run Comb-UCB pays roughly half the cumulative
+regret. It pulls ahead precisely because it tastes five items every round instead of
+comparing two. But notice _what each produces_: BT hands you a full calibrated ranking of
+all 30 items plus a model of _why_ (the latent skills), reusable for any k; Comb-UCB hands
+you a good slate and per-item means, and nothing about the items it never selected. Same
+goal, different artifacts — and the speed gap is the feedback, not the cleverness.
+
+### What you saw
+
+Sorting under noise is choose-the-max in disguise — once for the best, again for the next,
+with comparisons you can repeat to drive down uncertainty. The budget question is exactly
+the bandit's _explore vs exploit_: spend matches on pairs you're already sure about (no new
+information) or on pairs whose order you don't know (every match buys real progress)? Active
+and ladder schedules route the budget to the boundary, and that's why they win.
+
+It's also the first hint of _structure_. With independent arms every pair stands alone.
+Here the pairs are coupled by one global ranking: if A ≻ B and B ≻ C, then A ≻ C for free.
+That free transitive information is what gets exploited with a vengeance when the "arms"
+become the edges of a graph and the action you pick is a whole path through it.
