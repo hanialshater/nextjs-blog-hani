@@ -15,11 +15,7 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { notFound } from 'next/navigation'
 import { locales } from '@/i18n/config'
-import {
-  getPostCanonicalUrl,
-  isFreeWritingPost,
-  isPostInLocale,
-} from '@/lib/content/postRoutes'
+import { getPostCanonicalUrl, isFreeWritingPost, isPostInLocale } from '@/lib/content/postRoutes'
 
 const defaultLayout = 'PostLayout'
 const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof PostBanner> = {
