@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { allBlogs } from 'contentlayer/generated'
+import miniDemosData from '@/data/miniDemosData'
 import siteMetadata from '@/data/siteMetadata'
 import { locales } from '@/i18n/config'
 import { getPostRoutePath, getPostSection, isPublishedPost } from '@/lib/content/postRoutes'
@@ -26,6 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: 'blog', priority: 0.9, changeFrequency: 'weekly' as const },
     { path: 'free-writing', priority: 0.8, changeFrequency: 'weekly' as const },
     { path: 'projects', priority: 0.8, changeFrequency: 'monthly' as const },
+    { path: 'demos', priority: 0.8, changeFrequency: 'monthly' as const },
     { path: 'about', priority: 0.7, changeFrequency: 'monthly' as const },
   ]
 
@@ -38,5 +40,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   )
 
-  return [...routes, ...blogRoutes]
+  const demoRoutes = miniDemosData.flatMap((demo) =>
+    locales.map((locale) => ({
+      url: `${siteUrl}/${locale}/demos/${demo.slug}`,
+      lastModified: new Date().toISOString().split('T')[0],
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }))
+  )
+
+  return [...routes, ...demoRoutes, ...blogRoutes]
 }

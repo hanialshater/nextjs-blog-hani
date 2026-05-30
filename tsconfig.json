@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "incremental": true,
     "target": "ES6",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -8,7 +7,6 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "composite": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -31,7 +29,9 @@
         "name": "next"
       }
     ],
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./.next/cache/tsconfig.tsbuildinfo"
   },
   "include": [
     "next-env.d.ts",

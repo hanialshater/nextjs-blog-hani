@@ -62,6 +62,7 @@ export default [
       'react/prop-types': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       'react/no-unescaped-entities': 'off',
+      '@next/next/no-img-element': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-var-requires': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',

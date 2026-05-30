@@ -103,6 +103,12 @@ export default function Home({
             {t('nav.projects')}
           </Link>
           <Link
+            href={`/${locale}/demos`}
+            className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            {t('nav.demos')}
+          </Link>
+          <Link
             href={`/${locale}/about`}
             className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
           >

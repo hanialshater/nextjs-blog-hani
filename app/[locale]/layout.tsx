@@ -2,7 +2,6 @@ import 'css/tailwind.css'
 import 'pliny/search/algolia.css'
 import 'remark-github-blockquote-alert/alert.css'
 
-import { Space_Grotesk, Noto_Sans_Arabic } from 'next/font/google'
 import { Analytics, AnalyticsConfig } from 'pliny/analytics'
 import LocalizedSearchProvider from '@/components/LocalizedSearchProvider'
 import Header from '@/components/Header'
@@ -14,18 +13,6 @@ import { Metadata } from 'next'
 import { locales, Locale, localeDirection } from '@/i18n/config'
 import { LocaleProvider } from '@/i18n/LocaleContext'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
-
-const space_grotesk = Space_Grotesk({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-space-grotesk',
-})
-
-const noto_arabic = Noto_Sans_Arabic({
-  subsets: ['arabic'],
-  display: 'swap',
-  variable: '--font-noto-arabic',
-})
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
@@ -87,12 +74,7 @@ export default async function LocaleLayout({
   const basePath = process.env.BASE_PATH || ''
 
   return (
-    <html
-      lang={validLocale}
-      dir={dir}
-      className={`${space_grotesk.variable} ${noto_arabic.variable} scroll-smooth`}
-      suppressHydrationWarning
-    >
+    <html lang={validLocale} dir={dir} className="scroll-smooth" suppressHydrationWarning>
       <link
         rel="apple-touch-icon"
         sizes="76x76"

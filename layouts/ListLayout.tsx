@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { usePathname } from 'next/navigation'
 import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
@@ -13,6 +12,7 @@ interface PaginationProps {
   totalPages: number
   currentPage: number
   t: (key: string) => string
+  basePath: string
   locale: string
 }
 interface ListLayoutProps {
@@ -26,12 +26,8 @@ interface ListLayoutProps {
   basePath?: string
 }
 
-function Pagination({ totalPages, currentPage, t, locale }: PaginationProps) {
-  const pathname = usePathname()
-  const basePath = pathname
-    .replace(/^\//, '') // Remove leading slash
-    .replace(/\/page\/\d+\/?$/, '') // Remove any trailing /page
-    .replace(/\/$/, '') // Remove trailing slash
+function Pagination({ totalPages, currentPage, t, locale, basePath }: PaginationProps) {
+  const localizedBasePath = `/${locale}/${basePath}`
   const prevPage = currentPage - 1 > 0
   const nextPage = currentPage + 1 <= totalPages
 
@@ -45,7 +41,11 @@ function Pagination({ totalPages, currentPage, t, locale }: PaginationProps) {
         )}
         {prevPage && (
           <Link
-            href={currentPage - 1 === 1 ? `/${basePath}/` : `/${basePath}/page/${currentPage - 1}`}
+            href={
+              currentPage - 1 === 1
+                ? localizedBasePath
+                : `${localizedBasePath}/page/${currentPage - 1}`
+            }
             rel="prev"
           >
             {t('common.previous')}
@@ -60,7 +60,7 @@ function Pagination({ totalPages, currentPage, t, locale }: PaginationProps) {
           </button>
         )}
         {nextPage && (
-          <Link href={`/${basePath}/page/${currentPage + 1}`} rel="next">
+          <Link href={`${localizedBasePath}/page/${currentPage + 1}`} rel="next">
             {t('common.next')}
           </Link>
         )}
@@ -237,6 +237,7 @@ export default function ListLayout({
           totalPages={pagination.totalPages}
           t={t}
           locale={locale}
+          basePath={basePath}
         />
       )}
     </>

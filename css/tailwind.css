@@ -4,10 +4,16 @@
 @source '../node_modules/pliny';
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --font-space-grotesk: ui-sans-serif, system-ui, sans-serif;
+  --font-noto-arabic: 'Noto Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
 /* Core theme configuration */
 @theme {
   /* Font families */
-  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+  --font-sans:
+    var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
   /* Colors */

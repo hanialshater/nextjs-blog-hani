@@ -1,11 +1,7 @@
-import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
-import { allBlogs } from 'contentlayer/generated'
 import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
 import { Locale, locales, getTranslation } from '@/i18n/config'
-import { isBlogPost, isPostInLocale, isPublishedPost } from '@/lib/content/postRoutes'
-
-const POSTS_PER_PAGE = 5
+import { getPaginatedPosts } from '@/lib/content/posts'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -23,20 +19,7 @@ export default async function BlogPage({
   searchParams: Promise<{ page: string }>
 }) {
   const { locale } = await params
-  const isDev = process.env.NODE_ENV === 'development'
-  const filteredPosts = sortPosts(
-    allBlogs.filter(
-      (post) => isBlogPost(post) && isPostInLocale(post, locale) && isPublishedPost(post, isDev)
-    )
-  )
-  const posts = allCoreContent(filteredPosts)
-  const pageNumber = 1
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
-  const initialDisplayPosts = posts.slice(0, POSTS_PER_PAGE * pageNumber)
-  const pagination = {
-    currentPage: pageNumber,
-    totalPages: totalPages,
-  }
+  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts('blog', locale)
 
   const t = (key: string) => getTranslation(locale as Locale, key)
 
