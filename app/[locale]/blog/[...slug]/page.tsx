@@ -27,13 +27,16 @@ function getLanguageAlternates(post: Blog, routeType: 'blog' | 'free-writing') {
   const translationKey = post.translationOf || post.slug
   const relatedPosts = allBlogs.filter(
     (candidate) =>
-      (candidate.translationOf || candidate.slug) === translationKey || candidate.slug === translationKey
+      (candidate.translationOf || candidate.slug) === translationKey ||
+      candidate.slug === translationKey
   )
 
   return Object.fromEntries(
     locales
       .map((locale) => {
-        const localizedPost = relatedPosts.find((candidate) => (candidate.language || 'en') === locale)
+        const localizedPost = relatedPosts.find(
+          (candidate) => (candidate.language || 'en') === locale
+        )
         return localizedPost
           ? [locale, `${siteMetadata.siteUrl}/${locale}/${routeType}/${localizedPost.slug}`]
           : null
