@@ -1,4 +1,5 @@
 ---
+section: 'free-writing'
 title: 'Modeling Resilience: A Computational Exploration of Option B'
 date: '2025-10-02'
 tags: ['resilience', 'data-science', 'psychology', 'bayesian-modeling', 'option-b']
@@ -44,7 +45,7 @@ For each simulated individual, we defined:
 
 The rules for how these factors influenced recovery were designed to create varied paths in the "Option B" phase – some individuals might get "stuck" at a low level, some might partially recover, others might fully return to their Option A baseline, and a few might even experience Post-Traumatic Growth (PTG), surpassing their original state. The parameters for this simulation were informed by general psychological principles and the insights from *Option B* to ensure the generated scenarios, while synthetic, were diverse and meaningful for our modeling exploration.
 
-![Sample Trajectories](/static/images/option-b-trajectories.png)
+![Sample Trajectories](/static/images/posts/modeling-resilience-option-b/option-b-trajectories.png)
 *FIGURE 1: Sample Trajectories (Option A & B) from Revised Synthetic Data. This plot shows the raw skill trajectories over time for a selection of our 50 simulated individuals. Each colored line represents one individual. The plot clearly marks the "Option A" phase (stable skill), the "Trauma Event" (vertical dashed line), and the subsequent "Option B" phase. Diverse recovery paths (e.g., getting stuck, partial recovery, full recovery, post-traumatic growth, varying speeds) are visible.*
 
 ### The Modeling Goal: Understanding the Shape of Recovery
@@ -69,7 +70,7 @@ To visualize the structure of our (simplified) Bayesian model, we use a plate di
 - **Rectangles (Plates)**: Enclose parts of the model that are repeated. For example, we have a "plate" for individuals because the recovery process is modeled for each person
 - **Arrows**: Show dependencies (e.g., an individual's Coping Resources score influences their estimated Recovery Rate)
 
-![Plate Diagram](/static/images/option-b-plate-diagram.png)
+![Plate Diagram](/static/images/posts/modeling-resilience-option-b/option-b-plate-diagram.png)
 *FIGURE 2: Simplified Plate Diagram for the Option B Recovery Model. This diagram illustrates the hierarchical structure of our simplified Bayesian model. Global Hyperparameters (top row, e.g., "Trauma Drop Factor," "Coping Boost to Asymptote") are estimated from all data and define general relationships. These global parameters, along with an individual's specific characteristics ($K_{A_i}$, $T_i$, $CR_i$) shown within the "Individuals" plate, determine their unique recovery curve parameters ($K_{F_i}$, $K_{\infty_i}$, $r_i$, $m_i$).*
 
 The core mathematical idea for predicting skill in Option B for individual $i$ at time $t$ within our PyMC model is the **logistic function**:
@@ -128,7 +129,7 @@ The **Coping Effect on Midpoint ($p_{CEM}$)** (e.g., a negative value like **-0.
 
 An observation noise parameter (like **Variability in Option B Skill ($\sigma_{K_B}$)** with a mean around **5.0**) tells us that individual skill observations will naturally fluctuate around their true underlying recovery curve.
 
-![Individual Journeys](/static/images/option-b-coping-impact.png)
+![Individual Journeys](/static/images/posts/modeling-resilience-option-b/option-b-coping-impact.png)
 *FIGURE 3: Individual Journeys - Model Fits and Predictions. This multi-panel plot displays the model's interpretation for a selection of individual simulated journeys. Each subplot shows one individual's observed "Option A" data (light blue circles), their "Option B" data (coral squares), their original Option A level (dotted blue line), and the trauma event (vertical red line). Overlaid are many faint grey lines representing plausible recovery trajectories from the model's posterior predictive distribution, and a black dashed line indicating the mean predicted recovery trajectory.*
 
 By looking at Figure 3, we can visually confirm these points. We see individuals with low Coping Resources exhibiting flatter, lower recovery trajectories, consistent with the model estimating a low Asymptote and slow Rate for them. Conversely, individuals with high Coping Resources show steeper, upward curves, potentially reaching or exceeding their Option A levels, reflecting the model's higher estimated Asymptote, faster Rate, and earlier Midpoint for them.

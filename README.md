@@ -17,27 +17,32 @@ and [Contentlayer](https://www.contentlayer.dev/) for MDX content. It started fr
 
 ## Content structure
 
-Posts live under `data/` as MDX:
+Each post is a **self-contained bundle** — its text, translations, images, and
+interactive demos all live in one folder, so a post can be added independently
+while the app stays shared:
 
 ```
-data/
-  free-writing-blog/
-    my-post.mdx        # English (original)
-    my-post.ar.mdx     # Arabic translation
-  authors/
+data/posts/<slug>/
+  index.mdx          # English (original)
+  index.ar.mdx       # Arabic translation
+  images/            # → /static/images/posts/<slug>/
+  demos/             # → /demos/posts/<slug>/   (self-contained .html)
+  authors/           # (site authors, under data/authors/)
 ```
 
-The `.ar` / `.en` suffix is stripped when computing a post's slug, so a post and its
-translation share the same slug. A translation declares its origin in frontmatter:
+`scripts/sync-content.mjs` mirrors each bundle's `images/` and `demos/` into
+`public/` before every dev/build, and the section (`blog` / `free-writing`) is set
+in frontmatter. A translation declares its origin in frontmatter:
 
 ```yaml
+section: 'free-writing'
 language: ar
 translationOf: my-post   # slug of the original post
 originalLanguage: en
 ```
 
 Translation cross-links are resolved in `lib/content/postRoutes.ts` and rendered by
-`layouts/PostLayout.tsx`.
+`layouts/PostLayout.tsx`. See `data/posts/README.md` for the full bundle reference.
 
 ## Development
 

@@ -1,4 +1,5 @@
 ---
+section: 'free-writing'
 title: 'ضغط النص بالصور: توفير 8 أضعاف بالـ tokens بدون موديلات مخصصة'
 date: '2025-10-23'
 tags: ['ai', 'optimization', 'vision-models', 'cost-reduction', 'machine-learning']
@@ -13,7 +14,7 @@ originalLanguage: en
 
 **مش مصدق؟** بس انسخ هالصورة والصقها بـ Gemini مع الـ prompt "read this text and write it down":
 
-![Try it yourself](/static/images/blog/vision-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+![Try it yourself](/static/images/posts/vision-encoded-text-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
 
 هالصورة الصغيرة فيها 1,287 حرف اللي Gemini رح يقرأهم بدقة 99.5%—باستخدام بس 40 token بدل 321.
 
@@ -70,7 +71,7 @@ originalLanguage: en
 
 هاي الصورة المضغوطة الفعلية اللي Gemini بيقرأها بدقة 99.5%:
 
-![8× Compressed Text](/static/images/blog/vision-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+![8× Compressed Text](/static/images/posts/vision-encoded-text-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
 
 **هالصورة فيها 1,287 حرف** (مراجعة MacBook Pro كاملة) بـ **40 token** بس.
 
@@ -195,7 +196,7 @@ async def render_compressed_text(text: str, output_path: str):
 
 ### مثال ١: أخبار Quantum Computing (Y=0.6)
 
-![Quantum News Compressed](/static/images/blog/vision-compression/news_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+![Quantum News Compressed](/static/images/posts/vision-encoded-text-compression/news_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
 
 **نص المدخل** (1,442 حرف):
 > Scientists announced a major breakthrough in quantum computing this week, revealing a new error correction technique that could accelerate the development of practical quantum computers. The research team from MIT demonstrated that their novel approach reduces quantum bit errors by up to 90 percent compared to traditional methods...

@@ -73,9 +73,19 @@ co-located image, and a portable `<Demo />`). It ships as `draft: true` so it
 stays out of the live site — flip `draft` to `false` in both `index.mdx` files to
 view it locally at `/en/free-writing/hello-bundle`.
 
-## Legacy posts
+## Shared assets
 
-Existing posts under `data/free-writing-blog/` (and `data/blog/`) still work
-unchanged — their section comes from the folder name. New posts should use this
-bundle layout; old ones can be migrated by moving them into `data/posts/<slug>/`,
-relocating their assets, and adding `section` to the frontmatter.
+Most posts own their images outright, so those images live in the bundle. A few
+images are genuinely shared with other parts of the app — e.g. the
+`agent-autonomy` and `agent-autonomy-part-2` posts share images with the
+`/slides/agent-autonomy` sub-app. Those stay in `public/static/images/<name>` and
+are referenced by their absolute path from both places; only post-exclusive images
+are co-located. If you ever stop sharing an image, move it into the bundle and
+rewrite the path.
+
+## Backward compatibility
+
+The loader still understands the old layout (`data/blog/` and
+`data/free-writing-blog/`, where the section was the folder name), so dropping a
+legacy-style file back in would still work — but all current posts use the bundle
+layout above.
