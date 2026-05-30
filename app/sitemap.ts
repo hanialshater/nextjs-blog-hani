@@ -12,19 +12,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
     .filter((post) => !post.draft)
     .map((post) => {
       const isFreeWriting = post.path.startsWith('free-writing-blog')
-      const info = {
+      return {
         url: `${siteUrl}/${post.language || 'en'}/${isFreeWriting ? 'free-writing' : 'blog'}/${
           post.slug
         }`,
         lastModified: post.lastmod || post.date,
+        changeFrequency: 'monthly' as const,
+        priority: isFreeWriting ? 0.6 : 0.7,
       }
-      return info
     })
 
-  const routes = ['', 'blog', 'free-writing', 'projects', 'tags'].flatMap((route) =>
+  const staticRoutes = [
+    { path: '', priority: 1.0, changeFrequency: 'weekly' as const },
+    { path: 'blog', priority: 0.9, changeFrequency: 'weekly' as const },
+    { path: 'free-writing', priority: 0.8, changeFrequency: 'weekly' as const },
+    { path: 'projects', priority: 0.8, changeFrequency: 'monthly' as const },
+    { path: 'tags', priority: 0.5, changeFrequency: 'monthly' as const },
+  ]
+
+  const routes = staticRoutes.flatMap((route) =>
     locales.map((locale) => ({
-      url: `${siteUrl}/${locale}/${route}`.replace(/\/$/, ''), // Remove trailing slash if route is empty
+      url: `${siteUrl}/${locale}/${route.path}`.replace(/\/$/, ''),
       lastModified: new Date().toISOString().split('T')[0],
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
     }))
   )
 
