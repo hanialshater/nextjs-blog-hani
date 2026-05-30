@@ -32,3 +32,23 @@ export function isPublishedPost(post: Pick<Blog, 'draft'>, includeDrafts = false
 export function isPostInLocale(post: Pick<Blog, 'language'>, locale: string) {
   return (post.language || 'en') === locale
 }
+
+// A post and its translations share a key: the original's slug. Originals use
+// their own slug; translations point back via `translationOf`.
+export function getTranslationKey(post: Pick<Blog, 'slug' | 'translationOf'>) {
+  return post.translationOf || post.slug
+}
+
+// Find the counterpart of `post` in another locale (e.g. the Arabic version of
+// an English post, or the English original of an Arabic translation).
+export function findTranslatedPost<
+  T extends Pick<Blog, 'slug' | 'translationOf' | 'language' | 'path'>,
+>(post: T, posts: T[], targetLocale: string): T | undefined {
+  const key = getTranslationKey(post)
+  return posts.find(
+    (candidate) =>
+      candidate !== post &&
+      isPostInLocale(candidate, targetLocale) &&
+      getTranslationKey(candidate) === key
+  )
+}

@@ -13,6 +13,7 @@ import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
 import { useLocale } from '@/i18n/LocaleContext'
+import type { Locale } from '@/i18n/config'
 import { getProjectBySlug, getLocalizedProject } from '@/data/projectsData'
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
@@ -27,25 +28,23 @@ interface LayoutProps {
   authorDetails: CoreContent<Authors>[]
   next?: { path: string; title: string; slug: string }
   prev?: { path: string; title: string; slug: string }
+  // The counterpart of this post in the other locale, if one exists.
+  translation?: { locale: Locale; path: string }
   children: ReactNode
 }
 
-export default function PostLayout({ content, authorDetails, next, prev, children }: LayoutProps) {
+export default function PostLayout({
+  content,
+  authorDetails,
+  next,
+  prev,
+  translation,
+  children,
+}: LayoutProps) {
   const { locale, t, dir } = useLocale()
   const isRTL = dir === 'rtl'
 
-  const {
-    path,
-    slug,
-    date,
-    title,
-    tags,
-    readingTime,
-    translationOf,
-    originalLanguage,
-    draft,
-    project,
-  } = content
+  const { path, slug, date, title, tags, readingTime, translationOf, draft, project } = content
 
   // Get project data if post belongs to a project
   const projectData = project ? getProjectBySlug(project) : undefined
@@ -111,7 +110,7 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                   <span>{t('blog.draft')}</span>
                 </div>
               )}
-              {translationOf && (
+              {translationOf && translation && (
                 <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
                   <svg
                     className="h-4 w-4"
@@ -129,10 +128,33 @@ export default function PostLayout({ content, authorDetails, next, prev, childre
                   <span>{t('blog.autoTranslated')}</span>
                   <span className="mx-1">·</span>
                   <Link
-                    href={`/${originalLanguage || 'en'}/blog/${translationOf}`}
+                    href={translation.path}
                     className="font-medium underline hover:no-underline"
                   >
                     {t('blog.viewOriginal')}
+                  </Link>
+                </div>
+              )}
+              {!translationOf && translation && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                    />
+                  </svg>
+                  <Link
+                    href={translation.path}
+                    className="font-medium underline hover:no-underline"
+                  >
+                    {t(translation.locale === 'ar' ? 'blog.readInArabic' : 'blog.readInEnglish')}
                   </Link>
                 </div>
               )}

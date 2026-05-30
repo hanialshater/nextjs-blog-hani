@@ -16,11 +16,13 @@ import siteMetadata from '@/data/siteMetadata'
 import { notFound } from 'next/navigation'
 import { locales } from '@/i18n/config'
 import {
+  findTranslatedPost,
   getPostCanonicalUrl,
   getPostRoutePath,
   isBlogPost,
   isPostInLocale,
 } from '@/lib/content/postRoutes'
+import type { Locale } from '@/i18n/config'
 
 const defaultLayout = 'PostLayout'
 const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof PostBanner> = {
@@ -145,6 +147,14 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
   const prev = sortedCoreContents[postIndex + 1]
   const next = sortedCoreContents[postIndex - 1]
   const post = blogPosts.find((p) => p.slug === slug && isPostInLocale(p, locale)) as Blog
+
+  // Find the post's counterpart in the other locale (if a translation exists).
+  const otherLocale: Locale = locale === 'ar' ? 'en' : 'ar'
+  const translatedPost = findTranslatedPost(post, blogPosts, otherLocale)
+  const translation = translatedPost
+    ? { locale: otherLocale, path: getPostRoutePath(translatedPost, otherLocale) }
+    : undefined
+
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     // Always use English version of author (no language field means English)
@@ -176,13 +186,20 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Layout content={mainContent} authorDetails={authorDetails} next={next} prev={prev}>
+      <Layout
+        content={mainContent}
+        authorDetails={authorDetails}
+        next={next}
+        prev={prev}
+        translation={translation}
+      >
         <MDXLayoutRenderer code={post.body.code} components={components} toc={post.toc} />
         {mainContent.tags && (
           <RelatedPosts
             currentSlug={slug}
             currentTags={mainContent.tags}
             allPosts={sortedCoreContents}
+            locale={locale}
           />
         )}
       </Layout>

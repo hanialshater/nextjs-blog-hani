@@ -7,6 +7,7 @@ import { useLocale } from '@/i18n/LocaleContext'
 import Card from '@/components/Card'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import { Blog } from 'contentlayer/generated'
+import { getPostRoutePath } from '@/lib/content/postRoutes'
 
 interface Spark {
   id: string
@@ -218,7 +219,7 @@ export default function Home({
                 title={post.title}
                 description={post.summary || ''}
                 imgSrc={post.images && post.images[0]}
-                href={`/${locale}/blog/${post.slug}`}
+                href={getPostRoutePath(post, locale)}
               />
             ))}
           </div>
