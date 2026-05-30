@@ -2,10 +2,13 @@ import { Authors, allAuthors } from 'contentlayer/generated'
 import { MDXLayoutRenderer } from 'pliny/mdx-components'
 import AuthorLayout from '@/layouts/AuthorLayout'
 import { coreContent } from 'pliny/utils/contentlayer'
-import { genPageMetadata } from 'app/seo'
+import { genLocalizedPageMetadata } from 'app/seo'
 import { locales } from '@/i18n/config'
 
-export const metadata = genPageMetadata({ title: 'About' })
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  return genLocalizedPageMetadata({ title: 'About', locale, path: 'about' })
+}
 
 interface PageProps {
   params: Promise<{ locale: string }>
