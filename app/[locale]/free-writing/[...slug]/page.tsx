@@ -15,6 +15,11 @@ import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
 import { notFound } from 'next/navigation'
 import { locales } from '@/i18n/config'
+import {
+  getPostCanonicalUrl,
+  isFreeWritingPost,
+  isPostInLocale,
+} from '@/lib/content/postRoutes'
 
 const defaultLayout = 'PostLayout'
 const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof PostBanner> = {
@@ -23,16 +28,14 @@ const layouts: Record<string, typeof PostLayout | typeof PostSimple | typeof Pos
   PostBanner,
 }
 
-const freeWritingPosts = allBlogs.filter((p) => p.path.startsWith('free-writing-blog'))
+const freeWritingPosts = allBlogs.filter(isFreeWritingPost)
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: string; slug: string[] }>
 }): Promise<Metadata | undefined> {
   const params = await props.params
   const slug = decodeURI(params.slug.join('/'))
-  const post = freeWritingPosts.find(
-    (p) => p.slug === slug && (p.language || 'en') === params.locale
-  )
+  const post = freeWritingPosts.find((p) => p.slug === slug && isPostInLocale(p, params.locale))
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     const authorResults =
@@ -56,7 +59,7 @@ export async function generateMetadata(props: {
       url: img && img.includes('http') ? img : siteMetadata.siteUrl + img,
     }
   })
-  const canonicalUrl = `${siteMetadata.siteUrl}/${params.locale}/free-writing/${post.slug}`
+  const canonicalUrl = getPostCanonicalUrl(post, params.locale)
 
   return {
     title: post.title,
@@ -89,7 +92,7 @@ export const generateStaticParams = async () => {
   const params: { locale: string; slug: string[] }[] = []
   for (const locale of locales) {
     for (const post of freeWritingPosts) {
-      if ((post.language || 'en') === locale) {
+      if (isPostInLocale(post, locale)) {
         params.push({
           locale,
           slug: post.slug.split('/').map((name) => decodeURI(name)),
@@ -105,7 +108,7 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
   const { locale } = params
   const slug = decodeURI(params.slug.join('/'))
 
-  const allLocalePosts = freeWritingPosts.filter((p) => (p.language || 'en') === locale)
+  const allLocalePosts = freeWritingPosts.filter((p) => isPostInLocale(p, locale))
   const sortedCoreContents = allCoreContent(sortPosts(allLocalePosts))
   const postIndex = sortedCoreContents.findIndex((p) => p.slug === slug)
 
@@ -115,9 +118,7 @@ export default async function Page(props: { params: Promise<{ locale: string; sl
 
   const prev = sortedCoreContents[postIndex + 1]
   const next = sortedCoreContents[postIndex - 1]
-  const post = freeWritingPosts.find(
-    (p) => p.slug === slug && (p.language || 'en') === locale
-  ) as Blog
+  const post = freeWritingPosts.find((p) => p.slug === slug && isPostInLocale(p, locale)) as Blog
   const authorList = post?.authors || ['default']
   const authorDetails = authorList.map((author) => {
     const authorResults =
