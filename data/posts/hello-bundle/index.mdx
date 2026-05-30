@@ -1,0 +1,40 @@
+---
+title: 'Hello, Self-Contained Post'
+date: '2026-05-30'
+draft: true
+section: 'free-writing'
+summary: 'A template post showing the co-located bundle layout — text, images, and a portable demo all living in one folder.'
+authors: ['default']
+layout: 'PostLayout'
+tags: ['meta', 'template']
+images: ['/static/images/posts/hello-bundle/cover.png']
+---
+
+This entire post lives inside a single folder, `data/posts/hello-bundle/`:
+
+```
+data/posts/hello-bundle/
+  index.mdx          # this file (English original)
+  index.ar.mdx       # Arabic translation
+  images/cover.png   # → /static/images/posts/hello-bundle/cover.png
+  demos/counter.html # → /demos/posts/hello-bundle/counter.html
+```
+
+To add a new post you drop a folder like this in — nothing else in the app needs
+to change. `scripts/sync-content.mjs` mirrors `images/` and `demos/` into `public/`
+before every dev/build, and the section is set in frontmatter (`section: 'free-writing'`).
+
+## Co-located image
+
+The cover image is referenced with its synced public path:
+
+![A circle-packing layout used as a placeholder cover](/static/images/posts/hello-bundle/cover.png)
+
+## Portable demo
+
+Interactive demos ship as self-contained `.html` files in the bundle's `demos/`
+folder and embed via the `<Demo />` component — no app rebuild, no shared component:
+
+<Demo src="/demos/posts/hello-bundle/counter.html" title="Counter demo" height={220} />
+
+That's the whole convention. See `data/posts/README.md` for the full reference.

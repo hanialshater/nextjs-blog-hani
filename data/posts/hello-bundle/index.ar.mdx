@@ -1,0 +1,36 @@
+---
+title: 'مرحباً، مقال مكتفٍ بذاته'
+date: '2026-05-30'
+draft: true
+section: 'free-writing'
+summary: 'مقال قالب يوضّح بنية الحزمة المتجاورة — النص والصور والتجربة التفاعلية كلها في مجلد واحد.'
+authors: ['default']
+layout: 'PostLayout'
+tags: ['meta', 'template']
+images: ['/static/images/posts/hello-bundle/cover.png']
+language: ar
+translationOf: hello-bundle
+originalLanguage: en
+---
+
+هذا المقال بأكمله يعيش داخل مجلد واحد، `data/posts/hello-bundle/`:
+
+```
+data/posts/hello-bundle/
+  index.mdx          # النسخة الإنجليزية (الأصل)
+  index.ar.mdx       # هذا الملف (الترجمة العربية)
+  images/cover.png   # → /static/images/posts/hello-bundle/cover.png
+  demos/counter.html # → /demos/posts/hello-bundle/counter.html
+```
+
+لإضافة مقال جديد، تكفي إضافة مجلد كهذا — لا حاجة لتغيير أي شيء آخر في التطبيق.
+
+## صورة متجاورة
+
+![تخطيط تعبئة دوائر كصورة غلاف مؤقتة](/static/images/posts/hello-bundle/cover.png)
+
+## تجربة محمولة
+
+<Demo src="/demos/posts/hello-bundle/counter.html" title="تجربة العدّاد" height={220} />
+
+هذه هي الفكرة كاملة. راجع `data/posts/README.md` للمرجع الكامل.

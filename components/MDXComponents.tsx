@@ -9,6 +9,7 @@ import Caption from './Caption'
 import MapElitesDemo from './MapElitesDemo'
 import AlgorithmDemos from './AlgorithmDemos'
 import EvolvedDemos from './EvolvedDemos'
+import Demo from './Demo'
 
 export const components: MDXComponents = {
   Image,
@@ -18,6 +19,7 @@ export const components: MDXComponents = {
   table: TableWrapper,
   BlogNewsletterForm,
   Caption,
+  Demo,
   MapElitesDemo,
   AlgorithmDemos,
   EvolvedDemos,

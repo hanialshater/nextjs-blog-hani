@@ -47,8 +47,13 @@ const computedFields: ComputedFields = {
   slug: {
     type: 'string',
     resolve: (doc) => {
-      // Remove folder prefix and strip language suffix (.ar, .en, etc.)
-      const rawSlug = doc._raw.flattenedPath.replace(/^.+?(\/)/, '')
+      const flattenedPath = doc._raw.flattenedPath
+      // Co-located bundles: posts/<slug>/index[.ar] -> slug is the folder name.
+      if (flattenedPath.startsWith('posts/')) {
+        return flattenedPath.split('/')[1]
+      }
+      // Legacy layout: <section>/<slug>[.ar]. Strip folder prefix + language suffix.
+      const rawSlug = flattenedPath.replace(/^.+?(\/)/, '')
       return rawSlug.replace(/\.(ar|en)$/, '')
     },
   },
@@ -79,7 +84,7 @@ function createSearchIndex(allBlogs: any[]) {
 
 export const Blog = defineDocumentType(() => ({
   name: 'Blog',
-  filePathPattern: '(blog|free-writing-blog)/**/*.mdx',
+  filePathPattern: '(blog|free-writing-blog|posts)/**/*.mdx',
   contentType: 'mdx',
   fields: {
     title: { type: 'string', required: true },
@@ -96,6 +101,7 @@ export const Blog = defineDocumentType(() => ({
     language: { type: 'enum', options: ['en', 'ar'], default: 'en' },
     translationOf: { type: 'string' }, // slug of the original post (for translations)
     originalLanguage: { type: 'enum', options: ['en', 'ar'], default: 'en' }, // language of the original post
+    section: { type: 'enum', options: ['blog', 'free-writing'] }, // section for co-located posts/ bundles
     project: { type: 'string' }, // slug of associated project
     featured: { type: 'boolean', default: false },
   },

@@ -47,6 +47,10 @@ yarn-error.log*
 .contentlayer
 public/static/images/temp/2506.13131v1.pdf
 
+# Co-located post-bundle assets synced from data/posts/<slug>/ by scripts/sync-content.mjs
+/public/static/images/posts/
+/public/demos/posts/
+
 # TypeScript
 tsconfig.tsbuildinfo
 *.tsbuildinfo

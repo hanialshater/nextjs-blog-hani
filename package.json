@@ -3,14 +3,15 @@
   "version": "2.4.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env INIT_CWD=$PWD next dev",
-    "build": "cross-env INIT_CWD=$PWD next build && cross-env NODE_OPTIONS='--experimental-json-modules' node ./scripts/postbuild.mjs",
+    "content:sync": "node ./scripts/sync-content.mjs",
+    "dev": "node ./scripts/sync-content.mjs && cross-env INIT_CWD=$PWD next dev",
+    "build": "node ./scripts/sync-content.mjs && cross-env INIT_CWD=$PWD next build && cross-env NODE_OPTIONS='--experimental-json-modules' node ./scripts/postbuild.mjs",
     "start": "next start",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
     "lint": "eslint app components lib layouts scripts tests --max-warnings=0",
     "lint:fix": "eslint app components lib layouts scripts tests --fix",
-    "typecheck": "contentlayer2 build && tsc --noEmit",
+    "typecheck": "node ./scripts/sync-content.mjs && contentlayer2 build && tsc --noEmit",
     "test": "playwright test",
     "check": "yarn typecheck && yarn lint && yarn build && yarn test",
     "prepare": "husky"

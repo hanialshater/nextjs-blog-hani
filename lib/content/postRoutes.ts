@@ -4,24 +4,32 @@ import type { Blog } from 'contentlayer/generated'
 export type PostSection = 'blog' | 'free-writing'
 
 const FREE_WRITING_CONTENT_PREFIX = 'free-writing-blog'
+const BLOG_CONTENT_PREFIX = 'blog'
 
-export function isFreeWritingPost(post: Pick<Blog, 'path'>) {
-  return post.path.startsWith(FREE_WRITING_CONTENT_PREFIX)
+// Accepts either a full post or just the fields needed to resolve its section.
+type SectionInput = Pick<Blog, 'path'> & Partial<Pick<Blog, 'section'>>
+
+export function getPostSection(post: SectionInput): PostSection {
+  // Legacy layout encodes the section in the top-level content folder.
+  if (post.path.startsWith(FREE_WRITING_CONTENT_PREFIX)) return 'free-writing'
+  if (post.path.startsWith(BLOG_CONTENT_PREFIX)) return 'blog'
+  // Co-located bundles (data/posts/<slug>/) declare their section in frontmatter.
+  return post.section === 'free-writing' ? 'free-writing' : 'blog'
 }
 
-export function isBlogPost(post: Pick<Blog, 'path'>) {
-  return !isFreeWritingPost(post)
+export function isFreeWritingPost(post: SectionInput) {
+  return getPostSection(post) === 'free-writing'
 }
 
-export function getPostSection(post: Pick<Blog, 'path'>): PostSection {
-  return isFreeWritingPost(post) ? 'free-writing' : 'blog'
+export function isBlogPost(post: SectionInput) {
+  return getPostSection(post) === 'blog'
 }
 
-export function getPostRoutePath(post: Pick<Blog, 'path' | 'slug'>, locale: string) {
+export function getPostRoutePath(post: SectionInput & Pick<Blog, 'slug'>, locale: string) {
   return `/${locale}/${getPostSection(post)}/${post.slug}`
 }
 
-export function getPostCanonicalUrl(post: Pick<Blog, 'path' | 'slug'>, locale: string) {
+export function getPostCanonicalUrl(post: SectionInput & Pick<Blog, 'slug'>, locale: string) {
   return `${siteMetadata.siteUrl}${getPostRoutePath(post, locale)}`
 }
 
