@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race the bandit policies</title>
+<style>
+:root{--bg:#0b1220;--card:#131c30;--card2:#1a2440;--fg:#e6edf3;--dim:#8b95a8;--faint:#5b6378;--accent:#4c8df6;--accent2:#2a4a7a;--good:#5fd2a3;--warn:#f0a058;--bad:#e16c6c;--purple:#c879f0;--border:#1f2a44;--code:#0e1626;--mono:ui-monospace,"SF Mono",Menlo,Monaco,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--sans);font-size:15px;line-height:1.5;padding:12px}
+.widget{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:0}
+.legend{font-size:13px;color:var(--dim);margin-bottom:14px}
+button{font-family:var(--mono);font-size:13px;background:var(--card2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 13px;cursor:pointer;transition:all 0.12s}
+button:hover{background:var(--accent2);border-color:var(--accent)}
+button.primary{background:var(--accent);color:#0b1220;border-color:var(--accent);font-weight:600}
+button.primary:hover{background:#6ba0ff}
+button.toggle.on{background:var(--accent2);border-color:var(--accent);color:var(--accent)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 18px}
+.policy-pills{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;align-items:center}
+.policy-pills button{font-size:11.5px;padding:5px 9px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0 0;font-family:var(--mono);font-size:13px}
+.stat{background:var(--code);padding:9px 11px;border-radius:6px}
+.stat .label{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:0.08em}
+.stat .value{color:var(--fg);font-size:17px;margin-top:3px}
+canvas{display:block;width:100%;background:var(--code);border-radius:6px}
+</style>
+</head>
+<body>
+<div class="widget">
+<p class="legend">Five hidden restaurant-quality arms. Pick which policies to race; press play; watch their regret diverge. The shaded band is the low-budget zone where most A/B tests actually live.</p>
+<div class="policy-pills">
+  <span style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-right:6px;">in the race:</span>
+  <button class="toggle on" data-pol="random">random</button>
+  <button class="toggle" data-pol="exploit">pure exploit</button>
+  <button class="toggle on" data-pol="epsilon">ε-greedy</button>
+  <button class="toggle on" data-pol="ucb">UCB1</button>
+  <button class="toggle on" data-pol="thompson">Thompson</button>
+  <button class="toggle" data-pol="oracle">oracle</button>
+</div>
+<div class="controls">
+  <button id="raceplay" class="primary">▶ play 1,000 pulls</button>
+  <button id="racestep">+100</button>
+  <button id="racereset">reset (new arms)</button>
+  <button id="seedchg">scenario: <span id="seedname">balanced</span></button>
+</div>
+<canvas id="race" height="260"></canvas>
+<div class="stats">
+  <div class="stat"><div class="label">pull #</div><div class="value" id="rt">0</div></div>
+  <div class="stat"><div class="label">best mean</div><div class="value" id="rbm">—</div></div>
+  <div class="stat"><div class="label">leader regret</div><div class="value" id="rlr">—</div></div>
+  <div class="stat"><div class="label">leader</div><div class="value" id="rlead">—</div></div>
+</div>
+</div>
+<script>
+// ============ shared lib ============
+const COLORS={blue:'#4c8df6',green:'#5fd2a3',orange:'#f0a058',purple:'#c879f0',red:'#e16c6c',dim:'#8b95a8',faint:'#3a4358',fg:'#e6edf3',bg:'#0e1626'};
+function rng(seed){let s=seed|0||1;return function(){s=(s+0x6D2B79F5)|0;let t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function gauss(rand){let u=rand()||1e-12,v=rand();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function gammaSample(shape,rand){
+  if(shape<1){const u=Math.max(rand(),1e-12);return gammaSample(shape+1,rand)*Math.pow(u,1/shape);}
+  const d=shape-1/3,c=1/Math.sqrt(9*d);
+  while(true){let x=gauss(rand),v=1+c*x;if(v<=0)continue;v=v*v*v;const u=rand(),x2=x*x;if(u<1-0.0331*x2*x2)return d*v;if(Math.log(u)<0.5*x2+d*(1-v+Math.log(v)))return d*v;}
+}
+function beta(a,b,rand){const x=gammaSample(a,rand),y=gammaSample(b,rand);return x/(x+y);}
+function argmax(a){let i=0;for(let j=1;j<a.length;j++)if(a[j]>a[i])i=j;return i;}
+class Chart{
+  constructor(canvas,opts){this.canvas=canvas;this.opts=Object.assign({xlabel:'',ylabel:'',padding:{l:46,r:14,t:18,b:28},grid:4,yMin:null,yMax:null,xMin:0,xMax:null,shade:null},opts||{});this.series={};}
+  line(name,color){this.series[name]={color:color||COLORS.blue,points:[]};return this;}
+  push(name,x,y){if(!this.series[name])this.line(name);this.series[name].points.push([x,y]);}
+  reset(){for(const k in this.series)this.series[k].points=[];}
+  remove(name){delete this.series[name];}
+  _bounds(){let xM=this.opts.xMax,yM=this.opts.yMax,ym=this.opts.yMin,any=false;for(const k in this.series){const p=this.series[k].points;if(!p.length)continue;any=true;for(const [x,y] of p){if(xM===null||x>xM)xM=x;if(yM===null||y>yM)yM=y;if(ym===null||y<ym)ym=y;}}if(!any)return null;if(xM===null)xM=1;if(yM===null)yM=1;if(ym===null)ym=0;if(yM-ym<1e-6)yM=ym+1;return{xMin:this.opts.xMin,xMax:xM,yMin:ym,yMax:yM};}
+  render(){const c=this.canvas,dpr=window.devicePixelRatio||1,W=c.clientWidth,H=c.clientHeight||c.height;c.width=W*dpr;c.height=H*dpr;const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);const p=this.opts.padding,pw=W-p.l-p.r,ph=H-p.t-p.b;
+    if(this.opts.shade){const b=this._bounds();if(b){const xs=Math.max(b.xMin,this.opts.shade[0]),xe=Math.min(b.xMax,this.opts.shade[1]);if(xe>xs){const x1=p.l+((xs-b.xMin)/(b.xMax-b.xMin||1))*pw,x2=p.l+((xe-b.xMin)/(b.xMax-b.xMin||1))*pw;ctx.fillStyle='rgba(240,160,88,0.06)';ctx.fillRect(x1,p.t,x2-x1,ph);}}}
+    ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;ctx.font='11px ui-monospace,Menlo,monospace';ctx.fillStyle=COLORS.dim;
+    for(let i=0;i<=this.opts.grid;i++){const y=p.t+(i/this.opts.grid)*ph;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+pw,y);ctx.stroke();}
+    const b=this._bounds();if(!b){ctx.fillText('— waiting —',p.l+8,p.t+ph/2);return;}
+    const xPx=x=>p.l+((x-b.xMin)/(b.xMax-b.xMin||1))*pw,yPx=y=>p.t+(1-(y-b.yMin)/(b.yMax-b.yMin||1))*ph;
+    ctx.fillText(b.yMax.toFixed(b.yMax>10?0:1),4,p.t+4);ctx.fillText(b.yMin.toFixed(b.yMin>10?0:1),4,p.t+ph+4);
+    ctx.fillText(this.opts.xlabel?`${this.opts.xlabel}: ${b.xMax|0}`:`${b.xMax|0}`,W-100,H-6);
+    for(const name in this.series){const s=this.series[name];if(s.points.length<2)continue;ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<s.points.length;i++){const [x,y]=s.points[i],px=xPx(x),py=yPx(y);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.stroke();}
+    let lx=W-p.r-8,ly=p.t+12;ctx.textAlign='right';
+    for(const name in this.series){const s=this.series[name];ctx.fillStyle=s.color;const last=s.points[s.points.length-1];const lbl=last?`${name}  ${last[1].toFixed(1)}`:name;ctx.fillText(lbl,lx,ly);ly+=14;}ctx.textAlign='left';
+  }
+}
+
+// ============ Bandit core ============
+const K=5;
+const SCENARIOS={
+  balanced:{name:'balanced',ps:[0.30,0.55,0.40,0.65,0.50]},
+  hard:    {name:'hard (top two close)',ps:[0.45,0.62,0.40,0.58,0.30]},
+  easy:    {name:'easy (one runaway)',ps:[0.20,0.78,0.35,0.30,0.25]},
+  flat:    {name:'flat (many similar)',ps:[0.48,0.52,0.50,0.47,0.51]},
+};
+const SC_KEYS=Object.keys(SCENARIOS);
+function newBandit(ps, randSeed){
+  const r=rng(randSeed);
+  return {ps:ps.slice(),pulls:new Array(K).fill(0),successes:new Array(K).fill(0),cumRegret:0,bestArm:argmax(ps),bestMean:Math.max(...ps),history:[],rng:r,name:''};
+}
+function pull(b,arm){const r=(b.rng()<b.ps[arm])?1:0;b.pulls[arm]+=1;b.successes[arm]+=r;b.cumRegret+=(b.bestMean-b.ps[arm]);b.history.push(b.cumRegret);return r;}
+function policyPick(b,name,t){
+  if(name==='oracle') return b.bestArm;
+  if(name==='random') return Math.floor(b.rng()*K);
+  if(name==='exploit'){for(let i=0;i<K;i++)if(b.pulls[i]===0)return i;const m=b.pulls.map((n,i)=>n?b.successes[i]/n:0);return argmax(m);}
+  if(name==='epsilon'){if(b.rng()<0.10)return Math.floor(b.rng()*K);for(let i=0;i<K;i++)if(b.pulls[i]===0)return i;const m=b.pulls.map((n,i)=>n?b.successes[i]/n:0);return argmax(m);}
+  if(name==='ucb'){for(let i=0;i<K;i++)if(b.pulls[i]===0)return i;const u=b.pulls.map((n,i)=>{const mean=b.successes[i]/n;return mean+Math.sqrt(2*Math.log(t)/n);});return argmax(u);}
+  if(name==='thompson'){const s=b.pulls.map((n,i)=>{const a=1+b.successes[i],bb=1+(n-b.successes[i]);return beta(a,bb,b.rng);});return argmax(s);}
+  return 0;
+}
+const POL_INFO={
+  random:{label:'random',color:COLORS.dim},
+  exploit:{label:'pure exploit',color:COLORS.red},
+  epsilon:{label:'ε-greedy',color:COLORS.orange},
+  ucb:{label:'UCB1',color:COLORS.blue},
+  thompson:{label:'Thompson',color:COLORS.green},
+  oracle:{label:'oracle (cheating)',color:COLORS.purple},
+};
+
+// ============ Race widget ============
+(function race(){
+  const ch=new Chart(document.getElementById('race'),{xlabel:'pulls',ylabel:'regret',xMin:0,yMin:0,padding:{l:46,r:14,t:18,b:28},shade:[0,150]});
+  let scenario=0;
+  const seedname=document.getElementById('seedname');
+  let bandits={},t=0,active={random:true,exploit:false,epsilon:true,ucb:true,thompson:true,oracle:false},playing=false;
+  function refreshScenario(){const k=SC_KEYS[scenario];seedname.textContent=k;}
+  function init(){
+    const ps=SCENARIOS[SC_KEYS[scenario]].ps;
+    bandits={}; ch.reset(); t=0;
+    for(const p in active){if(active[p]){bandits[p]=newBandit(ps,2024+p.length+Date.now()%9999);ch.line(POL_INFO[p].label,POL_INFO[p].color);}}
+    document.getElementById('rbm').textContent=(Math.max(...ps)*100|0)+'%';
+    document.getElementById('rt').textContent='0';
+    document.getElementById('rlr').textContent='—';
+    document.getElementById('rlead').textContent='—';
+    ch.render();
+  }
+  function step(n){
+    for(let i=0;i<n;i++){t++;for(const p in bandits){const arm=policyPick(bandits[p],p,t);pull(bandits[p],arm);ch.push(POL_INFO[p].label,t,bandits[p].cumRegret);}}
+    let best=null,bestR=Infinity;
+    for(const p in bandits){if(bandits[p].cumRegret<bestR){bestR=bandits[p].cumRegret;best=p;}}
+    if(best){document.getElementById('rlead').textContent=POL_INFO[best].label;document.getElementById('rlr').textContent=bestR.toFixed(1);}
+    document.getElementById('rt').textContent=t;
+    ch.render();
+  }
+  function play1k(){playing=true;const step_size=15,target=t+1000;function tick(){if(!playing||t>=target)return;step(step_size);requestAnimationFrame(tick);}tick();}
+  document.querySelectorAll('.policy-pills .toggle').forEach(b=>{b.onclick=()=>{const k=b.dataset.pol;active[k]=!active[k];b.classList.toggle('on',active[k]);init();};});
+  document.getElementById('raceplay').onclick=()=>play1k();
+  document.getElementById('racestep').onclick=()=>step(100);
+  document.getElementById('racereset').onclick=()=>{playing=false;init();};
+  document.getElementById('seedchg').onclick=()=>{playing=false;scenario=(scenario+1)%SC_KEYS.length;refreshScenario();init();};
+  refreshScenario(); init();
+  window.addEventListener('resize',()=>ch.render());
+})();
+</script>
+<script>
+/* report content height to the embedding page so the iframe can auto-size */
+(function(){
+  if(window.parent===window)return;
+  function postHeight(){var h=Math.ceil(document.documentElement.getBoundingClientRect().height);window.parent.postMessage({type:'demo-height',height:h},'*');}
+  window.addEventListener('load',function(){postHeight();setTimeout(postHeight,250);setTimeout(postHeight,700);});
+  window.addEventListener('resize',postHeight);
+  if(window.ResizeObserver){try{new ResizeObserver(postHeight).observe(document.body);}catch(e){}}
+})();
+</script>
+</body>
+</html>

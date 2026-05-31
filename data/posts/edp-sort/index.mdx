@@ -1,13 +1,123 @@
 ---
-title: 'Sorting things you cannot measure — only match'
+title: 'From one-armed bandits to sorting you cannot measure'
 date: '2026-05-30'
 draft: false
 section: 'free-writing'
-summary: 'Eight players, no stats sheet — you can only stage matches and watch who wins, and a single match is a coin weighted by the skill gap. How many matches until the league table is right, who should you schedule, and why is the bandit version of this so different?'
+summary: 'Start with the simplest decision under uncertainty — which restaurant to eat at when you can only try one a night — and walk it all the way to sorting players you can only compare by staging noisy matches, and to combinatorial bandits that pick whole top-K slates. One thread: explore vs exploit, and where to spend your next try.'
 authors: ['default']
 layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
 ---
+
+Five restaurants nearby. One will make you happiest on average. You can try only one
+tonight, your experience is noisy, and every mediocre dinner costs you a shot at a better
+one. That tiny dilemma is the seed of a whole family of problems — and by the end of this
+post it'll have grown into sorting players you can't measure and picking whole shortlists
+of K. The thread tying it all together never changes: **explore vs exploit — where do I
+spend my next try?**
+
+## Part I — The one-armed bandit: choosing dinner
+
+That dinner problem _is_ the **multi-armed bandit**: choose one option, observe one noisy
+outcome, update your belief, repeat. The hard part isn't the choosing — it's deciding how
+many bad dinners you're willing to buy in order to learn which restaurant is actually best.
+
+The vocabulary is just the restaurant story in disguise. Each restaurant is an **arm**. A
+visit is a **pull**. The **reward** is whether tonight was good enough that you'd go back.
+You never see a restaurant's true average quality — only one noisy dinner at a time, and
+**only for the place you chose**. The others stay counterfactual: you never find out what
+you missed.
+
+### When you can read the numbers, it's boring
+
+Hand me five restaurant scores — 0.3, 0.7, 0.5, 0.4, 0.6 — and "find the best" is a
+five-step scan. The _interesting_ version hides the scores. Each dinner is a noisy sample
+of a quality you can't see: maybe the chef had a good night, maybe you ordered badly. One
+visit tells you something, not enough. You've got a hundred dinners — or ten thousand.
+Pick the order.
+
+### The cost of not knowing: regret
+
+This is the shape of every repeated decision under uncertainty — where to eat, which email
+subject line to send, which widget to show. Formally: $k$ arms, each with a hidden reward
+distribution; one pull per round; a noisy reward observed; maximize cumulative reward.
+Equivalently, **minimize regret** — the gap to an oracle that always plays the best arm:
+
+$$\text{Regret}(T) = \sum_{t=1}^{T}\big(\mu^* - \mu_{a_t}\big), \qquad \mu^* = \max_i \mu_i$$
+
+Regret is the quality you leave on the table. If Sushi is truly best and you eat somewhere
+weaker tonight, the gap between those two hidden averages is tonight's expected regret. And
+here's the bind: you can't commit to the best arm after a handful of pulls (early estimates
+are noisy — you'll often crown the wrong one), but you can't explore uniformly forever
+either (every round on a bad arm is regret you never get back). **Every algorithm is just a
+particular way of splitting your pulls between _finding out_ and _cashing in_.**
+
+### Three policies that cover most of the ground
+
+The surprising lesson up front: the dumb-sounding policies work shockingly well, and the
+clever ones win by less than you'd think.
+
+- **ε-greedy.** Play the best-so-far 90% of the time; play a random arm the other 10%. The
+  randomness is your tax against getting stuck on a wrong early guess. Hard to break, but it
+  keeps wasting that 10% even after the winner is obvious.
+- **UCB1** — _optimism in the face of uncertainty._ Score each arm by
+  $\hat{\mu}_i + \sqrt{2\ln t / n_i}$ and play the max: what you know, plus how wrong you
+  might be. Barely-tried arms get a bonus that shrinks as you sample them, so exploration is
+  **directed** at genuine uncertainty rather than sprayed uniformly.
+- **Thompson sampling** — _probability matching._ Keep a belief distribution per arm (a Beta
+  for win/lose rewards); each round draw one sample from each and play the highest draw. A
+  barely-tried arm has a wide posterior, so it _sometimes_ draws high and gets explored; a
+  known-bad arm has a narrow low posterior and almost never wins. Exploration fades on its
+  own. Embarrassingly good in practice.
+
+Notice what's shared: the loop is tiny — start each arm with a weak prior, pick, pull,
+update **only that arm**, repeat. What differs between algorithms is _only_ how they turn
+"estimate plus uncertainty" into the next pull.
+
+<Demo src="/demos/posts/edp-sort/bandit-race.html" title="Race the bandit policies" height={560} />
+
+Race ε-greedy, UCB, and Thompson on the **hard** scenario (top two arms nearly tied), then
+race ε-greedy against **pure exploit** on **balanced**. The story tells itself: pure-exploit
+commits to the wrong arm about as often as the right one; ε-greedy beats it because a 10%
+random tax is cheaper than locking in a mistake; UCB and Thompson beat ε-greedy because their
+exploration is _aimed_; and UCB vs Thompson trade the lead by a noisy margin — bandits aren't
+where you find your edge.
+
+A note on "UCB is slow": not in CPU terms — it's one index per arm. The slowness you feel is
+_learning_ slowness. UCB1's $\sqrt{2\ln t / n_i}$ bonus is a deliberately safe confidence
+radius (Hoeffding) valid for _any_ bounded reward, so it keeps re-checking arms a more
+model-aware method would already drop. In production people reach for tighter variants
+(KL-UCB, UCB-Tuned) or Thompson when a Bayesian reward model is natural.
+
+<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="Pull the bandit by hand" height={520} />
+
+Pull it yourself — click a restaurant to eat there tonight, watch your regret line climb
+against a Thompson bot eating in parallel. A hundred dinners by hand is enough to feel how
+hard it is to beat directed exploration on instinct.
+
+### Context changes the best arm
+
+One real-world wrinkle: the best dinner depends on the night. A quick lunch, a date night, a
+rainy solo dinner are different **contexts**. A plain bandit learns one global average per
+restaurant; a **contextual bandit** sees features of the situation _first_, then chooses.
+**LinUCB** is UCB with a twist — instead of one mean per arm, each arm learns weights $\theta_a$
+over a context vector $x_t$, predicts $x_t^\top \theta_a$, and adds the same optimism bonus on
+top. The same restaurant can be wrong for lunch and perfect for a rainy night.
+
+<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="Contextual dinner bandit" height={420} />
+
+### The one-sentence takeaway
+
+_A little cleverness wins by a lot; more cleverness wins by very little._ ε-greedy, UCB, and
+Thompson are points on a smooth curve, and any of them crushes committing-too-early or
+never-committing. The textbook problem is essentially solved.
+
+But it's a _very specific_ problem: $k$ independent arms, one pull per round, reward seen
+immediately. The interesting world is when that structure breaks — when the "arm" you pull is
+a **pair of items** and the only thing you learn is **which one is bigger**. That's sorting
+under noise, and it's where we go next.
+
+## Part II — Sorting: when the arm is a pair
 
 Eight players, no stats sheet. You can't read anyone's skill; you can only make two of
 them play and watch who wins — and a single match is a coin weighted by the skill gap.
@@ -169,7 +279,7 @@ top-100 cutline. Random wastes itself on blowouts far from the line; adaptive re
 the top-100 in _tens of thousands_ of matches instead of 50 million — entirely by spending its
 budget in the band around the cutline.
 
-### Two machines for "top-K" — and the feedback that separates them
+## Part III — Combinatorial bandits: picking a whole top-K
 
 Everything so far lives in one world: **the only thing you ever observe is who won** — a
 comparison bit. There's a second world where each thing you try hands back _its own_ number: a
@@ -178,13 +288,12 @@ problem, and they need different machines.
 
 - **Comparison feedback** (this whole post): Bradley-Terry / Elo active sorting. Fit skills from
   "A beat B," sort, schedule the boundary.
-- **Per-item reward feedback**: **Combinatorial-UCB**. Keep, for each item, a running mean of
-  its rewards plus an _optimism bonus_ that's large when you've barely tried it,
+- **Per-item reward feedback**: **Combinatorial-UCB**. It's the exact UCB idea from Part I,
+  scaled from one arm to a whole slate. Keep, for each item, a running mean of its rewards plus
+  the same _optimism bonus_ that's large when you've barely tried it,
   $u_i = \bar{x}_i + \sqrt{c\,\ln t / n_i}$. Each round, pick the **top-K by $u_i$** (that's the
-  "combinatorial" part — your action is a whole K-set), observe a reward for **each** of the K
-  you picked ("semi-bandit" feedback), and update only those. "UCB" is just _optimism in the
-  face of uncertainty_: untested items look good on purpose, so they get tried before being
-  dismissed.
+  "combinatorial" part — your action is a whole K-set, not a single arm), observe a reward for
+  **each** of the K you picked ("semi-bandit" feedback), and update only those.
 
 The honest catch — and it's the crux: **Comb-UCB cannot run on "who won."** It needs a reward
 per item; the football world never gives one. So the panel below is _not_ Comb-UCB solving the
