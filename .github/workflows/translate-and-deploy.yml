@@ -1,0 +1,140 @@
+# Translate all blog posts to Arabic, then (optionally) deploy to GitHub Pages.
+#
+# Manual only: trigger it from the Actions tab → "Translate & Deploy" → Run workflow.
+#
+# Prerequisite: a repository secret named ANTHROPIC_API_KEY
+#   (Settings → Secrets and variables → Actions → New repository secret).
+#
+# What it does:
+#   1. translate – uses Claude to create `index.ar.mdx` for every post under
+#      data/posts/<slug>/ that has `index.mdx` but no Arabic version yet, following
+#      .claude/commands/translate-post.md (Levantine voice). Existing translations
+#      are left untouched. New files are committed to `main` with `[skip ci]` so the
+#      regular CI / Pages workflows don't double-run on the bot commit.
+#   2. build + deploy – rebuilds the static export and publishes it to GitHub Pages.
+#
+# Note: the translate job pushes directly to `main`. If `main` is protected, either
+# grant the Actions bot push access, or change the "Commit translations" step to open
+# a pull request instead of pushing.
+name: Translate & Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Build and deploy to GitHub Pages after translating'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Share the 'pages' concurrency group with pages.yml so deploys never overlap.
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Translate untranslated posts with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # To lock the voice to a specific model, add e.g. --model claude-opus-4-8
+          claude_args: '--allowedTools "Read,Write,Edit,Glob,Grep,Bash(ls:*),Bash(find:*)" --max-turns 100'
+          prompt: |
+            Translate this blog's English posts into Levantine Arabic (عربي شامي).
+
+            Follow the conventions in `.claude/commands/translate-post.md` and the
+            author's voice in `.claude/skills/writing-style/SKILL.md`. Re-write each
+            post as if it were originally written in Arabic — punchy, conversational,
+            masculine forms by default — not a literal, word-for-word translation.
+
+            For EVERY directory `data/posts/<slug>/` that contains `index.mdx` but
+            does NOT already contain `index.ar.mdx`:
+              1. Create `data/posts/<slug>/index.ar.mdx`.
+              2. Translate the body to Levantine Arabic. Keep code blocks, URLs and
+                 technical terms (LLM, agent, feedback, etc.) as-is.
+              3. Copy every frontmatter field. Translate only `title` and `summary`.
+                 Keep `date`, `tags`, `section`, `authors`, `featured`, `draft`
+                 identical. Add three fields: `language: ar`,
+                 `translationOf: <slug>`, `originalLanguage: en`.
+
+            Do NOT modify existing `index.ar.mdx` files. Do NOT edit any English
+            `index.mdx`. Do NOT run git — just create the files.
+
+      - name: Commit translations
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore(i18n): auto-translate posts to Arabic [skip ci]"
+            git push origin HEAD:main
+          else
+            echo "No new translations — every post already has an Arabic version."
+          fi
+
+  build:
+    needs: translate
+    if: ${{ inputs.deploy }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+      - id: configurepages
+        uses: actions/configure-pages@v5
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/yarn.lock') }}-
+      - run: yarn
+      - run: yarn build
+        env:
+          EXPORT: 1
+          UNOPTIMIZED: 1
+          BASE_PATH: ${{ steps.configurepages.outputs.base_path }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    needs: build
+    if: ${{ inputs.deploy }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
