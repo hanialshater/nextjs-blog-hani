@@ -15,6 +15,7 @@ interface DemoProps {
 
 const englishVariants: Record<string, string> = {
   '/demos/posts/edp-sort/pitch-match.html': '/demos/posts/edp-sort/pitch-match.en.html',
+  '/demos/posts/edp-sort/topk-scale.html': '/demos/posts/edp-sort/topk-scale.en.html',
 }
 
 function resolveSrc(src: string) {
