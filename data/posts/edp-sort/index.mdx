@@ -17,7 +17,7 @@ $$\arg\max_i \mu_i$$
 
 But you cannot read them. You can try one tonight, another tomorrow, and another next week. Each dinner tells you something, but never enough. Perhaps the chef had a bad night. Perhaps you ordered badly. Perhaps the place is excellent and you found its one terrible dish.
 
-So you are not really choosing a restaurant. You are **sorting unknown numbers**.
+So you begin by **sorting unknown numbers**.
 
 Each restaurant has a real average quality $\mu_i$. The values are hidden. A dinner is one noisy observation of one value. You need to learn enough of their order without spending all your dinners on bad restaurants.
 
@@ -27,7 +27,7 @@ The question is not just “which restaurant is best?” It is:
 
 > **Where should the next try go?**
 
-The restaurant is the small version of a much broader problem.
+The restaurant is the small version of a broader problem. You begin by sorting unknown numbers; more generally, you are optimizing a known structure whose decisive parameters are unknown.
 
 To find a shortest path through a city, the graph may be known while travel times on its edges are uncertain and variable. You do not merely run Dijkstra on fixed weights; driving a road is how you learn its weight.
 
@@ -79,9 +79,9 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
 - **Thompson sampling** — *probability matching.* Keep a belief distribution for each arm. Each round, draw one plausible value from every belief and choose the highest draw. A barely tried arm has a wide posterior and occasionally gets another chance. A known-bad arm has a narrow, low posterior and rarely wins.
 
-<Demo src="/demos/posts/edp-sort/bandit-race.en.html" title="Race multi-armed bandit policies" height={560} />
+<Demo src="/demos/posts/edp-sort/bandit-race-averaged.en.html" title="Average multi-armed bandit policy race" height={560} />
 
-Run the **hard** setting, where the top two arms are close. Pure exploit fails because an early lucky result can become a permanent false belief. ε-greedy repairs that by buying random checks. UCB1, KL-UCB, and Thompson improve on it because their checks go where uncertainty is still relevant.
+Run the **hard** setting, where the top two arms are close. This chart averages many deterministic trials, so it shows a policy trend rather than the winner of one lucky rollout. Pure exploit fails because an early lucky result can become a permanent false belief. ε-greedy repairs that by buying random checks. UCB1, KL-UCB, and Thompson improve on it because their checks go where uncertainty is still relevant.
 
 KL-UCB is not a universal replacement for Thompson. It assumes the reward model is close to Bernoulli and pays for a numerical inverse-KL solve. But when that model is the right one, it removes avoidable slack from UCB1's confidence bonus.
 
@@ -176,7 +176,7 @@ There are limits. Every context feature must be available before acting; a post-
 
 <Demo src="/demos/posts/edp-sort/bandit-contextual.html?lang=en&v=2" title="Contextual dinner bandit" height={420} />
 
-The comparison in the demo matters: plain Thompson keeps learning one average per restaurant, while LinUCB sees the context first. Watch the contextual policy lose less regret because it stops treating all nights as the same problem.
+The comparison in the demo matters: **non-contextual Thompson sampling** keeps learning one average per restaurant, while LinUCB sees the context first. Watch the contextual policy lose less regret because it stops treating all nights as the same problem.
 
 <details>
 <summary><strong>Click to reveal: disjoint LinUCB in NumPy</strong></summary>
@@ -236,7 +236,11 @@ Each player has a hidden skill $s_i$. The logistic curve turns the difference $s
 
 One match is one noisy observation of one pairwise difference. But the pairs are not independent. If A beats B repeatedly and B beats C repeatedly, you learn something about A versus C without scheduling that match. The pairs share the same hidden skill vector.
 
-A pair separated by a gap $\Delta$ needs roughly $\log(1/\delta)/\Delta^2$ repeated matches before you can call the order with confidence $1-\delta$. Big gaps settle quickly. Near ties consume the budget.
+Up to constants and the scale of the link, distinguishing a skill gap $\Delta$ with confidence $1-\delta$ takes roughly
+
+$$O\!\left(\frac{\log(1/\delta)}{\beta^2\Delta^2}\right)$$
+
+comparisons. Big gaps settle quickly. Near ties consume the budget.
 
 ### How the table learns
 
@@ -302,14 +306,17 @@ def elo_update(rating, i, j, winner, learning_rate=0.25):
 
 </details>
 
+This bare batch fit assumes the comparison graph is connected. In production, add regularization or a prior: disconnected groups, undefeated items, and winless items can otherwise make unconstrained Bradley–Terry estimates unstable or diverge.
+
 The recipe has three parts:
 
 > **estimate** skills from matches → **read off** the ranking by sorting → **schedule** the next match.
 
 ### Where to spend the matches
 
-- A **lopsided** match produces an expected Elo update close to zero. It mostly confirms what you already knew.
-- A **near-even** match is both uncertain and capable of changing the table.
+With a calibrated model, the expected **signed** Elo update is zero for every pairing. The question is not whether a pairing has a nonzero expected update; it is where an observation is most informative.
+
+A lopsided match is usually low-information: the expected favourite winning produces a small update, while an upset produces a large update but happens rarely. Pairwise outcome variance, and therefore local information about the order, is largest near $p=0.5$.
 
 Sample near the boundaries where the answer can still change.
 
@@ -331,7 +338,7 @@ Set the table to **you scout (click 2)**. Pick two players, run a match, inspect
 Suppose you only need the **best K** items. Comparing only items currently in the top-K fails in three ways.
 
 1. A genuinely top-K item currently sitting at K+1 receives no matches and has no path back into contention.
-2. Inside a settled top-K, comparisons are often lopsided; Elo updates are near zero and the cutline does not move.
+2. Inside a settled top-K, comparisons are often lopsided; the cutline does not move.
 3. If the top group is isolated from the field, “K-th best” loses its anchor.
 
 The fix is a **candidate band around the cutline**. Keep sampling everyone whose uncertainty still overlaps the K-th position. Let the band narrow only when evidence rules people out.
@@ -343,28 +350,38 @@ The fix is a **candidate band around the cutline**. Keep sampling everyone whose
 import numpy as np
 
 
-def candidate_band(scores, item_games, k, rank_radius=3):
-    """Keep a small pool around the current K-th boundary."""
+def candidate_band(scores, score_se, k, z=1.96):
+    """
+    Keep candidates whose confidence intervals overlap the current K-th item.
+    score_se can come from a Hessian approximation, a bootstrap, or a posterior.
+    """
     order = np.argsort(-scores)
-    low = max(0, k - 1 - rank_radius)
-    high = min(len(scores), k + rank_radius)
+    cutline_item = order[k - 1]
+    cutline_low = scores[cutline_item] - z * score_se[cutline_item]
+    cutline_high = scores[cutline_item] + z * score_se[cutline_item]
 
-    # A rank band protects against the obvious feedback loop: a current K+1
-    # item must still be allowed to produce evidence.
-    return order[low:high]
+    lower = scores - z * score_se
+    upper = scores + z * score_se
+    band = np.flatnonzero((upper >= cutline_low) & (lower <= cutline_high))
+
+    # Keep enough local rivals even when the intervals are overconfident early on.
+    local = order[max(0, k - 4):min(len(scores), k + 4)]
+    return np.unique(np.concatenate([band, local]))
 
 
-def choose_active_pair(scores, pair_games, candidates):
-    """Prefer close pairs that have not been compared much."""
+def choose_active_pair(scores, score_se, pair_games, candidates):
+    """Prefer uncertain, close pairs inside the cutline candidate band."""
     best_pair = None
     best_value = -np.inf
 
     for left in range(len(candidates)):
         for right in range(left + 1, len(candidates)):
             i, j = candidates[left], candidates[right]
-            closeness = 1.0 / (abs(scores[i] - scores[j]) + 1e-3)
-            uncertainty = 1.0 / np.sqrt(pair_games[i, j] + 1.0)
-            value = closeness * uncertainty
+            pair_se = np.sqrt(score_se[i] ** 2 + score_se[j] ** 2)
+            standardized_gap = abs(scores[i] - scores[j]) / (pair_se + 1e-9)
+            boundary_value = 1.0 / (1.0 + standardized_gap)
+            pair_uncertainty = 1.0 / np.sqrt(pair_games[i, j] + 1.0)
+            value = boundary_value * pair_uncertainty
 
             if value > best_value:
                 best_value = value
@@ -374,13 +391,15 @@ def choose_active_pair(scores, pair_games, candidates):
 
 
 # At every round:
-# band = candidate_band(elo_rating, item_games, k=100)
-# i, j = choose_active_pair(elo_rating, pair_games, band)
+# band = candidate_band(elo_rating, score_se, k=100)
+# i, j = choose_active_pair(elo_rating, score_se, pair_games, band)
 # winner = observe_comparison(i, j)
 # elo_rating = elo_update(elo_rating, i, j, winner)
 ```
 
 </details>
+
+The implementation above shows the principle. A cheap production approximation may use a fixed rank radius around K; a better one uses posterior, bootstrap, or Hessian-based uncertainty to decide whose intervals overlap the cutline.
 
 With **10,000** players there are about 50 million possible pairs. Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
@@ -403,7 +422,9 @@ $$u_i = \bar{x}_i + \sqrt{c\,\ln t/n_i}$$
 
 Each round, choose the top-K by $u_i$, observe a reward for each selected item, and update those items.
 
-The limitation is simple: **Comb-UCB cannot run on “who won?”** It needs a reward for each item. A football match does not provide one.
+This simple top-K rule assumes additive per-item rewards. On a real ranked surface, position bias, substitution, cannibalization, diversity constraints, and slate-level interactions can break that assumption. Then “choose the top-K UCB scores” is no longer the full optimization problem; the action must be valued as a slate.
+
+The limitation is simpler still: **Comb-UCB cannot run on “who won?”** It needs a reward for each item. A football match does not provide one.
 
 <details>
 <summary><strong>Click to reveal: combinatorial UCB with per-item rewards</strong></summary>
@@ -462,6 +483,6 @@ The optimization structure is known. The parameters that determine the answer ar
 
 For independent arms, that is a multi-armed bandit. For pairwise comparisons, it is active ranking with a latent-skill model. For a slate with per-item rewards, it is a combinatorial semi-bandit.
 
-The reusable question is still the first one:
+You are not just choosing a restaurant, a match, or a slate.
 
-> **Where should the next try go?**
+> **You are choosing which ignorance is worth paying to remove.**
