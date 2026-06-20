@@ -13,6 +13,21 @@ interface DemoProps {
   height?: number | string
 }
 
+const englishVariants: Record<string, string> = {
+  '/demos/posts/edp-sort/pitch-match.html': '/demos/posts/edp-sort/pitch-match.en.html',
+}
+
+function resolveSrc(src: string) {
+  const [pathname, query = ''] = src.split('?')
+  const params = new URLSearchParams(query)
+
+  if (params.get('lang') === 'en' && englishVariants[pathname]) {
+    return englishVariants[pathname]
+  }
+
+  return src
+}
+
 // Embeds a self-contained HTML demo in an isolated, lazily-loaded iframe so a
 // post can ship its own interactive widgets without touching the app bundle.
 // If the demo posts a `demo-height` message (see the snippet in each demo HTML),
@@ -20,6 +35,7 @@ interface DemoProps {
 export default function Demo({ src, title = 'Interactive demo', height = 480 }: DemoProps) {
   const ref = useRef<HTMLIFrameElement>(null)
   const [measured, setMeasured] = useState<number | null>(null)
+  const resolvedSrc = resolveSrc(src)
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -41,7 +57,7 @@ export default function Demo({ src, title = 'Interactive demo', height = 480 }: 
     <figure className="my-6">
       <iframe
         ref={ref}
-        src={src}
+        src={resolvedSrc}
         title={title}
         loading="lazy"
         scrolling="no"
