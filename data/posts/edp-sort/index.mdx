@@ -224,7 +224,7 @@ You can make any two play and watch who wins. A match is a coin whose bias depen
 
 How many matches do you need before the league table is reliable? More importantly: **which match should happen next?**
 
-<Demo src="/demos/posts/edp-sort/pitch-match.html?lang=en&v=2" title="A league table built from noisy 1v1 matches" height={660} />
+<Demo src="/demos/posts/edp-sort/pitch-match.html?lang=en&v=3" title="A league table built from noisy 1v1 matches" height={660} />
 
 This is sorting, except the comparison oracle is unreliable. In a textbook, you sort by reading numbers. Here, the better player only *probably* wins.
 
@@ -248,6 +248,60 @@ $$s_i \leftarrow s_i + \eta(1-p), \qquad s_j \leftarrow s_j - \eta(1-p), \qquad 
 
 The update is the surprise, $1-p$. If the favourite wins, the ratings barely move. If an underdog wins, they move sharply.
 
+<details>
+<summary><strong>Click to reveal: Bradley–Terry batch fitting and online Elo</strong></summary>
+
+```python
+import numpy as np
+
+
+def fit_bradley_terry_mm(wins, iterations=100, eps=1e-9):
+    """
+    wins[i, j] is the number of times item i beat item j.
+    Returns log-strengths; sorting them gives the Bradley–Terry ranking.
+    """
+    wins = np.asarray(wins, dtype=float)
+    pair_games = wins + wins.T
+    total_wins = wins.sum(axis=1)
+    n_items = len(wins)
+    strength = np.ones(n_items)
+
+    for _ in range(iterations):
+        updated = strength.copy()
+        for i in range(n_items):
+            denominator = 0.0
+            for j in range(n_items):
+                if i != j and pair_games[i, j] > 0:
+                    denominator += pair_games[i, j] / (strength[i] + strength[j])
+
+            # An item with no observed matches retains its current strength.
+            if denominator > 0:
+                updated[i] = max(total_wins[i], eps) / denominator
+
+        # Bradley–Terry is identifiable only up to an additive constant in log-space.
+        updated /= np.exp(np.mean(np.log(np.maximum(updated, eps))))
+        strength = updated
+
+    return np.log(np.maximum(strength, eps))
+
+
+def elo_update(rating, i, j, winner, learning_rate=0.25):
+    """One online logistic-regression step after i versus j."""
+    p_i_wins = 1.0 / (1.0 + np.exp(-(rating[i] - rating[j])))
+    target_i = 1.0 if winner == i else 0.0
+    delta = learning_rate * (target_i - p_i_wins)
+
+    rating[i] += delta
+    rating[j] -= delta
+    return rating
+
+
+# Batch: scores = fit_bradley_terry_mm(wins)
+# Online: rating = elo_update(rating, i, j, winner)
+```
+
+</details>
+
 The recipe has three parts:
 
 > **estimate** skills from matches → **read off** the ranking by sorting → **schedule** the next match.
@@ -266,7 +320,7 @@ Sample near the boundaries where the answer can still change.
 
   $$\arg\max_{(i,j)}\left[\text{closeness}(|\hat{s}_i-\hat{s}_j|)+\text{uncertainty}\left(\frac{1}{1+n_{ij}}\right)\right]$$
 
-<Demo src="/demos/posts/edp-sort/pairing-race.html?lang=en&v=2" title="Where to spend your matches" height={440} />
+<Demo src="/demos/posts/edp-sort/pairing-race.html?lang=en&v=3" title="Where to spend your matches" height={440} />
 
 The curve is Kendall $\tau$, or table correctness, against matches played. Boundary-seeking schedulers settle the table first because they spend their budget where the order is still movable.
 
@@ -282,9 +336,55 @@ Suppose you only need the **best K** items. Comparing only items currently in th
 
 The fix is a **candidate band around the cutline**. Keep sampling everyone whose uncertainty still overlaps the K-th position. Let the band narrow only when evidence rules people out.
 
+<details>
+<summary><strong>Click to reveal: active matching around a top-K cutline</strong></summary>
+
+```python
+import numpy as np
+
+
+def candidate_band(scores, item_games, k, rank_radius=3):
+    """Keep a small pool around the current K-th boundary."""
+    order = np.argsort(-scores)
+    low = max(0, k - 1 - rank_radius)
+    high = min(len(scores), k + rank_radius)
+
+    # A rank band protects against the obvious feedback loop: a current K+1
+    # item must still be allowed to produce evidence.
+    return order[low:high]
+
+
+def choose_active_pair(scores, pair_games, candidates):
+    """Prefer close pairs that have not been compared much."""
+    best_pair = None
+    best_value = -np.inf
+
+    for left in range(len(candidates)):
+        for right in range(left + 1, len(candidates)):
+            i, j = candidates[left], candidates[right]
+            closeness = 1.0 / (abs(scores[i] - scores[j]) + 1e-3)
+            uncertainty = 1.0 / np.sqrt(pair_games[i, j] + 1.0)
+            value = closeness * uncertainty
+
+            if value > best_value:
+                best_value = value
+                best_pair = (i, j)
+
+    return best_pair
+
+
+# At every round:
+# band = candidate_band(elo_rating, item_games, k=100)
+# i, j = choose_active_pair(elo_rating, pair_games, band)
+# winner = observe_comparison(i, j)
+# elo_rating = elo_update(elo_rating, i, j, winner)
+```
+
+</details>
+
 With **10,000** players there are about 50 million possible pairs. Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
-<Demo src="/demos/posts/edp-sort/topk-scale.html?lang=en&v=2" title="10,000 players: find the best 100" height={500} />
+<Demo src="/demos/posts/edp-sort/topk-scale.html?lang=en&v=3" title="10,000 players: find the best 100" height={500} />
 
 Random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches rather than fifty million by concentrating effort where membership of the set is still uncertain.
 
@@ -305,9 +405,50 @@ Each round, choose the top-K by $u_i$, observe a reward for each selected item, 
 
 The limitation is simple: **Comb-UCB cannot run on “who won?”** It needs a reward for each item. A football match does not provide one.
 
+<details>
+<summary><strong>Click to reveal: combinatorial UCB with per-item rewards</strong></summary>
+
+```python
+import numpy as np
+
+
+class CombinatorialUCB:
+    def __init__(self, n_items, exploration=1.0):
+        self.reward_sum = np.zeros(n_items)
+        self.pulls = np.zeros(n_items, dtype=np.int64)
+        self.exploration = exploration
+
+    def select_slate(self, k, t):
+        means = np.divide(
+            self.reward_sum,
+            self.pulls,
+            out=np.zeros_like(self.reward_sum),
+            where=self.pulls > 0,
+        )
+        bonus = np.full_like(means, np.inf)
+        seen = self.pulls > 0
+        bonus[seen] = self.exploration * np.sqrt(np.log(max(t, 2)) / self.pulls[seen])
+        scores = means + bonus
+
+        # argpartition avoids sorting every item when k << n_items.
+        slate = np.argpartition(scores, -k)[-k:]
+        return slate[np.argsort(-scores[slate])]
+
+    def update(self, slate, rewards):
+        self.pulls[slate] += 1
+        self.reward_sum[slate] += np.asarray(rewards)
+
+
+slate = policy.select_slate(k=12, t=round_number)
+rewards = observe_per_item_rewards(slate)  # one reward for every selected item
+policy.update(slate, rewards)
+```
+
+</details>
+
 The next demo is not a fair race between two solutions to the same feedback problem. It shows two machines looking at the same hidden item quality through different observation channels.
 
-<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html?lang=en&v=2" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
+<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html?lang=en&v=3" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
 
 Comb-UCB receives several direct rewards each round; Bradley-Terry receives one comparison bit. Bradley-Terry gives a global latent ranking, reusable for any K. Comb-UCB gives per-item reward estimates for the items it has selected, but says little about items it never observed.
 
