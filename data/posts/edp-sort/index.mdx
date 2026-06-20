@@ -1,9 +1,9 @@
 ---
-title: 'From One-Armed Bandits to Sorting What You Cannot Measure'
+title: 'From Multi-Armed Bandits to Sorting What You Cannot Measure'
 date: '2026-05-30'
 draft: false
 section: 'free-writing'
-summary: 'Start with five restaurants whose true quality is unknown, then follow the same problem through bandits, noisy pairwise ranking, and top-K selection: the optimization structure is known, but its parameters must be learned by trying.'
+summary: 'Start with five restaurants whose true quality is unknown, then follow the same problem through multi-armed bandits, noisy pairwise ranking, and top-K selection: the optimization structure is known, but its parameters must be learned by trying.'
 authors: ['default']
 layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
@@ -39,11 +39,11 @@ In all of these cases, the optimization problem is known. The actions, constrain
 
 So the problem must be solved while its parameters are being learned.
 
-## Part I — The one-armed bandit: choosing dinner
+## Part I — The multi-armed bandit: choosing dinner
 
 The restaurant problem is a **multi-armed bandit**: choose one option, observe one noisy outcome, update your belief, repeat.
 
-Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**. You never see a restaurant's true average quality; you see one noisy dinner at a time, and only for the restaurant you chose. The others remain counterfactual.
+Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**. You never see a restaurant's true average quality; you see one noisy dinner at a time, and only for the restaurant you chose. The other restaurants remain counterfactual.
 
 ### The cost of not knowing: regret
 
@@ -57,11 +57,11 @@ Commit after a handful of dinners and early noise can crown the wrong winner. Ex
 
 Before naming the policies, try it yourself.
 
-<Demo src="/demos/posts/edp-sort/mysterious-policy.html" title="You versus a mysterious policy" height={640} />
+<Demo src="/demos/posts/edp-sort/mysterious-policy.en.html" title="You versus a mysterious policy" height={560} />
 
 There are five hidden restaurant qualities. You choose where to eat; a second policy chooses in parallel. The goal is not to win one dinner. It is to avoid accumulating bad dinners while you work out where the good ones are.
 
-### Three policies cover most of the ground
+### Four policies cover most of the ground
 
 - **ε-greedy.** Choose the current best arm 90% of the time and a random arm for the other 10%. The random part is insurance against an early mistake, but it keeps paying that 10% after the winner is obvious.
 
@@ -71,25 +71,148 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
   and choose the largest score. The first term is what you believe; the second is how wrong you might still be. Barely tried arms get a bonus that shrinks as evidence arrives.
 
+- **KL-UCB.** For Bernoulli feedback—click/no-click, purchase/no-purchase—UCB1's generic Hoeffding radius is conservative. KL-UCB asks a sharper question: *how high could this arm's true Bernoulli mean still plausibly be, given the observations?* It chooses the largest $q$ such that
+
+  $$n_i\,\mathrm{KL}(\hat{\mu}_i\,\|\,q) \leq \ln t + c\ln\ln t$$
+
+  where $\mathrm{KL}$ is Bernoulli KL divergence. Its upper bound follows the shape of binomial evidence, so it is especially tighter near probabilities close to 0 or 1.
+
 - **Thompson sampling** — *probability matching.* Keep a belief distribution for each arm. Each round, draw one plausible value from every belief and choose the highest draw. A barely tried arm has a wide posterior and occasionally gets another chance. A known-bad arm has a narrow, low posterior and rarely wins.
 
-<Demo src="/demos/posts/edp-sort/bandit-race.html" title="Race the bandit policies" height={560} />
+<Demo src="/demos/posts/edp-sort/bandit-race.en.html" title="Race multi-armed bandit policies" height={560} />
 
-Pure exploit fails because an early lucky result can become a permanent false belief. ε-greedy repairs that by buying random checks. UCB and Thompson improve on it because their checks go where uncertainty is still relevant.
+Run the **hard** setting, where the top two arms are close. Pure exploit fails because an early lucky result can become a permanent false belief. ε-greedy repairs that by buying random checks. UCB1, KL-UCB, and Thompson improve on it because their checks go where uncertainty is still relevant.
 
-UCB is not computationally slow; it is one score per arm. Its conservatism is statistical. The confidence bonus keeps revisiting arms that a more model-aware method might discard earlier. In practice, people often use tighter variants such as KL-UCB or UCB-Tuned, or Thompson sampling when a Bayesian reward model is natural.
+KL-UCB is not a universal replacement for Thompson. It assumes the reward model is close to Bernoulli and pays for a numerical inverse-KL solve. But when that model is the right one, it removes avoidable slack from UCB1's confidence bonus.
 
-<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="Pull the bandit yourself" height={520} />
+<details>
+<summary><strong>Click to reveal: compact Bernoulli-bandit code</strong></summary>
+
+```python
+import math
+import numpy as np
+
+
+def bernoulli_kl(p, q):
+    eps = 1e-12
+    p = min(1 - eps, max(eps, p))
+    q = min(1 - eps, max(eps, q))
+    return p * math.log(p / q) + (1 - p) * math.log((1 - p) / (1 - q))
+
+
+def kl_ucb(mean, pulls, t, c=3.0):
+    if mean >= 1.0:
+        return 1.0
+
+    budget = (math.log(max(t, 2)) + c * math.log(math.log(max(t, 3)))) / pulls
+    low, high = mean, 1.0 - 1e-12
+
+    for _ in range(32):
+        candidate = (low + high) / 2
+        if bernoulli_kl(mean, candidate) <= budget:
+            low = candidate
+        else:
+            high = candidate
+    return low
+
+
+def choose_arm(successes, pulls, t, policy, rng):
+    unseen = np.flatnonzero(pulls == 0)
+    if len(unseen):
+        return int(rng.choice(unseen))
+
+    means = successes / pulls
+
+    if policy == "epsilon_greedy":
+        return int(rng.integers(len(pulls))) if rng.random() < 0.10 else int(np.argmax(means))
+
+    if policy == "ucb1":
+        scores = means + np.sqrt(2.0 * np.log(t) / pulls)
+        return int(np.argmax(scores))
+
+    if policy == "kl_ucb":
+        scores = np.array([kl_ucb(means[a], pulls[a], t) for a in range(len(pulls))])
+        return int(np.argmax(scores))
+
+    if policy == "thompson":
+        samples = rng.beta(1 + successes, 1 + pulls - successes)
+        return int(np.argmax(samples))
+
+
+def update(successes, pulls, arm, reward):
+    pulls[arm] += 1
+    successes[arm] += reward
+```
+
+</details>
 
 The good actions are not simply the high-reward ones. They are the actions that are worth both their immediate outcome and what they teach you.
 
 ### Context changes which arm is best
 
-A quick lunch, a date, and a rainy solo dinner are different **contexts**. A plain bandit learns one global average per restaurant. A **contextual bandit** sees features of the situation before choosing.
+The plain bandit assumes each arm has one global mean $\mu_a$. That is often the wrong parameterization.
 
-In LinUCB, each arm learns weights $\theta_a$ over a context vector $x_t$, predicts $x_t^\top\theta_a$, and adds an uncertainty bonus. The question becomes: which restaurant is best for this situation, given what we know and what we still need to learn?
+A quick lunch, a date, and a rainy solo dinner are different **contexts**. A restaurant can be weak for one and exactly right for another. On a product surface, the equivalent context may include query, device, user intent, price band, time of day, or any feature known *before* the decision.
 
-<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="Contextual dinner bandit" height={420} />
+In the simplest disjoint linear contextual bandit, the expected reward for action $a$ in context $x_t$ is
+
+$$\mathbb{E}[r_t \mid x_t, a] = x_t^\top\theta_a$$
+
+The unknown object is no longer one scalar per arm. It is a vector $\theta_a$ for each arm: the way that arm responds across the context space.
+
+For each arm, LinUCB keeps a regularized design matrix and reward vector:
+
+$$A_a = \lambda I + \sum_{s:a_s=a} x_sx_s^\top, \qquad b_a = \sum_{s:a_s=a} r_sx_s$$
+
+It estimates $\hat{\theta}_a=A_a^{-1}b_a$, then chooses the action with the largest optimistic score:
+
+$$x_t^\top\hat{\theta}_a + \alpha\sqrt{x_t^\top A_a^{-1}x_t}$$
+
+The first term is predicted reward. The second is not vague “uncertainty about the restaurant.” It is uncertainty about **this direction in context space**. A restaurant may be well understood for weekday lunch but still uncertain for a high-intent mobile user on a rainy evening.
+
+That is what context buys you: evidence can transfer between related requests. A dinner for one rainy evening does not only update a restaurant's global average; it updates the parts of its response model that nearby contexts share.
+
+There are limits. Every context feature must be available before acting; a post-click feature is leakage, not context. Features should be scaled and regularized. And disjoint LinUCB only transfers evidence *within* an arm. When there are many sparse arms, use a shared or hybrid model—shared user/item features plus an arm-specific residual—or an action-feature model instead.
+
+<Demo src="/demos/posts/edp-sort/bandit-contextual.html?lang=en&v=2" title="Contextual dinner bandit" height={420} />
+
+The comparison in the demo matters: plain Thompson keeps learning one average per restaurant, while LinUCB sees the context first. Watch the contextual policy lose less regret because it stops treating all nights as the same problem.
+
+<details>
+<summary><strong>Click to reveal: disjoint LinUCB in NumPy</strong></summary>
+
+```python
+import numpy as np
+
+
+class DisjointLinUCB:
+    def __init__(self, n_arms, dim, alpha=0.8, l2=1.0):
+        self.alpha = alpha
+        self.A = [l2 * np.eye(dim) for _ in range(n_arms)]
+        self.b = [np.zeros(dim) for _ in range(n_arms)]
+
+    def choose_arm(self, x):
+        scores = []
+        for A_a, b_a in zip(self.A, self.b):
+            theta_a = np.linalg.solve(A_a, b_a)
+            predicted_reward = x @ theta_a
+            uncertainty = np.sqrt(x @ np.linalg.solve(A_a, x))
+            scores.append(predicted_reward + self.alpha * uncertainty)
+        return int(np.argmax(scores))
+
+    def update(self, arm, x, reward):
+        self.A[arm] += np.outer(x, x)
+        self.b[arm] += reward * x
+
+
+# x must contain only information known before the action.
+# Example: [1, is_lunch, is_date, is_raining, mobile_user].
+arm = policy.choose_arm(x_t)
+reward = observe_reward(arm)
+policy.update(arm, x_t, reward)
+```
+
+</details>
 
 The basic bandit has one feedback channel: choose one item and observe one reward. Now change that. Suppose you can only compare two items and see which one wins.
 
@@ -101,7 +224,7 @@ You can make any two play and watch who wins. A match is a coin whose bias depen
 
 How many matches do you need before the league table is reliable? More importantly: **which match should happen next?**
 
-<Demo src="/demos/posts/edp-sort/pitch-match.html" title="A league table built from noisy 1v1 matches" height={660} />
+<Demo src="/demos/posts/edp-sort/pitch-match.html?lang=en&v=2" title="A league table built from noisy 1v1 matches" height={660} />
 
 This is sorting, except the comparison oracle is unreliable. In a textbook, you sort by reading numbers. Here, the better player only *probably* wins.
 
@@ -143,7 +266,7 @@ Sample near the boundaries where the answer can still change.
 
   $$\arg\max_{(i,j)}\left[\text{closeness}(|\hat{s}_i-\hat{s}_j|)+\text{uncertainty}\left(\frac{1}{1+n_{ij}}\right)\right]$$
 
-<Demo src="/demos/posts/edp-sort/pairing-race.html" title="Where to spend your matches" height={440} />
+<Demo src="/demos/posts/edp-sort/pairing-race.html?lang=en&v=2" title="Where to spend your matches" height={440} />
 
 The curve is Kendall $\tau$, or table correctness, against matches played. Boundary-seeking schedulers settle the table first because they spend their budget where the order is still movable.
 
@@ -161,7 +284,7 @@ The fix is a **candidate band around the cutline**. Keep sampling everyone whose
 
 With **10,000** players there are about 50 million possible pairs. Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
-<Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 players: find the best 100" height={500} />
+<Demo src="/demos/posts/edp-sort/topk-scale.html?lang=en&v=2" title="10,000 players: find the best 100" height={500} />
 
 Random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches rather than fifty million by concentrating effort where membership of the set is still uncertain.
 
@@ -184,7 +307,7 @@ The limitation is simple: **Comb-UCB cannot run on “who won?”** It needs a r
 
 The next demo is not a fair race between two solutions to the same feedback problem. It shows two machines looking at the same hidden item quality through different observation channels.
 
-<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
+<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html?lang=en&v=2" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
 
 Comb-UCB receives several direct rewards each round; Bradley-Terry receives one comparison bit. Bradley-Terry gives a global latent ranking, reusable for any K. Comb-UCB gives per-item reward estimates for the items it has selected, but says little about items it never observed.
 
@@ -196,7 +319,7 @@ The restaurant, the league table, and the top-K slate are variations on the same
 
 The optimization structure is known. The parameters that determine the answer are not. Attempts reveal them only partially and noisily, so the solver must decide both what to do now and what to learn next.
 
-For independent arms, that is a bandit. For pairwise comparisons, it is active ranking with a latent-skill model. For a slate with per-item rewards, it is a combinatorial semi-bandit.
+For independent arms, that is a multi-armed bandit. For pairwise comparisons, it is active ranking with a latent-skill model. For a slate with per-item rewards, it is a combinatorial semi-bandit.
 
 The reusable question is still the first one:
 
