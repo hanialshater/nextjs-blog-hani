@@ -1,326 +1,287 @@
 ---
-title: 'From one-armed bandits to sorting you cannot measure'
+title: 'The Next Try: Bandits, Noisy Rankings, and the Art of Spending Evidence'
 date: '2026-05-30'
 draft: false
 section: 'free-writing'
-summary: 'Start with the simplest decision under uncertainty — which restaurant to eat at when you can only try one a night — and walk it all the way to sorting players you can only compare by staging noisy matches, and to combinatorial bandits that pick whole top-K slates. One thread: explore vs exploit, and where to spend your next try.'
+summary: 'Most algorithms begin with clean numbers. Real decisions begin with partial, noisy evidence. Start with choosing a restaurant, then follow one question through bandits, noisy rankings, and top-K selection: where should the next try go?'
 authors: ['default']
 layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
 ---
 
-Five restaurants nearby. One will make you happiest on average. You can try only one
-tonight, your experience is noisy, and every mediocre dinner costs you a shot at a better
-one. That tiny dilemma is the seed of a whole family of problems — and by the end of this
-post it'll have grown into sorting players you can't measure and picking whole shortlists
-of K. The thread tying it all together never changes: **explore vs exploit — where do I
-spend my next try?**
+Most algorithms are taught in a small, unusually generous universe.
 
-## Part I — The one-armed bandit: choosing dinner
+The inputs are already there. The numbers are trustworthy. You sort them, optimize them, take the maximum, and go home. Five restaurants with ratings of 4.8, 4.3, 4.1, 3.9, and 3.7? Take the first one. No drama.
 
-That dinner problem _is_ the **multi-armed bandit**: choose one option, observe one noisy
-outcome, update your belief, repeat. The hard part isn't the choosing — it's deciding how
-many bad dinners you're willing to buy in order to learn which restaurant is actually best.
+Real decisions are ruder than that.
 
-The vocabulary is just the restaurant story in disguise. Each restaurant is an **arm**. A
-visit is a **pull**. The **reward** is whether tonight was good enough that you'd go back.
-You never see a restaurant's true average quality — only one noisy dinner at a time, and
-**only for the place you chose**. The others stay counterfactual: you never find out what
-you missed.
+Imagine five restaurants nearby and a guest you would like to impress. You can try one restaurant tonight. Tomorrow you can try another. But each dinner is a messy piece of evidence: perhaps the chef had a bad night, perhaps you ordered the wrong thing, perhaps the place is excellent on Tuesdays and terrible on Saturdays. A good meal is evidence. A bad meal is evidence too. Neither is a verdict.
 
-### When you can read the numbers, it's boring
+So the problem is no longer “which score is largest?” It is:
 
-Hand me five restaurant scores — 0.3, 0.7, 0.5, 0.4, 0.6 — and "find the best" is a
-five-step scan. The _interesting_ version hides the scores. Each dinner is a noisy sample
-of a quality you can't see: maybe the chef had a good night, maybe you ordered badly. One
-visit tells you something, not enough. You've got a hundred dinners — or ten thousand.
-Pick the order.
+> **How do I discover what is best without spending too many attempts on choices that hurt?**
 
-### The cost of not knowing: regret
+That question starts with dinner, but it travels remarkably far. It governs which ad to show, which product widget to test, which player to compare, which candidates deserve another interview, and how to recover the best hundred items from a population of ten thousand when all you can afford is a tiny fraction of the possible evidence.
 
-This is the shape of every repeated decision under uncertainty — where to eat, which email
-subject line to send, which widget to show. Formally: $k$ arms, each with a hidden reward
-distribution; one pull per round; a noisy reward observed; maximize cumulative reward.
-Equivalently, **minimize regret** — the gap to an oracle that always plays the best arm:
+This post follows that one question through three increasingly strange worlds:
+
+1. choosing one uncertain option at a time;
+2. constructing a ranking when the only measurement is a noisy head-to-head match;
+3. choosing a whole top-K slate when every selected item produces its own reward.
+
+The vocabulary changes. The underlying tension does not:
+
+> **Explore or exploit: where should the next try go?**
+
+## Part I — The bandit problem: choosing dinner
+
+The restaurant problem is a **multi-armed bandit**. Choose one option, observe one noisy outcome, update what you believe, repeat.
+
+The difficult part is not choosing. The difficult part is deciding how many mediocre dinners you are willing to buy in order to learn where the good dinners are.
+
+The terminology is just the dinner story wearing a lab coat. Each restaurant is an **arm**. A visit is a **pull**. The **reward** is whether the meal was good enough that you would gladly return. You never observe a restaurant’s true average quality. You observe one noisy dinner at a time—and only at the place you chose. Every unvisited restaurant remains a counterfactual: you do not get to see what you missed.
+
+### When the numbers are visible, the problem is boring
+
+Give me five scores—0.3, 0.7, 0.5, 0.4, 0.6—and “find the best” is a five-step scan.
+
+Hide the scores and it becomes interesting. Each dinner is a noisy sample from a quality you cannot inspect directly. One visit tells you *something*, but not enough. You may have one hundred dinners, or ten thousand impressions, or one finite experiment budget.
+
+The question is not merely what to choose. It is **in what order to learn**.
+
+### The price of ignorance: regret
+
+This is the shape of every repeated decision under uncertainty: where to eat, which email subject line to send, which recommendation module to show. Formally, there are $k$ arms, each with an unknown reward distribution. You pull one arm per round, observe a noisy reward, and want to maximize the total reward you collect.
+
+The same goal is usually phrased as minimizing **regret**: the gap between your choices and an oracle that somehow knew the best arm from the beginning.
 
 $$\text{Regret}(T) = \sum_{t=1}^{T}\big(\mu^* - \mu_{a_t}\big), \qquad \mu^* = \max_i \mu_i$$
 
-Regret is the quality you leave on the table. If Sushi is truly best and you eat somewhere
-weaker tonight, the gap between those two hidden averages is tonight's expected regret. And
-here's the bind: you can't commit to the best arm after a handful of pulls (early estimates
-are noisy — you'll often crown the wrong one), but you can't explore uniformly forever
-either (every round on a bad arm is regret you never get back). **Every algorithm is just a
-particular way of splitting your pulls between _finding out_ and _cashing in_.**
+Regret is the quality you left on the table. If Sushi is truly the best restaurant and you eat somewhere weaker tonight, the gap between their hidden averages is tonight’s expected regret.
 
-### Three policies that cover most of the ground
+And there is no painless answer. Commit after a handful of pulls and early noise will often crown the wrong winner. Explore every restaurant forever and you will keep paying for bad meals long after the answer is obvious. **Every bandit algorithm is simply a rule for dividing your budget between finding out and cashing in.**
 
-The surprising lesson up front: the dumb-sounding policies work shockingly well, and the
-clever ones win by less than you'd think.
+Before naming the algorithms, try the feeling yourself. There are five restaurants. Their real quality is hidden. You choose where to eat; a mysterious policy is choosing in parallel. Your job is not to win one dinner. It is to avoid accumulating painful dinners while you learn.
 
-- **ε-greedy.** Play the best-so-far 90% of the time; play a random arm the other 10%. The
-  randomness is your tax against getting stuck on a wrong early guess. Hard to break, but it
-  keeps wasting that 10% even after the winner is obvious.
-- **UCB1** — _optimism in the face of uncertainty._ Score each arm by
-  $\hat{\mu}_i + \sqrt{2\ln t / n_i}$ and play the max: what you know, plus how wrong you
-  might be. Barely-tried arms get a bonus that shrinks as you sample them, so exploration is
-  **directed** at genuine uncertainty rather than sprayed uniformly.
-- **Thompson sampling** — _probability matching._ Keep a belief distribution per arm (a Beta
-  for win/lose rewards); each round draw one sample from each and play the highest draw. A
-  barely-tried arm has a wide posterior, so it _sometimes_ draws high and gets explored; a
-  known-bad arm has a narrow low posterior and almost never wins. Exploration fades on its
-  own. Embarrassingly good in practice.
+<Demo src="/demos/posts/edp-sort/mysterious-policy.html" title="You versus a mysterious policy" height={640} />
 
-Notice what's shared: the loop is tiny — start each arm with a weak prior, pick, pull,
-update **only that arm**, repeat. What differs between algorithms is _only_ how they turn
-"estimate plus uncertainty" into the next pull.
+After a few rounds, reveal the policy. If it feels as though it is exploring in a way that is neither random nor fully committed, you have already met the central idea.
+
+### Three policies cover most of the territory
+
+The first surprise is that the dumb-sounding policies work extremely well. The sophisticated ones win by less than people expect.
+
+- **ε-greedy.** Play the best-so-far arm 90% of the time; play a random arm for the other 10%. The randomness is a tax you pay to avoid being trapped by an early mistake. It is hard to break, but it keeps wasting that 10% even once the winner is obvious.
+- **UCB1** — *optimism in the face of uncertainty.* Score each arm by $\hat{\mu}_i + \sqrt{2\ln t / n_i}$ and pick the maximum: what you know, plus how wrong you might still be. Barely sampled arms receive a bonus that shrinks as evidence arrives. Exploration is therefore **directed** at real uncertainty rather than sprayed evenly across everything.
+- **Thompson sampling** — *probability matching.* Keep a belief distribution for each arm—a Beta distribution for win/loss rewards. Each round, draw one plausible value from each belief and choose the highest draw. A rarely tried arm has a wide posterior, so it occasionally looks brilliant and gets another chance. A known-bad arm has a narrow, low posterior and almost never wins. Exploration fades by itself. It is embarrassingly effective in practice.
+
+What they share is tiny: start with a weak prior, choose, pull, update **only the arm you pulled**, repeat. What differs is only the mechanism that turns “estimate plus uncertainty” into the next action.
 
 <Demo src="/demos/posts/edp-sort/bandit-race.html" title="Race the bandit policies" height={560} />
 
-Race ε-greedy, UCB, and Thompson on the **hard** scenario (top two arms nearly tied), then
-race ε-greedy against **pure exploit** on **balanced**. The story tells itself: pure-exploit
-commits to the wrong arm about as often as the right one; ε-greedy beats it because a 10%
-random tax is cheaper than locking in a mistake; UCB and Thompson beat ε-greedy because their
-exploration is _aimed_; and UCB vs Thompson trade the lead by a noisy margin — bandits aren't
-where you find your edge.
+Race ε-greedy, UCB, and Thompson on the **hard** setting, where the top two arms are nearly tied. Then race ε-greedy against **pure exploit** on **balanced**. The shape of the story becomes visible fast:
 
-A note on "UCB is slow": not in CPU terms — it's one index per arm. The slowness you feel is
-_learning_ slowness. UCB1's $\sqrt{2\ln t / n_i}$ bonus is a deliberately safe confidence
-radius (Hoeffding) valid for _any_ bounded reward, so it keeps re-checking arms a more
-model-aware method would already drop. In production people reach for tighter variants
-(KL-UCB, UCB-Tuned) or Thompson when a Bayesian reward model is natural.
+- pure exploitation locks on to an early accident almost as often as it finds the right arm;
+- ε-greedy wins because a 10% exploration tax is cheaper than freezing a bad decision;
+- UCB and Thompson improve on ε-greedy because their exploration has somewhere specific to go;
+- UCB and Thompson usually exchange a narrow, noisy lead.
 
-<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="Pull the bandit by hand" height={520} />
+Bandits are rarely where you find your grand competitive edge. Getting the feedback loop right matters far more than winning an ideological war between two good policies.
 
-Pull it yourself — click a restaurant to eat there tonight, watch your regret line climb
-against a Thompson bot eating in parallel. A hundred dinners by hand is enough to feel how
-hard it is to beat directed exploration on instinct.
+A small clarification about the claim that “UCB is slow”: it is not computationally slow. It is one index per arm. The slowness is **learning** slowness. UCB1’s $\sqrt{2\ln t / n_i}$ term is a deliberately conservative confidence radius, valid for any bounded reward, so it keeps checking arms a more model-aware method might already abandon. In production, people often use tighter variants such as KL-UCB or UCB-Tuned, or Thompson sampling when a Bayesian reward model is natural.
 
-### Context changes the best arm
+<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="Pull the bandit yourself" height={520} />
 
-One real-world wrinkle: the best dinner depends on the night. A quick lunch, a date night, a
-rainy solo dinner are different **contexts**. A plain bandit learns one global average per
-restaurant; a **contextual bandit** sees features of the situation _first_, then chooses.
-**LinUCB** is UCB with a twist — instead of one mean per arm, each arm learns weights $\theta_a$
-over a context vector $x_t$, predicts $x_t^\top \theta_a$, and adds the same optimism bonus on
-top. The same restaurant can be wrong for lunch and perfect for a rainy night.
+Click a restaurant, eat there tonight, and watch your regret line climb beside a Thompson bot eating in parallel. One hundred dinners by hand are enough to make directed exploration feel less like a theorem and more like common sense.
 
-<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="Contextual dinner bandit" height={420} />
+### Context changes which arm is best
 
-### The one-sentence takeaway
+There is one immediate complication from real life: the best restaurant depends on the night. A quick lunch, a date, and a rainy solo dinner are different **contexts**.
 
-_A little cleverness wins by a lot; more cleverness wins by very little._ ε-greedy, UCB, and
-Thompson are points on a smooth curve, and any of them crushes committing-too-early or
-never-committing. The textbook problem is essentially solved.
+A plain bandit learns one global average per restaurant. A **contextual bandit** sees features of the situation *before* choosing. **LinUCB** is UCB with that additional layer: instead of one mean per arm, each arm learns weights $\theta_a$ over a context vector $x_t$, predicts $x_t^\top \theta_a$, and adds the same optimism bonus. The same restaurant can be a terrible lunch choice and the perfect place for a rainy night.
 
-But it's a _very specific_ problem: $k$ independent arms, one pull per round, reward seen
-immediately. The interesting world is when that structure breaks — when the "arm" you pull is
-a **pair of items** and the only thing you learn is **which one is bigger**. That's sorting
-under noise, and it's where we go next.
+<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="The contextual dinner bandit" height={420} />
 
-## Part II — Sorting: when the arm is a pair
+### The whole first act in one sentence
 
-Eight players, no stats sheet. You can't read anyone's skill; you can only make two of
-them play and watch who wins — and a single match is a coin weighted by the skill gap.
-How many matches until the league table is right, and who should you schedule?
+*A little cleverness wins by a lot; much more cleverness wins by a little.*
+
+ε-greedy, UCB, and Thompson sit on a smooth curve. Any of them is vastly better than committing too early or never committing at all. For the textbook setup—independent arms, one pull per round, immediate reward—the core problem is largely solved.
+
+But it is also a very particular setup. What happens when the thing you pull is not one item but a **pair**, and the only feedback you receive is which member of the pair won?
+
+Then we are no longer choosing dinner. We are sorting under noise.
+
+## Part II — Sorting when the arm is a pair
+
+Eight players. No stat sheet. No clean skill number to read.
+
+You can make any two play and watch who wins. A single match is a coin whose bias depends on the skill gap: a great player usually beats a weak player; two evenly matched players produce something close to a toss-up.
+
+How many matches do you need before the league table is reliable? More importantly: **which match should happen next?**
 
 <Demo src="/demos/posts/edp-sort/pitch-match.html" title="A league table built from noisy 1v1 matches" height={660} />
 
-Hidden true skill on the left, the estimate on the right. Press **reveal true skill** any
-time to see how close the table is. Change the **scheduler** to decide who plays — or set
-it to **you scout** and run the matches yourself.
+True skill is hidden on the left; the current estimate is on the right. Press **reveal true skill** at any moment to see how close the table is. Change the **scheduler** to choose who plays—or switch to **you scout** and run the league yourself.
 
-This is sorting — but the comparison oracle is unreliable. In a textbook you sort by
-reading numbers. Here the only way to compare two players is to stage a match, and the
-better player merely _probably_ wins. Sorting under that oracle is the **noisy comparison**
-(or **dueling-bandit**) problem, and it turns "what is the order?" into "where do I spend my
-matches?"
+This is sorting, except the comparison oracle is unreliable. In a textbook, you sort by reading numbers. Here, the only way to compare two players is to stage a match, and the better player only *probably* wins. That is the **noisy comparison** problem, also called a **dueling-bandit** problem.
 
-We'll build it in three moves: the noise model (how a match becomes evidence), the
-estimator (how matches become a ranking), and the scheduler (which match to play next) —
-and then see why the "bandit" version that only cares about the top behaves so differently.
+It transforms “what is the order?” into a more operational question:
 
-### Act 1 — Sort, when you can read the numbers
+> **Where should I spend my matches?**
 
-Mergesort, quicksort, heapsort: $O(n \log n)$ comparisons against an exact oracle that says
-"x is larger" with certainty. The textbook closed this in 1962. Every comparison is free of
-doubt, so you never ask the same one twice, and there's nothing to estimate. Take that
-certainty away and everything changes.
+We will build the answer in three moves: a noise model for how matches become evidence, an estimator that turns evidence into a ranking, and a scheduler that chooses the next match. Then we will see why a system that only cares about the top of the ranking behaves differently again.
+
+### Act 1 — Sorting when you can read the numbers
+
+Mergesort, quicksort, heapsort: $O(n \log n)$ comparisons against an exact oracle that says “x is larger” with certainty. The textbook story was effectively closed in 1962.
+
+Every comparison is decisive. You never need to repeat one. There is nothing to estimate.
+
+Remove that certainty and everything changes.
 
 ### Act 2 — The oracle is a match, not a measurement
 
-Now the eight things are footballers, wines, ad creatives, chess players — anything with a
-real but unobservable quality. You can't read skill; you can only stage a match, and the
-match is noisy. A lopsided match goes the right way almost always; an even match is close to
-a coin flip. The model for that coin is the **Bradley-Terry** law:
+Now the eight objects might be footballers, wines, ad creatives, chess players—anything with a real but unobservable quality. You cannot inspect the quality. You can only stage a contest, and the contest is noisy.
+
+A lopsided match goes the expected way almost every time. An even match is close to a coin flip. The standard model for that coin is the **Bradley-Terry** law:
 
 $$P(i \succ j) = \sigma\!\big(\beta\,(s_i - s_j)\big)$$
 
-Each player carries one hidden number $s_i$ (their skill); $\sigma$ is the logistic curve;
-$\beta$ is how decisive the sport is. The intuition is all in the gap $s_i - s_j$: equal
-skill ($s_i = s_j$) gives a fair 50/50 coin; a wide gap pushes the coin toward a near-certain
-result. So **one match is a single noisy sample of one pairwise gap** — and that's exactly a
-Bernoulli arm. Sorting under noise is just running $n(n-1)/2$ such arms in parallel and
-asking, for each pair, "which side does the win land on?"
+Each player has a hidden skill $s_i$. The logistic curve $\sigma$ turns the difference $s_i - s_j$ into a win probability. The parameter $\beta$ says how decisive the game is.
 
-The cost of certainty follows directly. A pair separated by a gap $\Delta$ needs about
-$\log(1/\delta)/\Delta^2$ repeated matches before you can call it at confidence $1-\delta$.
-Big gaps are settled in one match; **near-tied pairs are where the budget goes**. Hold onto
-that — it decides everything about scheduling.
+The intuition lives entirely in the gap:
 
-### How the table actually learns: from a batch fit to one step per match
+- equal skill, $s_i = s_j$, gives a fair 50/50 match;
+- a large gap pushes the probability close to certainty;
+- one match is one noisy sample of one pairwise gap.
 
-We have match results; we want skills. Two ways to get them, and the second is the one that
-scales.
+That last line is the bridge back to bandits. Sorting under noise is like running $n(n-1)/2$ Bernoulli arms in parallel and deciding which pair should receive the next observation.
 
-**Batch fit (what the 8-player table does).** Given _all_ the matches, find the skills that
-best explain them — maximum likelihood for the Bradley-Terry model. The widget does this with
-a few _minorize-maximize_ passes; you don't need the derivation, just the picture: it nudges
-everyone's skill until each player's predicted win-rate matches their actual win-rate. Then
-**the ranking is simply the players sorted by fitted skill.** Clean, but refitting from
-scratch after every match is hopeless once you have thousands of players.
+The cost of confidence follows directly. A pair separated by a gap $\Delta$ needs roughly $\log(1/\delta)/\Delta^2$ repeated matches before you can call the order with confidence $1-\delta$. Blowouts settle themselves. **Near ties consume the budget.**
 
-**Online fit = Elo = one gradient step per match.** Treat each match as a single
-logistic-regression example and take _one_ SGD step on it. For a match where $i$ beat $j$:
+Keep that fact. It decides everything about scheduling.
 
-$$s_i \leftarrow s_i + \eta\,(1 - p), \qquad s_j \leftarrow s_j - \eta\,(1 - p), \qquad p = \sigma(s_i - s_j)$$
+### How the table learns: from a batch fit to one update per match
 
-That _is_ Elo (with step size $\eta$ playing the role of Elo's $K$). The intuition is lovely:
-the update is the **surprise**, $1 - p$. If the favourite wins ($p \approx 1$) the ratings
-barely move — you learned nothing new. If an underdog pulls an upset ($p$ small) the ratings
-swing hard. The system self-corrects toward whatever the matches keep saying, $O(1)$ per
-match, no refit.
+We have match results. We want hidden skills. There are two useful routes, and the second is what survives at scale.
 
-So the whole recipe in the noisy world is three separable dials:
+**Batch fit—the eight-player table.** Given all matches so far, find the skill values that best explain them: maximum likelihood under Bradley-Terry. The widget uses a few *minorize-maximize* passes. You do not need the derivation; the picture is enough. It nudges skills until each player’s predicted win rate agrees with the matches they have actually won. Sort the fitted skills and you have a ranking.
 
-> **estimate** skills by SGD on matches → **read off** the ranking by sorting them →
-> **choose** which match to sample next.
+That is clean, but refitting from scratch after every new result becomes hopeless once there are thousands of players.
 
-Change the estimator (batch vs Elo) without touching the rest; change the scheduler without
-touching the estimator. The next two sections are about that third dial — because _which_
-matches you feed the SGD is what decides how fast the sort converges.
+**Online fit = Elo = one gradient step per match.** Treat a match as one logistic-regression example and make one SGD update. When $i$ beats $j$:
 
-### Act 3 — Where to spend the matches
+$$s_i \leftarrow s_i + \eta\,(1-p), \qquad s_j \leftarrow s_j - \eta\,(1-p), \qquad p = \sigma(s_i - s_j)$$
 
-Here's the payoff of the $\Delta^2$ budget. Look again at the Elo step, $\eta(1-p)$:
+That is Elo, with step size $\eta$ playing the role of Elo’s $K$.
 
-- A **lopsided** match ($p \approx 1$) produces a step near zero and never reorders anyone.
-  It confirms what you already knew.
-- A **near-even** match ($p \approx \tfrac12$) produces a real step _and_ it's between two
-  players whose order is genuinely in doubt.
+The update is the surprise: $1-p$. When the favourite wins, $p \approx 1$, so ratings barely move. Nothing surprising happened. When an underdog wins, $p$ is small and ratings move sharply. The system keeps correcting itself toward what the matches say, one $O(1)$ update at a time.
 
-**The informative matches are the close ones at the boundary.** A good scheduler aims there.
-Four policies, same league, raced on the chart below:
+So the noisy-ranking recipe has three separable dials:
 
-- **Random** — pick any pair. Trivial, but spends as many matches confirming blowouts as
-  resolving coin-flips.
-- **Round-robin** — play the least-played pair, $\arg\min_{(i,j)} n_{ij}$. Fair coverage, but
-  blind: it keeps re-playing settled blowouts.
-- **Ladder** — only play players one rank apart on the current table. The order is uncertain
-  between neighbours, not between #1 and #8, so this aims at the boundary — ~1.5× fewer
-  matches than random — but it trusts a noisy ranking to decide who's "adjacent."
-- **Active** — play the closest, least-settled pair,
-  $\arg\max_{(i,j)}\big[\text{closeness}(|\hat{s}_i - \hat{s}_j|) + \text{uncertainty}(1/(1+n_{ij}))\big]$.
-  It explicitly routes each match to where it buys the most table-correctness.
+> **estimate** skills from matches → **read off** a ranking by sorting → **schedule** the next match.
 
-This is the explore/exploit trade in its purest form: a match on a pair you're already sure
-about is pure exploitation with no information; a match on an uncertain pair is exploration
-that actually moves the answer.
+You can change the estimator without changing the scheduler. You can change the scheduler without changing the estimator. The next question is that third dial, because the matches you feed into Elo determine how quickly the table becomes correct.
+
+### Act 3 — Where the next match should go
+
+The $\Delta^2$ budget tells us what matters. Look again at the Elo update, $\eta(1-p)$:
+
+- A **lopsided** match, where $p \approx 1$, generates an update close to zero. It confirms something you mostly knew.
+- A **near-even** match creates a meaningful update and concerns an order that is genuinely uncertain.
+
+**Informative matches are close matches near the decision boundary.** A good scheduler spends evidence there.
+
+Four policies, same league:
+
+- **Random** — choose any pair. Easy to implement, but spends as many matches confirming blowouts as resolving coin flips.
+- **Round-robin** — play the least-sampled pair, $\arg\min_{(i,j)} n_{ij}$. Fair coverage, but blind: it keeps replaying settled blowouts.
+- **Ladder** — only play players adjacent in the current ranking. The uncertainty is usually between neighbours, not between #1 and #8, so this aims toward the boundary. It reaches a good table in about 1.5× fewer matches than random, but it trusts a noisy current ranking to decide who is adjacent.
+- **Active** — play the closest, least-settled pair: $\arg\max_{(i,j)}[\text{closeness}(|\hat{s}_i-\hat{s}_j|) + \text{uncertainty}(1/(1+n_{ij}))]$. It explicitly routes each match toward the place where it can buy the most table-correctness.
+
+This is explore/exploit in its purest form. A match on a settled pair is exploitation without much information. A match on an uncertain pair is exploration that can change the answer.
 
 <Demo src="/demos/posts/edp-sort/pairing-race.html" title="Where to spend your matches" height={440} />
 
-Same hidden league for all four; the curve is Kendall $\tau$ (table correctness) vs matches
-played. Whichever reaches the top soonest settles the table first — and the boundary-seekers
-win.
+The curve is Kendall $\tau$, or table correctness, against matches played. Whichever policy reaches the top first settles the league first. The boundary-seekers win because they spend the budget where the ranking can still move.
 
-### Now you be the scout
+### Now be the scout
 
-Set the hero's _scheduler_ to **you scout (click 2)** and the matchmaking is yours: click two
-players to stage a match, read the table, and decide who to test next. You'll feel the same
-pull the algorithms feel: the wasted matches are the lopsided ones; the matches that move you
-are the close calls near your cutoff.
+Set the main league’s scheduler to **you scout (click 2)**. Click two players, stage a match, inspect the table, and decide what you want to learn next.
 
-### Why your candidate pool must be wider than K
+The wasted matches become obvious. They are the blowouts you were already expecting. The valuable ones are close calls near the places where the order matters.
 
-Now suppose you don't want the whole order — just the **best K**. The tempting shortcut is to
-only play matches _inside_ the current top-K. It backfires three different ways, and seeing
-why is the most useful idea in the post:
+### Why the candidate pool must be wider than K
 
-1. **Selection bias (the feedback loop).** A genuinely top-K player who's currently underrated
-   at rank K+1 never gets scheduled, so never climbs back. You let a _noisy_ line decide who's
-   allowed to play, and the line freezes itself in place.
-2. **Dead gradients.** Inside a settled top-K every match is lopsided ($p \approx 1$), so the
-   Elo step $\eta(1-p) \approx 0$. Nothing reorders. The matches that actually move the cutline
-   are the near-even ones that _straddle_ it.
-3. **Broken identifiability.** Bradley-Terry/Elo skills are only well-defined while the
-   "who-played-whom" graph stays connected. A top-K-only schedule disconnects the top group
-   from the field, so "K-th place" loses its anchor entirely.
+Suppose you do not want the whole ranking. You only want the **best K**.
 
-The fix is exactly the instinct you'd reach for in a real league: keep a **candidate band
-around the cutline** — everyone whose uncertainty still overlaps K-th place — and let the band
-narrow as you grow confident. Too tight (just K) and you get all three failures; too wide (the
-whole field) and you're back to round-robin, burning matches on decided blowouts. That
-shrinking band is precisely _successive elimination_: keep contenders until the data rules them
-out.
+The tempting shortcut is to schedule matches only inside the current top-K. It fails in three separate ways.
 
-### Eight was the tutorial. Now ten thousand.
+1. **Selection bias: the feedback loop.** A truly top-K player who is currently underrated at rank K+1 never receives matches, so they never get a chance to climb. A noisy ranking starts deciding who is allowed to generate evidence, then freezes itself in place.
+2. **Dead gradients.** Inside a settled top-K, many matches are lopsided, so the Elo update $\eta(1-p)$ is nearly zero. Nothing changes. The matches that actually move the cutline are close ones that *straddle* it.
+3. **Broken identifiability.** Bradley-Terry and Elo skills are only meaningful while the graph of who played whom remains connected. A top-K-only schedule disconnects the top group from the rest of the field, so “K-th place” loses its anchor.
 
-With eight players you can almost play everyone. With **10,000** you cannot: every pair is
-$n(n-1)/2 \approx 50$ million matches. So we lean on both ideas above. Estimator: **Elo**, the
-$O(1)$-per-match SGD update, because refitting Bradley-Terry over 10k players every match is
-hopeless. Scheduler: **adaptive**, which estimates the K-th rating (the cutline) and pairs
-players _near_ it — the boundary band, at scale. The metric is **recall@100**: how much of the
-true top-100 your estimated top-100 has captured.
+The cure is the thing you would invent from first principles in a real league: maintain a **candidate band around the cutline**. Keep everyone whose uncertainty still overlaps K-th place, and allow the band to shrink only as confidence grows.
 
-<Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 players — find the best 100" height={500} />
+Too tight—exactly K—and all three failures appear. Too wide—the entire field—and you are back to round-robin, wasting evidence on decisions that are already made. That shrinking candidate band is **successive elimination**: retain contenders until the data rules them out.
 
-Each match is one noisy Bradley-Terry duel scored by Elo; adaptive matchmaking (green) vs
-random (grey) race on recall@100, and the scatter shows estimated rating vs true skill with the
-top-100 cutline. Random wastes itself on blowouts far from the line; adaptive recovers most of
-the top-100 in _tens of thousands_ of matches instead of 50 million — entirely by spending its
-budget in the band around the cutline.
+### Eight players was the tutorial. Now make it ten thousand.
 
-## Part III — Combinatorial bandits: picking a whole top-K
+With eight players, you can nearly play everyone. With **10,000**, you cannot. There are $n(n-1)/2 \approx 50$ million possible pairs.
 
-Everything so far lives in one world: **the only thing you ever observe is who won** — a
-comparison bit. There's a second world where each thing you try hands back _its own_ number: a
-click, a watch-time, a benchmark score. Top-K shows up in both, but they are not the same
-problem, and they need different machines.
+So we use both ideas from above:
 
-- **Comparison feedback** (this whole post): Bradley-Terry / Elo active sorting. Fit skills from
-  "A beat B," sort, schedule the boundary.
-- **Per-item reward feedback**: **Combinatorial-UCB**. It's the exact UCB idea from Part I,
-  scaled from one arm to a whole slate. Keep, for each item, a running mean of its rewards plus
-  the same _optimism bonus_ that's large when you've barely tried it,
-  $u_i = \bar{x}_i + \sqrt{c\,\ln t / n_i}$. Each round, pick the **top-K by $u_i$** (that's the
-  "combinatorial" part — your action is a whole K-set, not a single arm), observe a reward for
-  **each** of the K you picked ("semi-bandit" feedback), and update only those.
+- **Estimator:** Elo, the $O(1)$ online update. Re-fitting Bradley-Terry over 10,000 players after every match is hopeless.
+- **Scheduler:** adaptive matchmaking that estimates the K-th rating—the cutline—and pairs players near it.
 
-The honest catch — and it's the crux: **Comb-UCB cannot run on "who won."** It needs a reward
-per item; the football world never gives one. So the panel below is _not_ Comb-UCB solving the
-sorting problem. It's the two machines on the **same hidden item qualities but through different
-feedback channels** — one drawing comparison bits, one drawing per-item rewards.
+The metric is **recall@100**: how much of the true top-100 your estimated top-100 has recovered.
 
-<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Bradley-Terry vs combinatorial-UCB, top-k recovery" height={400} />
+<Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 players: find the best 100" height={500} />
 
-Averaged curves from a 40-run experiment (N=30, K=5, 1000 rounds). Both reach ~0.90 top-k
-accuracy by round 1000 — but _how fast_ exposes the asymmetry: by round 100 Comb-UCB is at 0.80
-while BT is at 0.59, because Comb-UCB tastes **five** rewards per round while BT extracts a
-**single** comparison bit (the widget's "feedback / round: 1 vs 5"). It's deliberately not a
-fair race — that's the lesson, not a verdict. And notice the _artifacts_ differ: BT leaves you a
-full calibrated ranking of all 30 items plus a model of _why_ (the latent skills), reusable for
-any K; Comb-UCB leaves you a good slate of 5 and per-item means, and nothing about the items it
-never picked. Same goal, different feedback, different machinery — pick the machine your signal
-can actually feed.
+Each match is a noisy Bradley-Terry duel scored by Elo. Adaptive matchmaking races random pairing on recall@100, while the scatter shows estimated rating against true skill and the top-100 cutline.
 
-### What you saw
+Random pairing spends itself on blowouts far from the line. Adaptive matching recovers most of the top 100 in tens of thousands of matches rather than fifty million—not by discovering a cleverer rating system, but by putting the evidence budget in the narrow band where the answer is still uncertain.
 
-Sorting under noise is choose-the-max in disguise, and it cleanly separates into three dials:
-**estimate** (SGD on matches → skills), **read off** (sort), **schedule** (aim at the boundary).
-The budget question — spend matches on pairs you're sure about, or on pairs whose order is in
-doubt? — is the bandit's explore/exploit, and the answer is always "the boundary," widened into
-a band whenever you only need the top-K.
+## Part III — Combinatorial bandits: choosing a whole top-K
 
-It's also the first hint of _structure_. With independent arms every pair stands alone; here
-the pairs are tied together by one global ranking, so A ≻ B and B ≻ C buys you A ≻ C for free.
-That free transitive information is what gets exploited with a vengeance once the "arms" become
-edges of a graph and the action you pick is a whole path through it.
+Everything so far lived in a world of **comparison feedback**. You stage A against B and only observe a single bit: who won.
+
+There is another world. Every item you try gives back its own number: a click, watch time, a benchmark score, a conversion. Top-K appears in both worlds, but they are not the same problem and they need different machinery.
+
+- **Comparison feedback:** Bradley-Terry / Elo active sorting. Fit skills from “A beat B,” sort them, and schedule the boundary.
+- **Per-item reward feedback:** **Combinatorial-UCB**. This is the UCB idea from Part I expanded from one arm to a whole slate.
+
+For each item, Combinatorial-UCB keeps a running mean plus an optimism bonus:
+
+$$u_i = \bar{x}_i + \sqrt{c\,\ln t / n_i}$$
+
+Each round, it chooses the **top-K by $u_i$**. That is the combinatorial part: the action is a complete K-set rather than one item. Then it observes a reward for **each** selected item—called *semi-bandit feedback*—and updates only those items.
+
+The honest catch is also the important one: **Comb-UCB cannot run on “who won.”** It needs one reward per item. A football match does not provide that.
+
+So the next panel is not Comb-UCB “solving” the noisy-sorting problem. It is two different machines looking at the same hidden item quality through different feedback channels: one receives comparison bits; the other receives per-item rewards.
+
+<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
+
+These are averaged curves from a 40-run experiment: $N=30$, $K=5$, 1,000 rounds. Both reach roughly 0.90 top-K accuracy by round 1,000. The early difference tells the real story: by round 100, Comb-UCB is around 0.80 while Bradley-Terry is around 0.59, because Comb-UCB gets **five** rewards per round while Bradley-Terry extracts **one** comparison bit.
+
+It is deliberately not a fair race. That is the lesson.
+
+The artifacts are different too. Bradley-Terry leaves you with a calibrated ranking of all 30 items and a latent model of *why* they are ordered—a result you can reuse for any K. Comb-UCB leaves you with a strong slate of five and per-item means, but says little about items it never selected. Same top-K goal. Different feedback. Different machine.
+
+Choose the machine your signal can actually feed.
+
+## What just happened
+
+Sorting under noise is choose-the-max in disguise. It separates cleanly into three dials:
+
+> **estimate** → **read off** → **schedule**.
+
+Estimate skills from matches. Read off a ranking by sorting. Schedule evidence where the ranking can still change.
+
+The budget question never went away. Should you spend your next observation on something you already believe, or on an uncertainty that could change the decision? That is explore versus exploit. In ranking, the answer is almost always: **the boundary**—widened into a band whenever you only need the top-K.
+
+This is also the first hint that structure changes what can be learned. Independent bandit arms stand alone. Rankings do not. If A beats B and B beats C, then A above C is partly implied for free. That transitive structure becomes even more powerful when the “arms” become edges of a graph and the action becomes a whole path through it.
+
+But that is the next story.
