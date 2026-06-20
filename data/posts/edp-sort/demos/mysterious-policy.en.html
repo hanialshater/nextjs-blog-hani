@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You versus a mysterious policy</title>
+<style>
+:root{--bg:#0b1220;--card:#131c30;--card2:#1a2440;--fg:#e6edf3;--dim:#8b95a8;--accent:#4c8df6;--accent2:#2a4a7a;--good:#5fd2a3;--warn:#f0a058;--bad:#e16c6c;--border:#1f2a44;--code:#0e1626;--mono:ui-monospace,"SF Mono",Menlo,Monaco,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--fg)}body{font-family:var(--sans);font-size:15px;line-height:1.45;padding:12px}.widget{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}.legend{font-size:13px;color:var(--dim);margin:0 0 14px}.restaurants{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px}.restaurant{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:11px;text-align:left;cursor:pointer;color:var(--fg);font-family:var(--sans)}.restaurant:hover{border-color:var(--accent);background:var(--card2)}.restaurant .name{font-weight:700;font-size:13px}.restaurant .meta{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:7px}.restaurant .bar{height:5px;background:#07101e;border-radius:99px;margin-top:8px;overflow:hidden}.restaurant .bar span{display:block;height:100%;background:var(--warn);border-radius:99px;transition:width .2s}.restaurant.best{border-color:var(--good)}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}button{font-family:var(--mono);font-size:12px;background:var(--card2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer}button:hover{background:var(--accent2);border-color:var(--accent)}button.primary{background:var(--accent);color:#07101e;border-color:var(--accent);font-weight:700}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.stat{background:var(--code);border-radius:7px;padding:9px 10px}.label{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}.value{font-family:var(--mono);font-size:17px;margin-top:4px}.feed{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:10px;margin:12px 0;color:var(--dim);font-size:13px}.answer{display:none;background:rgba(95,210,163,.08);border:1px solid rgba(95,210,163,.35);border-radius:8px;padding:10px;font-size:13px}.answer.on{display:block}.answer b{color:var(--good)}canvas{display:block;width:100%;height:150px;background:var(--code);border-radius:8px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="widget">
+  <p class="legend">Five restaurants have hidden average quality. Pick one for tonight. You see only your dinner; a mysterious policy chooses in parallel. The question is not whether you win tonight. It is where to spend the next attempt.</p>
+  <div class="restaurants" id="restaurants"></div>
+  <div class="controls">
+    <button class="primary" id="auto">run 10 nights</button>
+    <button id="reveal">reveal the policy</button>
+    <button id="truth">reveal true means</button>
+    <button id="reset">new game</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="label">nights</div><div class="value" id="round">0 / 40</div></div>
+    <div class="stat"><div class="label">your regret</div><div class="value" id="yourRegret">0.00</div></div>
+    <div class="stat"><div class="label">mystery regret</div><div class="value" id="botRegret">0.00</div></div>
+    <div class="stat"><div class="label">last mystery pick</div><div class="value" id="botPick">—</div></div>
+  </div>
+  <div class="feed" id="feed">Choose a restaurant. A good or bad dinner is a noisy observation, not a final verdict.</div>
+  <div class="answer" id="answer"><b>The mysterious policy is Thompson sampling.</b> It samples one plausible quality from each restaurant's current uncertainty, then chooses the largest sample. Unknown restaurants keep getting chances; known-bad ones slowly disappear.</div>
+  <canvas id="chart" height="150"></canvas>
+</div>
+<script>
+const names=['Ramen Den','Taco Yard','Biryani House','Sushi Bar','Pasta Corner'];
+const means=[.32,.49,.42,.66,.55];
+let pulls,successes,yourRegret,botPulls,botSuccesses,botRegret,round,revealTruth=false,showPolicy=false;
+const $=id=>document.getElementById(id);
+function rng(){return Math.random()}
+function gamma(shape){if(shape<1)return gamma(shape+1)*Math.pow(Math.max(rng(),1e-12),1/shape);const d=shape-1/3,c=1/Math.sqrt(9*d);while(true){let u=0,v=0;while(!u)u=rng();while(!v)v=rng();const z=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v),x=1+c*z;if(x<=0)continue;const q=x*x*x,w=rng();if(w<1-.0331*z*z*z*z||Math.log(w)<.5*z*z+d*(1-q+Math.log(q)))return d*q}}
+function beta(a,b){const x=gamma(a),y=gamma(b);return x/(x+y)}
+function argmax(a){return a.reduce((best,v,i)=>v>a[best]?i:best,0)}
+function estimate(i){return pulls[i]?successes[i]/pulls[i]:.5}
+function uncertainty(i){return Math.min(1,1/Math.sqrt(pulls[i]+1))}
+function thompsonPick(){return argmax(botPulls.map((n,i)=>beta(1+botSuccesses[i],1+n-botSuccesses[i])))}
+function outcome(i){return rng()<means[i]?1:0}
+function play(i){if(round>=40)return;const y=outcome(i);pulls[i]++;successes[i]+=y;yourRegret+=Math.max(...means)-means[i];const b=thompsonPick(),by=outcome(b);botPulls[b]++;botSuccesses[b]+=by;botRegret+=Math.max(...means)-means[b];round++;$('botPick').textContent=names[b];$('feed').textContent=`You chose ${names[i]}: ${y?'good dinner':'bad dinner'}. That is one sample, not the restaurant's true quality.`;render()}
+function render(){const best=argmax(means),host=$('restaurants');host.innerHTML='';names.forEach((name,i)=>{const el=document.createElement('button');el.className='restaurant'+(revealTruth&&i===best?' best':'');el.onclick=()=>play(i);const est=estimate(i);el.innerHTML=`<div class="name">${name}</div><div class="meta">${pulls[i]} dinners · estimate ${est.toFixed(2)}${revealTruth?` · true ${means[i].toFixed(2)}`:''}</div><div class="bar"><span style="width:${100*uncertainty(i)}%"></span></div>`;host.appendChild(el)});$('round').textContent=`${round} / 40`;$('yourRegret').textContent=yourRegret.toFixed(2);$('botRegret').textContent=botRegret.toFixed(2);$('answer').classList.toggle('on',showPolicy);draw()}
+function draw(){const c=$('chart'),dpr=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);x.fillStyle='#8b95a8';x.font='11px ui-monospace,monospace';x.fillText('cumulative regret',10,16);const max=Math.max(1,yourRegret,botRegret),sy=v=>h-18-v/max*(h-38);x.strokeStyle='rgba(255,255,255,.08)';for(let i=1;i<4;i++){const y=18+i*(h-38)/4;x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}x.strokeStyle='#f0a058';x.lineWidth=3;x.beginPath();x.moveTo(0,sy(yourRegret));x.lineTo(w,sy(yourRegret));x.stroke();x.strokeStyle='#5fd2a3';x.beginPath();x.moveTo(0,sy(botRegret));x.lineTo(w,sy(botRegret));x.stroke();x.fillStyle='#f0a058';x.fillText('you',w-60,sy(yourRegret)-5);x.fillStyle='#5fd2a3';x.fillText('mystery',w-60,sy(botRegret)-5)}
+function reset(){pulls=Array(5).fill(0);successes=Array(5).fill(0);botPulls=Array(5).fill(0);botSuccesses=Array(5).fill(0);yourRegret=botRegret=round=0;revealTruth=false;showPolicy=false;$('botPick').textContent='—';$('feed').textContent='Choose a restaurant. A good or bad dinner is a noisy observation, not a final verdict.';render()}
+$('auto').onclick=()=>{for(let i=0;i<10&&round<40;i++)play(argmax(pulls.map((n,j)=>n?successes[j]/n:1)))};$('reveal').onclick=()=>{showPolicy=true;render()};$('truth').onclick=()=>{revealTruth=true;render()};$('reset').onclick=reset;window.addEventListener('resize',draw);reset();
+(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,200)});addEventListener('resize',h);new ResizeObserver(h).observe(document.body)})();
+</script>
+</body>
+</html>
