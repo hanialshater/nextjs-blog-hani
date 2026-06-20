@@ -3,10 +3,10 @@ title: 'From Multi-Armed Bandits to Sorting What You Cannot Measure'
 date: '2026-05-30'
 draft: false
 section: 'free-writing'
-summary: 'Start with five restaurants whose true quality is unknown, then follow the same problem through multi-armed bandits, noisy pairwise ranking, and top-K selection: the optimization structure is known, but its parameters must be learned by trying.'
+summary: 'Start with five restaurants whose true quality is unknown, then follow the same problem through multi-armed bandits, dueling bandits, noisy pairwise ranking, and top-K selection: the optimization structure is known, but its parameters must be learned by trying.'
 authors: ['default']
 layout: 'PostLayout'
-tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
+tags: ['algorithms', 'bandits', 'dueling-bandits', 'sorting', 'interactive', 'edp']
 ---
 
 Five restaurants are near your home. One is probably best on average.
@@ -33,11 +33,22 @@ To find a shortest path through a city, the graph may be known while travel time
 
 To match customers with experts, the feasible matches may be known while the quality of each pairing is not. Every match teaches you something about preferences and compatibility, but it also uses an opportunity.
 
-To rank products, sellers, ads, or creators, the candidate set and objective may be known while the quantities that determine the right order are not. You learn from clicks, purchases, returns, comparisons, ratings—whatever feedback reality gives you.
+To rank products, sellers, ads, or creators, the candidate set and objective may be known while the quantities that determine the right order are not. You learn from clicks, purchases, returns, comparisons, ratings—whatever feedback reality gives you. But clicks and purchases are not pure item quality: they are outcomes conditional on exposure, rank, price, inventory, presentation, and the policy that chose the item. Logged feedback must therefore be treated with care.
 
 In all of these cases, the optimization problem is known. The actions, constraints, and objective are clear. What is unknown are the parameters that determine which solution is best, and the observations are stochastic.
 
 So the problem must be solved while its parameters are being learned.
+
+Before choosing an algorithm, separate the **decision** from the **feedback channel**:
+
+| Decision | Feedback after acting | Natural machinery |
+| --- | --- | --- |
+| Choose one item | One noisy reward for that item | Multi-armed or contextual bandit |
+| Choose a pair | Only a relative winner | Dueling bandit / active ranking |
+| Choose a slate | One reward for every selected item | Combinatorial semi-bandit |
+| Choose a slate | Only one aggregate slate outcome | Full-bandit or slate-level learning |
+
+The label “top-K” is not enough to choose the method. What matters is what reality tells you after you act.
 
 ## Part I — The multi-armed bandit: choosing dinner
 
@@ -228,17 +239,21 @@ How many matches do you need before the league table is reliable? More important
 
 This is sorting, except the comparison oracle is unreliable. In a textbook, you sort by reading numbers. Here, the better player only *probably* wins.
 
-The standard model is the **Bradley-Terry** law:
+The interaction is a **dueling bandit**: choose two options, observe only a relative preference, then decide which pair to ask about next. A dueling bandit is the learning problem, not a particular statistical model.
 
-$$P(i \succ j) = \sigma\!\big(\beta(s_i-s_j)\big)$$
+**Bradley-Terry is one useful model inside that broader family.** It assumes every player has one latent scalar skill and that pairwise probabilities come from their difference:
 
-Each player has a hidden skill $s_i$. The logistic curve turns the difference $s_i-s_j$ into a win probability. Equal skills give a 50/50 match; a large gap gives an almost certain result.
+$$P(i \succ j) = \sigma(s_i-s_j)$$
 
-One match is one noisy observation of one pairwise difference. But the pairs are not independent. If A beats B repeatedly and B beats C repeatedly, you learn something about A versus C without scheduling that match. The pairs share the same hidden skill vector.
+Each player has a hidden skill $s_i$. The logistic curve turns the difference $s_i-s_j$ into a win probability. Equal skills give a 50/50 match; a large gap gives an almost certain result. The absolute score scale is conventional; writing a separate inverse-temperature $\beta$ is equivalent to rescaling all of the skills.
 
-Up to constants and the scale of the link, distinguishing a skill gap $\Delta$ with confidence $1-\delta$ takes roughly
+This shared latent structure is why evidence transfers. Match outcomes can be conditionally independent given the skill vector, yet the pairwise probabilities are coupled: if A beats B repeatedly and B beats C repeatedly, you learn something about A versus C without scheduling that match.
 
-$$O\!\left(\frac{\log(1/\delta)}{\beta^2\Delta^2}\right)$$
+Bradley-Terry is not required for a dueling bandit. Other dueling-bandit algorithms may assume only that a Condorcet or Copeland winner exists, or work with a more general pairwise-preference matrix. And some worlds violate every global scalar ranking: rock-paper-scissors cycles, context-specific preferences, and item interactions cannot be faithfully represented by one score per item.
+
+Up to constants, distinguishing a small skill gap $\Delta$ with confidence $1-\delta$ takes roughly
+
+$$O\!\left(\frac{\log(1/\delta)}{\Delta^2}\right)$$
 
 comparisons. Big gaps settle quickly. Near ties consume the budget.
 
@@ -278,7 +293,6 @@ def fit_bradley_terry_mm(wins, iterations=100, eps=1e-9):
                 if i != j and pair_games[i, j] > 0:
                     denominator += pair_games[i, j] / (strength[i] + strength[j])
 
-            # An item with no observed matches retains its current strength.
             if denominator > 0:
                 updated[i] = max(total_wins[i], eps) / denominator
 
@@ -306,7 +320,7 @@ def elo_update(rating, i, j, winner, learning_rate=0.25):
 
 </details>
 
-This bare batch fit assumes the comparison graph is connected. In production, add regularization or a prior: disconnected groups, undefeated items, and winless items can otherwise make unconstrained Bradley–Terry estimates unstable or diverge.
+This bare batch fit assumes the comparison graph is connected. In production, add regularization or a prior: disconnected groups, undefeated items, and winless items can otherwise make unconstrained Bradley-Terry estimates unstable or diverge.
 
 The recipe has three parts:
 
@@ -377,6 +391,9 @@ def choose_active_pair(scores, score_se, pair_games, candidates):
     for left in range(len(candidates)):
         for right in range(left + 1, len(candidates)):
             i, j = candidates[left], candidates[right]
+
+            # Lightweight heuristic. A full BTL fit should use uncertainty
+            # of the difference s_i - s_j, including covariance.
             pair_se = np.sqrt(score_se[i] ** 2 + score_se[j] ** 2)
             standardized_gap = abs(scores[i] - scores[j]) / (pair_se + 1e-9)
             boundary_value = 1.0 / (1.0 + standardized_gap)
@@ -399,13 +416,13 @@ def choose_active_pair(scores, score_se, pair_games, candidates):
 
 </details>
 
-The implementation above shows the principle. A cheap production approximation may use a fixed rank radius around K; a better one uses posterior, bootstrap, or Hessian-based uncertainty to decide whose intervals overlap the cutline.
+The implementation above shows the principle. A cheap production approximation may use a fixed rank radius around K; a better one uses posterior, bootstrap, or Hessian-based uncertainty to decide whose intervals overlap the cutline. For a fitted Bradley-Terry model, the relevant uncertainty is the uncertainty of $s_i-s_j$, including covariance between the two estimated skills.
 
 With **10,000** players there are about 50 million possible pairs. Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
 <Demo src="/demos/posts/edp-sort/topk-scale.html?lang=en&v=3" title="10,000 players: find the best 100" height={500} />
 
-Random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches rather than fifty million by concentrating effort where membership of the set is still uncertain.
+In the synthetic setting used by this demo, random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches rather than enumerating all fifty million possible pairs, because it concentrates effort where membership of the set is still uncertain. The exact sample count depends on the gaps around rank 100, outcome noise, model fit, and the stopping rule.
 
 ## Part III — Combinatorial bandits: choosing a whole top-K
 
@@ -413,7 +430,7 @@ Everything so far used **comparison feedback**. You stage A against B and receiv
 
 There is another setting where every selected item returns its own outcome: a click, watch time, purchase, or benchmark score. The goal may still be top-K, but the observation model is different.
 
-- **Comparison feedback:** fit latent skills from “A beat B,” sort them, and schedule matches near the boundary.
+- **Comparison feedback:** choose a pair, receive “A beat B,” fit or update a preference model, then schedule the next comparison.
 - **Per-item reward feedback:** pick a slate and observe a reward for each selected item.
 
 The second setting is a **combinatorial semi-bandit**. For each item, Combinatorial-UCB keeps an optimistic score:
@@ -422,7 +439,7 @@ $$u_i = \bar{x}_i + \sqrt{c\,\ln t/n_i}$$
 
 Each round, choose the top-K by $u_i$, observe a reward for each selected item, and update those items.
 
-This simple top-K rule assumes additive per-item rewards. On a real ranked surface, position bias, substitution, cannibalization, diversity constraints, and slate-level interactions can break that assumption. Then “choose the top-K UCB scores” is no longer the full optimization problem; the action must be valued as a slate.
+This simple top-K rule assumes additive per-item rewards. On a real ranked surface, position bias, substitution, cannibalization, diversity constraints, and slate-level interactions can break that assumption. More fundamentally, an observed click is conditional on exposure under the current policy. Randomized exploration, propensity correction, or other counterfactual methods may be needed before a click estimate means what we think it means. Then “choose the top-K UCB scores” is no longer the full optimization problem; the action must be valued as a slate.
 
 The limitation is simpler still: **Comb-UCB cannot run on “who won?”** It needs a reward for each item. A football match does not provide one.
 
@@ -481,7 +498,7 @@ The restaurant, the league table, and the top-K slate are variations on the same
 
 The optimization structure is known. The parameters that determine the answer are not. Attempts reveal them only partially and noisily, so the solver must decide both what to do now and what to learn next.
 
-For independent arms, that is a multi-armed bandit. For pairwise comparisons, it is active ranking with a latent-skill model. For a slate with per-item rewards, it is a combinatorial semi-bandit.
+For independent arms, that is a multi-armed bandit. For pairwise comparisons, it is a dueling bandit; Bradley-Terry is one structural assumption that makes those comparisons transfer into a latent ranking. For a slate with per-item rewards, it is a combinatorial semi-bandit.
 
 You are not just choosing a restaurant, a match, or a slate.
 
