@@ -1,356 +1,203 @@
 ---
-title: 'The Hidden-Parameter Problem: Solving by Trying'
+title: 'From One-Armed Bandits to Sorting What You Cannot Measure'
 date: '2026-05-30'
 draft: false
 section: 'free-writing'
-summary: 'Some problems hide the parameters that determine the right answer. You cannot estimate them before acting, because each action is also the experiment that reveals them. This is a guide to solving those hidden-parameter problems through bandits, active ranking, and top-K selection.'
+summary: 'Start with five restaurants whose true quality is unknown, then follow the same problem through bandits, noisy pairwise ranking, and top-K selection: the optimization structure is known, but its parameters must be learned by trying.'
 authors: ['default']
 layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
 ---
 
-A recommendation team launches a new slot on a high-traffic page.
+Five restaurants are near your home. One is probably best on average.
 
-There are five candidate policies for filling it. Each policy may have a different conversion rate, a different return rate, and a different effect on long-term engagement. None of those quantities is known well enough to trust offline. The only way to learn what policy does is to give it traffic and observe what happens.
+If you could read their true qualities, this would be trivial: sort the numbers and take the maximum.
 
-That sounds obvious, but it changes the problem completely.
+$$\arg\max_i \mu_i$$
 
-In an ordinary optimization problem, the parameters are known. You estimate the value of every action, take the maximum, and execute:
+But you cannot read them. You can try one tonight, another tomorrow, and another next week. Each dinner tells you something, but never enough. Perhaps the chef had a bad night. Perhaps you ordered badly. Perhaps the place is excellent and you found its one terrible dish.
 
-$$a^* = \arg\max_a V(a; \theta)$$
+So you are not really choosing a restaurant. You are **sorting unknown numbers**.
 
-In this problem, the parameter vector $\theta$ is hidden. Worse: you do not get observations for free. Showing policy $a_t$ produces an outcome $y_t$, and it tells you nothing directly about the policies you did not show. Your decision is therefore also an experiment.
+Each restaurant has a real average quality $\mu_i$. The values are hidden. A dinner is one noisy observation of one value. You need to learn enough of their order without spending all your dinners on bad restaurants.
 
-I will call this the **hidden-parameter problem**:
+That creates a trade-off. You can **exploit** what currently looks best, or **explore** a restaurant whose quality is still unclear. Explore too little and an early lucky dinner can lock you into the wrong answer. Explore too much and you keep paying for mediocre meals after the answer is mostly clear.
 
-> **The quantities that determine the correct decision are unknown, and the only way to estimate them is to take actions whose consequences reveal partial evidence.**
+The question is not just “which restaurant is best?” It is:
 
-Different fields give pieces of this problem different names: online learning, sequential experimentation, adaptive control, active ranking, bandits. The names are useful, but they can obscure the shared structure.
+> **Where should the next try go?**
 
-The shared structure is simple:
+The restaurant is the small version of a much broader problem.
 
-$$\theta \text{ is hidden}; \qquad a_t \text{ produces } y_t \sim P_\theta(y \mid a_t); \qquad a_{t+1} \text{ depends on what happened before.}$$
+To find a shortest path through a city, the graph may be known while travel times on its edges are uncertain and variable. You do not merely run Dijkstra on fixed weights; driving a road is how you learn its weight.
 
-You are not optimizing *after* learning the parameters. You are learning the parameters *through* optimization.
+To match customers with experts, the feasible matches may be known while the quality of each pairing is not. Every match teaches you something about preferences and compatibility, but it also uses an opportunity.
 
-This post is about how to recognize that kind of problem and solve it. The examples move from a simple bandit to noisy ranking and top-K selection, but the point is not to collect algorithm names. It is to learn what to ask when the answer has to be discovered by trying.
+To rank products, sellers, ads, or creators, the candidate set and objective may be known while the quantities that determine the right order are not. You learn from clicks, purchases, returns, comparisons, ratings—whatever feedback reality gives you.
 
-## The four questions that define the problem
+In all of these cases, the optimization problem is known. The actions, constraints, and objective are clear. What is unknown are the parameters that determine which solution is best, and the observations are stochastic.
 
-Before choosing an algorithm, answer four questions.
+So the problem must be solved while its parameters are being learned.
 
-### 1. What exactly is unknown?
+## Part I — The one-armed bandit: choosing dinner
 
-Sometimes each action has one hidden reward rate: click-through rate for an item, conversion rate for a ranking policy, defect rate for a manufacturing setting.
+The restaurant problem is a **multi-armed bandit**: choose one option, observe one noisy outcome, update your belief, repeat.
 
-Sometimes the unknown is conditional: the right action depends on user, query, device, price band, or time of day. Then the hidden object is not one number per action; it is a response function.
+Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**. You never see a restaurant's true average quality; you see one noisy dinner at a time, and only for the restaurant you chose. The others remain counterfactual.
 
-Sometimes the unknowns are linked. In a ranking problem, each item may have a hidden latent score, and a comparison between two items teaches you about both—and indirectly about every other comparison involving them.
+### The cost of not knowing: regret
 
-Naming the unknown parameters is the first real act of problem solving. Without it, “exploration” becomes an excuse for random traffic allocation.
-
-### 2. What evidence does an action generate?
-
-Feedback is not a detail. It determines what can be learned.
-
-- Show one policy and observe one conversion: **per-action reward feedback**.
-- Compare A against B and observe only the winner: **pairwise comparison feedback**.
-- Show a slate of ten items and observe a reward for each displayed item: **semi-bandit feedback**.
-- Show a slate and observe only total page value: **aggregate feedback**.
-
-These are different information channels. A method built for one should not be casually imported into another.
-
-### 3. What is the actual objective?
-
-There are at least two very different objectives that people often blur together.
-
-- **Cumulative reward:** make good choices while learning. A bad action is costly because it hurts today.
-- **Identification:** spend a finite budget to identify the best arm, the correct order, or the top-K set. A bad action is costly mainly because it wastes evidence.
-
-A product surface usually has both. You want revenue now, but you also want to stop being wrong about the policy. The relative weight determines how aggressive exploration should be.
-
-### 4. What structure lets evidence transfer?
-
-The naïve model treats every action as independent. Then a result from item A says nothing about item B.
-
-But most worthwhile problems have structure: user features, item embeddings, a shared latent ranking, graph constraints, or a response model. Structure is how one observation becomes useful beyond the exact action that generated it.
-
-The rest of the post is just this checklist in action.
-
----
-
-## Part I — The smallest hidden-parameter problem: a bandit
-
-Start with the deliberately simple version.
-
-A product team has five candidate ranking policies for a slot. Policy $i$ has an unknown probability $\mu_i$ of generating a desired outcome. Each session, you must choose exactly one policy. You see a noisy reward—say, purchase or no purchase—only for the policy you deployed.
-
-There is no replay log containing the counterfactual answer. You cannot ask what would have happened under the four policies you did not show. Their rewards remain unobserved.
-
-This is the **multi-armed bandit**:
-
-- each policy is an **arm**;
-- sending a session to it is a **pull**;
-- the observed outcome is the **reward**;
-- $\mu_i$ is the hidden parameter you are trying to learn.
-
-The restaurant version is the same toy model with tastier rewards: each restaurant has a hidden average quality, every dinner is noisy, and choosing one tells you nothing directly about the others.
-
-### The mistake that creates the problem
-
-If the $\mu_i$ values were visible, there would be no bandit problem. Compute $\max_i \mu_i$ and ship it.
-
-The hard case is not uncertainty in the abstract. The hard case is **selective evidence**: you learn only about what you chose.
-
-That is why a normal A/B test mindset is insufficient. A classical fixed experiment says: allocate traffic evenly, wait, estimate, decide. A bandit says: the decision happens every round, and waiting has an opportunity cost.
-
-The cost is measured by **regret**:
+There are $k$ arms, each with an unknown reward distribution. At every round, choose one arm, observe one noisy reward, and try to maximize total reward. Equivalently, minimize **regret**:
 
 $$\text{Regret}(T) = \sum_{t=1}^{T}\big(\mu^* - \mu_{a_t}\big), \qquad \mu^* = \max_i \mu_i$$
 
-At time $t$, regret is the value you lose by choosing $a_t$ instead of the true best arm. The oracle knows $\mu^*$ from the start. You do not.
+If the sushi place is truly best and you eat somewhere weaker tonight, the gap between their hidden average qualities is tonight's expected regret.
 
-So every policy must solve the same tension:
+Commit after a handful of dinners and early noise can crown the wrong winner. Explore every restaurant evenly forever and you waste dinners after the answer is clear. A bandit policy is a rule for dividing your budget between learning and using what you have learned.
 
-- exploit what currently looks best;
-- explore actions whose uncertainty could still change the decision.
+Before naming the policies, try it yourself.
 
-Not random exploration. **Decision-relevant exploration.**
+<Demo src="/demos/posts/edp-sort/mysterious-policy.html" title="You versus a mysterious policy" height={640} />
 
-<Demo src="/demos/posts/edp-sort/mysterious-policy.html" title="The hidden-parameter problem in miniature" height={640} />
+There are five hidden restaurant qualities. You choose where to eat; a second policy chooses in parallel. The goal is not to win one dinner. It is to avoid accumulating bad dinners while you work out where the good ones are.
 
-The demo uses restaurants, but read it as five unknown policy parameters. The important fact is that a single good or bad outcome is not a verdict. It is evidence with variance.
+### Three policies cover most of the ground
 
-### Three ways to turn uncertainty into an action
+- **ε-greedy.** Choose the current best arm 90% of the time and a random arm for the other 10%. The random part is insurance against an early mistake, but it keeps paying that 10% after the winner is obvious.
 
-The main policies differ in only one thing: how they convert an estimate and its uncertainty into the next pull.
-
-- **ε-greedy:** choose the current best arm most of the time; reserve a fixed fraction $\varepsilon$ for random exploration. It is robust and easy, but spends exploration budget even when uncertainty is already resolved.
-- **UCB1:** choose the arm with the highest optimistic estimate:
+- **UCB1** — *optimism in the face of uncertainty.* Score each arm by
 
   $$\hat{\mu}_i + \sqrt{2\ln t / n_i}$$
 
-  The first term is what you currently believe. The second is the uncertainty bonus. An arm sampled only a few times is allowed to look better than its mean because it might be better. The bonus shrinks as evidence accumulates.
+  and choose the largest score. The first term is what you believe; the second is how wrong you might still be. Barely tried arms get a bonus that shrinks as evidence arrives.
 
-- **Thompson sampling:** maintain a distribution over plausible values of each $\mu_i$. Sample one plausible world, choose the best arm in that world, observe the result, update the distribution. Wide uncertainty naturally creates occasional exploration; narrow, low posteriors stop winning.
+- **Thompson sampling** — *probability matching.* Keep a belief distribution for each arm. Each round, draw one plausible value from every belief and choose the highest draw. A barely tried arm has a wide posterior and occasionally gets another chance. A known-bad arm has a narrow, low posterior and rarely wins.
 
-<Demo src="/demos/posts/edp-sort/bandit-race.html" title="How exploration policies spend evidence" height={560} />
+<Demo src="/demos/posts/edp-sort/bandit-race.html" title="Race the bandit policies" height={560} />
 
-The useful lesson from this race is not that one curve is universally superior. It is that pure exploitation fails for a specific reason: a lucky early reward can become a permanent false belief. ε-greedy repairs that by buying random checks. UCB and Thompson do better because they spend their checks where uncertainty is still material.
+Pure exploit fails because an early lucky result can become a permanent false belief. ε-greedy repairs that by buying random checks. UCB and Thompson improve on it because their checks go where uncertainty is still relevant.
 
-<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="Choose the next pull yourself" height={520} />
+UCB is not computationally slow; it is one score per arm. Its conservatism is statistical. The confidence bonus keeps revisiting arms that a more model-aware method might discard earlier. In practice, people often use tighter variants such as KL-UCB or UCB-Tuned, or Thompson sampling when a Bayesian reward model is natural.
 
-### Context changes the parameterization
+<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="Pull the bandit yourself" height={520} />
 
-The independent-arm model is often too crude.
+The good actions are not simply the high-reward ones. They are the actions that are worth both their immediate outcome and what they teach you.
 
-On a retail site, “policy A has conversion rate 3%” is rarely the parameter you care about. Policy A may work for high-intent users on mobile, fail for gift shoppers, and interact with price sensitivity. The hidden quantity is closer to:
+### Context changes which arm is best
 
-$$\mu_i(x) = \text{expected reward of action } i \text{ in context } x$$
+A quick lunch, a date, and a rainy solo dinner are different **contexts**. A plain bandit learns one global average per restaurant. A **contextual bandit** sees features of the situation before choosing.
 
-A **contextual bandit** observes $x$ before acting. In LinUCB, for example, each arm learns a weight vector $\theta_i$ and predicts $x_t^\top\theta_i$, then adds an uncertainty bonus. The action is no longer “which policy is globally best?” It is “which policy is best for this request, given what we know and what we still need to learn?”
+In LinUCB, each arm learns weights $\theta_a$ over a context vector $x_t$, predicts $x_t^\top\theta_a$, and adds an uncertainty bonus. The question becomes: which restaurant is best for this situation, given what we know and what we still need to learn?
 
-<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="Contextual bandit: unknown response functions" height={420} />
+<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="Contextual dinner bandit" height={420} />
 
-This is the first structural upgrade. Evidence from one mobile, high-intent session can inform nearby sessions in feature space. You are not merely counting rewards per arm anymore; you are fitting a response model.
+The basic bandit has one feedback channel: choose one item and observe one reward. Now change that. Suppose you can only compare two items and see which one wins.
 
-### What the bandit taught us
+## Part II — Sorting: when the arm is a pair
 
-A bandit is not fundamentally “a restaurant choice problem.” It is the smallest model of a hidden-parameter problem:
+Eight players. No stat sheet. No clean skill number to read.
 
-1. each action has an unknown consequence;
-2. acting produces the only evidence;
-3. evidence is partial and noisy;
-4. the next action should depend on what has been learned.
+You can make any two play and watch who wins. A match is a coin whose bias depends on the skill gap: a strong player usually beats a weak one; evenly matched players are close to a toss-up.
 
-Now change one thing: suppose you cannot observe a reward for an item at all. You can only compare two items and hear which one won.
+How many matches do you need before the league table is reliable? More importantly: **which match should happen next?**
 
-That is a ranking problem.
+<Demo src="/demos/posts/edp-sort/pitch-match.html" title="A league table built from noisy 1v1 matches" height={660} />
 
----
+This is sorting, except the comparison oracle is unreliable. In a textbook, you sort by reading numbers. Here, the better player only *probably* wins.
 
-## Part II — Hidden parameters with shared structure: ranking from comparisons
-
-Suppose a marketplace has eight new sellers with no reliable transaction history. You need a quality order, but the only available signal is a noisy comparison: experts or customers can look at two sellers and say which one seems stronger.
-
-You do not observe “seller A has quality 0.73.” You observe statements like “A beat B.”
-
-This is a different feedback channel, but it is still a hidden-parameter problem. The hidden parameters are now the latent skills:
-
-$$s_1, s_2, \ldots, s_n$$
-
-A comparison between $i$ and $j$ is generated by their difference. The standard Bradley-Terry model writes:
+The standard model is the **Bradley-Terry** law:
 
 $$P(i \succ j) = \sigma\!\big(\beta(s_i-s_j)\big)$$
 
-Equal skills give a 50/50 comparison. A large skill gap makes the stronger item likely to win. The parameter $\beta$ controls how decisive the comparisons are.
+Each player has a hidden skill $s_i$. The logistic curve turns the difference $s_i-s_j$ into a win probability. Equal skills give a 50/50 match; a large gap gives an almost certain result.
 
-<Demo src="/demos/posts/edp-sort/pitch-match.html" title="Build a ranking from noisy comparisons" height={660} />
+One match is one noisy observation of one pairwise difference. But the pairs are not independent. If A beats B repeatedly and B beats C repeatedly, you learn something about A versus C without scheduling that match. The pairs share the same hidden skill vector.
 
-The football presentation is useful because it makes the observation model visible. A single match does not measure skill. It supplies one noisy constraint on a pairwise difference.
+A pair separated by a gap $\Delta$ needs roughly $\log(1/\delta)/\Delta^2$ repeated matches before you can call the order with confidence $1-\delta$. Big gaps settle quickly. Near ties consume the budget.
 
-### This is not just many bandit arms
+### How the table learns
 
-At the level of raw outcomes, each pairwise result is Bernoulli: A wins or B wins.
+**Batch fit.** Given all matches so far, find the Bradley-Terry skill values that best explain them. Sort the fitted skills and you have a ranking. This is clean, but refitting from scratch after every match does not scale.
 
-But the pairs share parameters. If A beats B repeatedly and B beats C repeatedly, you have learned something about A versus C without ever scheduling that match. This transitive transfer is the central structural advantage of ranking.
+**Online fit: Elo.** Treat each match as one logistic-regression example and take a single SGD step. If $i$ beats $j$:
 
-Treat every pair as an independent bandit arm and you throw that advantage away. The right model estimates one global vector of skills and lets evidence propagate through it.
+$$s_i \leftarrow s_i + \eta(1-p), \qquad s_j \leftarrow s_j - \eta(1-p), \qquad p = \sigma(s_i-s_j)$$
 
-### Estimation: recover the latent scores
+The update is the surprise, $1-p$. If the favourite wins, the ratings barely move. If an underdog wins, they move sharply.
 
-There are two useful forms.
+The recipe has three parts:
 
-**Batch Bradley-Terry fit.** Given all comparisons so far, find the skill vector that makes the observed wins most likely. The eight-player demo uses a few minorize-maximize passes. Sort the fitted skills and you have a current table.
+> **estimate** skills from matches → **read off** the ranking by sorting → **schedule** the next match.
 
-**Online fit: Elo.** When comparisons arrive continuously, do not refit the entire model after every match. Update the two participating scores once. If $i$ beats $j$:
+### Where to spend the matches
 
-$$s_i \leftarrow s_i + \eta(1-p), \qquad s_j \leftarrow s_j - \eta(1-p), \qquad p=\sigma(s_i-s_j)$$
+- A **lopsided** match produces an expected Elo update close to zero. It mostly confirms what you already knew.
+- A **near-even** match is both uncertain and capable of changing the table.
 
-The magnitude $1-p$ is the surprise. If an expected favourite wins, there is little to learn and ratings move little. If an underdog wins, the model moves sharply.
+Sample near the boundaries where the answer can still change.
 
-Elo is not magic. It is an online estimator for a latent-parameter model.
+- **Random** chooses any pair.
+- **Round-robin** chooses the least-played pair, $\arg\min_{(i,j)}n_{ij}$.
+- **Ladder** compares neighbours in the current table.
+- **Active** chooses a pair that is both close and under-sampled:
 
-### Experiment design: choose the next comparison
+  $$\arg\max_{(i,j)}\left[\text{closeness}(|\hat{s}_i-\hat{s}_j|)+\text{uncertainty}\left(\frac{1}{1+n_{ij}}\right)\right]$$
 
-Once the estimator exists, the main problem returns: which pair should you compare next?
+<Demo src="/demos/posts/edp-sort/pairing-race.html" title="Where to spend your matches" height={440} />
 
-A comparison between items with a large estimated gap is often wasteful. It confirms an order that is already almost certain. A comparison between near-equal items may resolve an ordering that actually affects the table.
+The curve is Kendall $\tau$, or table correctness, against matches played. Boundary-seeking schedulers settle the table first because they spend their budget where the order is still movable.
 
-The sample cost makes this precise. If two skills differ by $\Delta$, identifying their order with confidence $1-\delta$ requires roughly:
+Set the table to **you scout (click 2)**. Pick two players, run a match, inspect the table, and choose the next pair. Obvious mismatches feel safe, but they rarely change anything.
 
-$$\log(1/\delta) / \Delta^2$$
+### Why the candidate pool must be wider than K
 
-comparisons. Large gaps settle quickly. Near ties consume the evidence budget.
+Suppose you only need the **best K** items. Comparing only items currently in the top-K fails in three ways.
 
-That gives a simple operational rule:
+1. A genuinely top-K item currently sitting at K+1 receives no matches and has no path back into contention.
+2. Inside a settled top-K, comparisons are often lopsided; Elo updates are near zero and the cutline does not move.
+3. If the top group is isolated from the field, “K-th best” loses its anchor.
 
-> **Sample near the boundaries where the answer can still change.**
+The fix is a **candidate band around the cutline**. Keep sampling everyone whose uncertainty still overlaps the K-th position. Let the band narrow only when evidence rules people out.
 
-<Demo src="/demos/posts/edp-sort/pairing-race.html" title="Ranking is also an experiment-design problem" height={440} />
+With **10,000** players there are about 50 million possible pairs. Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
-The schedulers expose different beliefs about where evidence matters.
+<Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 players: find the best 100" height={500} />
 
-- **Random** spreads evidence everywhere, including settled blowouts.
-- **Round-robin** gives every pair equal coverage, which is fair but often inefficient.
-- **Ladder** compares neighbours in the current ranking, because adjacent items are likely to be uncertain.
-- **Active scheduling** combines closeness and uncertainty, explicitly choosing the comparison most likely to improve the table.
+Random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches rather than fifty million by concentrating effort where membership of the set is still uncertain.
 
-The active policy is not using a fancier sort. It is using the comparison budget better.
+## Part III — Combinatorial bandits: choosing a whole top-K
 
-### The top-K objective changes where the boundary is
+Everything so far used **comparison feedback**. You stage A against B and receive one bit: who won.
 
-Usually you do not need a perfect ranking of everything. You need the best $K$ items.
+There is another setting where every selected item returns its own outcome: a click, watch time, purchase, or benchmark score. The goal may still be top-K, but the observation model is different.
 
-That changes the experimental target. The important uncertainty is no longer every adjacent pair. It is the region around the K-th position—the **cutline**.
+- **Comparison feedback:** fit latent skills from “A beat B,” sort them, and schedule matches near the boundary.
+- **Per-item reward feedback:** pick a slate and observe a reward for each selected item.
 
-The common mistake is to compare only items currently inside the top-K. That creates three failures.
+The second setting is a **combinatorial semi-bandit**. For each item, Combinatorial-UCB keeps an optimistic score:
 
-1. **Feedback-loop selection bias.** A genuinely top-K item currently sitting at K+1 receives no comparisons, so it has no route back into contention.
-2. **Dead updates.** Comparisons among already separated top items are often predictable, so Elo updates are near zero. They do not move the cutline.
-3. **Disconnected evidence.** If the top group stops being compared with the field, the scale loses its anchor. “K-th best” becomes less identifiable.
+$$u_i = \bar{x}_i + \sqrt{c\,\ln t/n_i}$$
 
-The fix is a **candidate band** around the cutline. Keep sampling everyone whose uncertainty overlaps the K-th position. Narrow the band only after the evidence rules people out.
+Each round, choose the top-K by $u_i$, observe a reward for each selected item, and update those items.
 
-<Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 items: recover the real top 100" height={500} />
+The limitation is simple: **Comb-UCB cannot run on “who won?”** It needs a reward for each item. A football match does not provide one.
 
-At ten thousand items there are almost fifty million possible pairs. The point of the adaptive scheduler is not to search all of them. It is to spend comparisons in the small region where the membership of the top 100 is still uncertain.
+The next demo is not a fair race between two solutions to the same feedback problem. It shows two machines looking at the same hidden item quality through different observation channels.
 
-This is a general principle of hidden-parameter problem solving: **do not explore where uncertainty is large in the abstract; explore where uncertainty can still change a decision.**
+<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
 
----
+Comb-UCB receives several direct rewards each round; Bradley-Terry receives one comparison bit. Bradley-Terry gives a global latent ranking, reusable for any K. Comb-UCB gives per-item reward estimates for the items it has selected, but says little about items it never observed.
 
-## Part III — The feedback channel decides the machine
+Same goal. Different feedback. Different machinery.
 
-Top-K selection appears in another form.
+## What this adds up to
 
-Suppose you show a slate of $K$ products. This time you receive a separate reward for each displayed product: click, add-to-cart, watch time, or conversion. You are not asking an observer “which of these two is better?” You are receiving an outcome for every selected item.
+The restaurant, the league table, and the top-K slate are variations on the same move.
 
-That is not noisy sorting. It is a **combinatorial semi-bandit**.
+The optimization structure is known. The parameters that determine the answer are not. Attempts reveal them only partially and noisily, so the solver must decide both what to do now and what to learn next.
 
-For each item, Combinatorial-UCB keeps an optimistic score:
+For independent arms, that is a bandit. For pairwise comparisons, it is active ranking with a latent-skill model. For a slate with per-item rewards, it is a combinatorial semi-bandit.
 
-$$u_i = \bar{x}_i + \sqrt{c\,\ln t / n_i}$$
+The reusable question is still the first one:
 
-Each round, choose the top-K items by $u_i$. Observe rewards for the selected K items. Update those items. The action is combinatorial because it is a whole slate, not one arm.
-
-<Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Same top-K goal, different feedback, different algorithm" height={400} />
-
-The comparison with Bradley-Terry is intentionally uneven. Combinatorial-UCB receives several direct rewards per round. Bradley-Terry receives one comparison bit. It is not a race to crown a winner; it is a demonstration that information geometry determines the learning rate and the appropriate model.
-
-The two systems leave you with different assets too:
-
-- **Bradley-Terry / Elo** builds a global latent ranking. It can answer new top-K queries because it models relative quality across all items.
-- **Combinatorial-UCB** learns per-item reward estimates for the items it has selected. It is efficient when the feedback really is per item, but it does not magically infer pairwise structure from absent data.
-
-Same product goal. Different observation model. Different solution.
-
----
-
-## A practical recipe for hidden-parameter problem solving
-
-When you meet a problem that seems to require “trying things,” do not jump straight to a bandit library. Work through this sequence.
-
-### 1. Write down the hidden parameters
-
-What would be known if you had perfect information?
-
-- a reward rate per action;
-- a response function per context;
-- a latent score per item;
-- an interaction matrix between pairs or slate elements;
-- a changing state that must be tracked over time.
-
-This tells you what the model is trying to learn.
-
-### 2. Write down the observation model
-
-For a chosen action, what arrives back?
-
-Not “we have logs.” Be precise. Do you observe a reward for the chosen item, the full slate, the page total, a pairwise winner, or a delayed outcome? Which counterfactuals remain invisible?
-
-Most bad algorithm choices start here: they assume a richer feedback channel than the product actually supplies.
-
-### 3. Separate learning objective from business objective
-
-Are you trying to maximize cumulative value during learning? Identify the best policy by a deadline? Recover the top 100? Maintain a ranking as preferences drift?
-
-The answer determines the correct metric: regret, simple regret, recall@K, Kendall $\tau$, calibration, or a risk-sensitive variant. Do not optimize a generic “accuracy” number when the decision is about a cutline.
-
-### 4. Find the structure that transfers evidence
-
-Independent arms are the fallback, not the default.
-
-Use context when nearby requests should behave similarly. Use latent-score models when pairwise comparisons are generated by shared item quality. Use slate models when items interact. Use graphs when actions share components.
-
-Structure is not decorative modeling. It is what lowers the cost of exploration.
-
-### 5. Define the decision boundary
-
-Which uncertainty could alter what you actually do next?
-
-For a best-arm problem, it is the gap between the top contenders. For a top-K problem, it is the band around K. For a policy rollout, it is the decision threshold for shipping or stopping. For a ranking page, it may be the items that can still enter a visible position.
-
-Spend evidence there.
-
-### 6. Keep exploration safe enough to survive contact with production
-
-The mathematically best information-gathering action is not always acceptable. You may need constraints: minimum relevance, maximum exposure loss, segment protection, delayed-reward correction, conservative priors, or explicit holdouts.
-
-That does not make the hidden-parameter problem disappear. It makes the policy constrained. The core loop remains: act, observe partial evidence, update, allocate the next action.
-
----
-
-## The point
-
-The deep distinction is not between “machine learning problems” and “algorithm problems.” It is between problems whose parameters are available before you act and problems whose parameters are created by acting.
-
-For the first kind, solve and execute.
-
-For the second kind, there is no clean separation. Your solver must decide what to do **and** what to learn next. Bandits are the simplest version. Contextual bandits add shared response structure. Noisy ranking adds latent parameters and comparison feedback. Combinatorial bandits add whole actions and per-item rewards.
-
-The reusable idea is smaller than all of those names:
-
-> **When the answer depends on hidden parameters, and actions are how you reveal them, problem solving is the design of a good sequence of tries.**
-
-The best next try is not simply the one with the highest estimated value. It is the one whose value and information are jointly worth its cost.
+> **Where should the next try go?**
