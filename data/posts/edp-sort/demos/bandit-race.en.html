@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race multi-armed bandit policies</title>
+<style>
+:root{--bg:#0b1220;--card:#131c30;--card2:#1a2440;--fg:#e6edf3;--dim:#8b95a8;--accent:#4c8df6;--accent2:#2a4a7a;--green:#5fd2a3;--orange:#f0a058;--red:#e16c6c;--purple:#c879f0;--cyan:#67e8f9;--border:#1f2a44;--code:#0e1626;--mono:ui-monospace,"SF Mono",Menlo,Monaco,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--fg)}body{font-family:var(--sans);font-size:15px;line-height:1.45;padding:12px}.widget{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}.legend{font-size:13px;color:var(--dim);margin:0 0 12px}.pills,.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:10px 0}button{font-family:var(--mono);font-size:12px;background:var(--card2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer}button:hover{background:var(--accent2);border-color:var(--accent)}button.on{border-color:var(--accent);color:var(--accent)}button.primary{background:var(--accent);border-color:var(--accent);color:#07101e;font-weight:700}.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-top:12px}.stat{background:var(--code);padding:9px 10px;border-radius:7px}.label{color:var(--dim);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em}.value{font-family:var(--mono);font-size:17px;margin-top:3px}canvas{width:100%;height:270px;display:block;background:var(--code);border-radius:7px;margin-top:12px}.note{font-size:12px;color:var(--dim);margin-top:9px}.key{font-family:var(--mono);font-size:11px;color:var(--dim);margin-right:4px}
+</style>
+</head>
+<body>
+<div class="widget">
+  <p class="legend">Five hidden Bernoulli arms. Toggle policies, choose a scenario, then compare cumulative regret. KL-UCB uses the Bernoulli likelihood rather than UCB1's generic Hoeffding bonus.</p>
+  <div class="pills" id="pills"></div>
+  <div class="controls"><button class="primary" id="play">▶ run 1,000 pulls</button><button id="step">+100</button><button id="scenario">scenario: <span id="scenarioName">balanced</span></button><button id="reset">reset</button></div>
+  <canvas id="chart" height="270"></canvas>
+  <div class="statgrid"><div class="stat"><div class="label">pulls</div><div class="value" id="t">0</div></div><div class="stat"><div class="label">best mean</div><div class="value" id="best">—</div></div><div class="stat"><div class="label">lowest regret</div><div class="value" id="regret">—</div></div><div class="stat"><div class="label">current leader</div><div class="value" id="leader">—</div></div></div>
+  <p class="note">Try <span class="key">hard</span> first. KL-UCB tends to matter most for Bernoulli feedback when the winner is close and the generic UCB1 interval is wasteful.</p>
+</div>
+<script>
+const COLORS={random:'#8b95a8',exploit:'#e16c6c',epsilon:'#f0a058',ucb:'#4c8df6',klucb:'#67e8f9',thompson:'#5fd2a3'};
+const LABEL={random:'random',exploit:'pure exploit',epsilon:'epsilon-greedy',ucb:'UCB1',klucb:'KL-UCB',thompson:'Thompson'};
+const SCENARIOS=[{name:'balanced',p:[.30,.55,.40,.65,.50]},{name:'hard',p:[.45,.62,.40,.58,.30]},{name:'easy',p:[.20,.78,.35,.30,.25]},{name:'flat',p:[.48,.52,.50,.47,.51]}];
+const active={random:true,exploit:false,epsilon:true,ucb:true,klucb:true,thompson:true};
+let scenario=0,t=0,states={},timer=null;
+const $=id=>document.getElementById(id);const argmax=a=>a.reduce((m,v,i)=>v>a[m]?i:m,0);
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function gamma(shape){if(shape<1)return gamma(shape+1)*Math.pow(Math.max(Math.random(),1e-12),1/shape);const d=shape-1/3,c=1/Math.sqrt(9*d);while(true){const x=gauss(),v=1+c*x;if(v<=0)continue;const q=v*v*v,u=Math.random();if(u<1-.0331*x*x*x*x||Math.log(u)<.5*x*x+d*(1-q+Math.log(q)))return d*q}}
+function beta(a,b){const x=gamma(a),y=gamma(b);return x/(x+y)}
+function kl(p,q){p=Math.min(1-1e-12,Math.max(1e-12,p));q=Math.min(1-1e-12,Math.max(1e-12,q));return p*Math.log(p/q)+(1-p)*Math.log((1-p)/(1-q))}
+function klucb(mean,n,round){if(mean>=1)return 1;const bound=(Math.log(Math.max(round,2))+3*Math.log(Math.max(Math.log(Math.max(round,3)),1)))/n;let lo=mean,hi=1-1e-12;for(let k=0;k<28;k++){const mid=(lo+hi)/2;if(kl(mean,mid)<=bound)lo=mid;else hi=mid}return lo}
+function fresh(){const p=SCENARIOS[scenario].p;return{p,n:Array(5).fill(0),s:Array(5).fill(0),regret:0,history:[]}}
+function mean(b,i){return b.n[i]?b.s[i]/b.n[i]:0}
+function choose(b,name,round){for(let i=0;i<5;i++)if(!b.n[i])return i;if(name==='random')return Math.floor(Math.random()*5);if(name==='exploit')return argmax(b.n.map((_,i)=>mean(b,i)));if(name==='epsilon')return Math.random()<.1?Math.floor(Math.random()*5):argmax(b.n.map((_,i)=>mean(b,i)));if(name==='ucb')return argmax(b.n.map((n,i)=>mean(b,i)+Math.sqrt(2*Math.log(round)/n)));if(name==='klucb')return argmax(b.n.map((n,i)=>klucb(mean(b,i),n,round)));if(name==='thompson')return argmax(b.n.map((n,i)=>beta(1+b.s[i],1+n-b.s[i])))}
+function pull(b,i){const reward=Math.random()<b.p[i]?1:0;b.n[i]++;b.s[i]+=reward;b.regret+=Math.max(...b.p)-b.p[i]}
+function init(){clearInterval(timer);timer=null;t=0;states={};for(const k in active)if(active[k])states[k]=fresh();$('scenarioName').textContent=SCENARIOS[scenario].name;$('best').textContent=Math.max(...SCENARIOS[scenario].p).toFixed(2);$('t').textContent='0';$('regret').textContent='—';$('leader').textContent='—';draw();}
+function step(n){for(let z=0;z<n;z++){t++;for(const k in states){const b=states[k];pull(b,choose(b,k,t));if(t%10===0)b.history.push([t,b.regret])}}let lead=null,low=Infinity;for(const k in states)if(states[k].regret<low){low=states[k].regret;lead=k}$('t').textContent=t;$('regret').textContent=low.toFixed(1);$('leader').textContent=LABEL[lead];draw()}
+function run(){clearInterval(timer);let left=1000;timer=setInterval(()=>{step(Math.min(10,left));left-=10;if(left<=0){clearInterval(timer);timer=null}},16)}
+function draw(){const c=$('chart'),dpr=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);const pad={l:44,r:14,t:16,b:28},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;let ymax=1;for(const k in states)for(const p of states[k].history)ymax=Math.max(ymax,p[1]);x.strokeStyle='rgba(255,255,255,.07)';x.fillStyle='#8b95a8';x.font='11px ui-monospace,monospace';for(let i=0;i<=4;i++){const y=pad.t+i*ph/4;x.beginPath();x.moveTo(pad.l,y);x.lineTo(pad.l+pw,y);x.stroke();x.fillText((ymax*(1-i/4)).toFixed(ymax>10?0:1),3,y+4)}x.fillText(`pulls: ${t}`,w-100,h-7);for(const k in states){const pts=states[k].history;if(pts.length<2)continue;x.strokeStyle=COLORS[k];x.lineWidth=2;x.beginPath();pts.forEach(([px,py],i)=>{const xx=pad.l+px/Math.max(1,t)*pw,yy=pad.t+(1-py/ymax)*ph;i?x.lineTo(xx,yy):x.moveTo(xx,yy)});x.stroke()}let ly=pad.t+12;x.textAlign='right';for(const k in states){const pts=states[k].history,last=pts[pts.length-1];x.fillStyle=COLORS[k];x.fillText(`${LABEL[k]}${last?'  '+last[1].toFixed(1):''}`,w-pad.r,ly);ly+=14}x.textAlign='left'}
+function pills(){const host=$('pills');for(const k in LABEL){const b=document.createElement('button');b.textContent=LABEL[k];b.className=active[k]?'on':'';b.onclick=()=>{active[k]=!active[k];b.classList.toggle('on',active[k]);init()};host.appendChild(b)}}
+pills();$('play').onclick=run;$('step').onclick=()=>step(100);$('reset').onclick=init;$('scenario').onclick=()=>{scenario=(scenario+1)%SCENARIOS.length;init()};addEventListener('resize',draw);init();
+(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,200)});addEventListener('resize',h);new ResizeObserver(h).observe(document.body)})();
+</script>
+</body>
+</html>
