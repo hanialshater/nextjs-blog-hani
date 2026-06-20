@@ -1,0 +1,29 @@
+name: EDP demo smoke
+
+on:
+  push:
+    paths:
+      - 'data/posts/edp-sort/**'
+      - 'components/Demo.tsx'
+      - 'tests/edp-sort-demos.spec.ts'
+      - '.github/workflows/edp-demo-smoke.yml'
+  pull_request:
+    paths:
+      - 'data/posts/edp-sort/**'
+      - 'components/Demo.tsx'
+      - 'tests/edp-sort-demos.spec.ts'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
+      - run: yarn build
+      - run: yarn playwright test tests/edp-sort-demos.spec.ts
