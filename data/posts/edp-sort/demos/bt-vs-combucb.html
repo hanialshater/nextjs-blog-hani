@@ -2,31 +2,41 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pairwise BTL feedback versus combinatorial semi-bandit feedback</title>
+<title>Choose ten candidates for a standard benchmark</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--purple:#c879f0;--green:#5fd2a3;--blue:#4c8df6;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:8px 10px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}canvas{display:block;width:100%;height:220px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button{font:12px var(--mono);border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}@media(max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--purple:#c879f0;--green:#5fd2a3;--blue:#4c8df6;--gold:#f5c451;--coral:#ef7d74;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:8px 10px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}canvas{display:block;width:100%;height:210px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button{font:12px var(--mono);border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.batch{margin-top:12px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:10px}.batch-head{display:flex;justify-content:space-between;gap:10px;font:11px var(--mono);color:var(--muted)}.batch-head b{color:var(--text)}.batch-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;margin-top:9px}.candidate{min-width:0;border:1px solid var(--edge);border-radius:6px;padding:5px 3px;background:#111d32;text-align:center}.candidate b{display:block;font:10px var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis}.candidate span{display:block;margin-top:2px;font:10px var(--mono);color:var(--green)}.candidate.true{border-color:var(--gold);box-shadow:0 0 0 1px rgba(245,196,81,.16) inset}.candidate.explore{border-color:var(--blue)}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-grid{grid-template-columns:repeat(5,minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div class="root">
-  <div class="stats"><div class="stat"><div class="label">decision rounds</div><div class="value" id="round">0</div></div><div class="stat"><div class="label">BTL/Elo recall@5</div><div class="value" id="bt">0%</div></div><div class="stat"><div class="label">Comb-UCB recall@5</div><div class="value" id="comb">0%</div></div><div class="stat"><div class="label">observations / round</div><div class="value">1 vs 5</div></div></div>
-  <div class="controls"><button class="primary" id="btcb-play">▶ run</button><button id="step">+25 rounds</button><button id="reset">new world</button></div>
-  <canvas id="btcb" height="220"></canvas>
-  <div class="note" id="note"><b>Deliberately unequal feedback.</b> The BTL learner selects one pair and receives one relative winner; Comb-UCB selects five items and observes five direct Bernoulli rewards. The chart illustrates why the feedback channel—not merely the top-K objective—determines the learning speed.</div>
+  <div class="stats">
+    <div class="stat"><div class="label">benchmark rounds</div><div class="value" id="round">0</div></div>
+    <div class="stat"><div class="label">candidates / batch</div><div class="value">10</div></div>
+    <div class="stat"><div class="label">benchmark UCB recall@10</div><div class="value" id="comb">0%</div></div>
+    <div class="stat"><div class="label">pairwise BTL recall@10</div><div class="value" id="bt">0%</div></div>
+  </div>
+  <div class="controls"><button class="primary" id="btcb-play">▶ run</button><button id="step">+25 rounds</button><button id="reset">new candidate pool</button></div>
+  <canvas id="btcb" height="210"></canvas>
+  <div class="batch"><div class="batch-head"><b>latest Comb-UCB benchmark batch</b><span id="batch_meta">10 standardized scores observed</span></div><div class="batch-grid" id="batch_grid"></div></div>
+  <div class="note" id="note"><b>One clean semi-bandit round:</b> select ten candidates, run the same benchmark for each, and observe ten directly comparable noisy scores. Comb-UCB updates every chosen candidate. The football learner still sees only one relative winner, so the two lines illustrate the value of a richer feedback channel—not an apples-to-apples algorithm race.</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
 (() => {
   const { eloUpdate, mulberry32, normal, resizeCanvas, sigmoid, topK } = window.EDP
-  const n = 40, k = 5
+  const n = 80, k = 10
   const $ = (id) => document.getElementById(id)
-  let rng, skill, rewardProbability, trueTop, btRatings, btPairGames, combRewardSum, combPulls, round, btHistory, combHistory, running, frame
+  let rng, skill, benchmarkMean, trueTop, btRatings, btPairGames, combRewardSum, combPulls, round, btHistory, combHistory, running, frame, latestBatch, latestScores
+
+  function clippedScore(mean) {
+    return Math.max(0, Math.min(100, mean + 10 * normal(rng)))
+  }
 
   function reset() {
     rng = mulberry32((Date.now() >>> 0) || 7)
     skill = Array.from({ length: n }, () => normal(rng))
-    rewardProbability = skill.map((value) => sigmoid(value))
-    trueTop = new Set(topK(skill, k))
+    benchmarkMean = skill.map((value) => 70 + 9 * value)
+    trueTop = new Set(topK(benchmarkMean, k))
     btRatings = Array(n).fill(0)
     btPairGames = Array.from({ length: n }, () => Array(n).fill(0))
     combRewardSum = Array(n).fill(0)
@@ -34,6 +44,8 @@
     round = 0
     btHistory = []
     combHistory = []
+    latestBatch = []
+    latestScores = []
     running = false
     cancelAnimationFrame(frame)
     $('btcb-play').textContent = '▶ run'
@@ -47,7 +59,7 @@
   }
 
   function chooseBtlPair() {
-    const order = topK(btRatings, Math.min(n, k + 6))
+    const order = topK(btRatings, Math.min(n, k + 16))
     const candidates = round < n ? Array.from({ length: n }, (_, index) => index) : order
     let best = [candidates[0], candidates[1]]
     let bestScore = -Infinity
@@ -63,10 +75,11 @@
   }
 
   function chooseCombSlate() {
-    const logRound = Math.log(Math.max(round + 1, 2))
+    const logRound = Math.log(Math.max(round + 2, 2))
     const scores = Array.from({ length: n }, (_, item) => {
       if (!combPulls[item]) return Infinity
-      return combRewardSum[item] / combPulls[item] + Math.sqrt(2 * logRound / combPulls[item])
+      const mean = combRewardSum[item] / combPulls[item]
+      return mean + 16 * Math.sqrt(2 * logRound / combPulls[item])
     })
     return topK(scores, k)
   }
@@ -74,21 +87,39 @@
   function oneRound() {
     const [left, right] = chooseBtlPair()
     const leftWon = rng() < sigmoid(skill[left] - skill[right])
-    eloUpdate(btRatings, left, right, leftWon, 0.28)
+    eloUpdate(btRatings, left, right, leftWon, .28)
     btPairGames[left][right] += 1
     btPairGames[right][left] += 1
 
-    const slate = chooseCombSlate()
-    slate.forEach((item) => {
-      const reward = rng() < rewardProbability[item] ? 1 : 0
+    latestBatch = chooseCombSlate()
+    latestScores = latestBatch.map((item) => {
+      const score = clippedScore(benchmarkMean[item])
       combPulls[item] += 1
-      combRewardSum[item] += reward
+      combRewardSum[item] += score
+      return score
     })
 
     round += 1
-    const combMeans = combRewardSum.map((sum, item) => combPulls[item] ? sum / combPulls[item] : 0)
+    const combMeans = combRewardSum.map((sum, item) => combPulls[item] ? sum / combPulls[item] : -Infinity)
     btHistory.push([round, recall(btRatings)])
     combHistory.push([round, recall(combMeans)])
+  }
+
+  function renderBatch() {
+    const grid = $('batch_grid')
+    if (!latestBatch.length) {
+      grid.innerHTML = Array.from({ length: k }, () => '<div class="candidate"><b>—</b><span>not run</span></div>').join('')
+      $('batch_meta').textContent = 'press run to select a batch'
+      return
+    }
+    const exploration = latestBatch.filter((item) => combPulls[item] <= 2).length
+    $('batch_meta').textContent = `${exploration} early-exploration candidates · 10 direct scores`
+    grid.innerHTML = latestBatch.map((item, index) => {
+      const classes = ['candidate']
+      if (trueTop.has(item)) classes.push('true')
+      if (combPulls[item] <= 2) classes.push('explore')
+      return `<div class="${classes.join(' ')}"><b>C-${String(item + 1).padStart(2, '0')}</b><span>${latestScores[index].toFixed(1)}</span></div>`
+    }).join('')
   }
 
   function evaluate() {
@@ -97,20 +128,21 @@
     $('round').textContent = round
     $('bt').textContent = `${Math.round(btRecall * 100)}%`
     $('comb').textContent = `${Math.round(combRecall * 100)}%`
+    renderBatch()
   }
 
   function draw() {
-    const { context, width, height } = resizeCanvas($('btcb'), 220)
+    const { context, width, height } = resizeCanvas($('btcb'), 210)
     const pad = { left: 34, right: 12, top: 14, bottom: 22 }, plotWidth = width-pad.left-pad.right, plotHeight=height-pad.top-pad.bottom
     context.strokeStyle='rgba(255,255,255,.08)';context.fillStyle='#9aa8bd';context.font='10px ui-monospace'
     for(let tick=0;tick<=4;tick+=1){const value=tick/4,y=pad.top+(1-value)*plotHeight;context.beginPath();context.moveTo(pad.left,y);context.lineTo(pad.left+plotWidth,y);context.stroke();context.fillText(`${Math.round(value*100)}%`,3,y+3)}
     const drawLine=(history,color)=>{if(history.length<2)return;context.strokeStyle=color;context.lineWidth=2;context.beginPath();history.forEach(([at,value],index)=>{const x=pad.left+(at/Math.max(round,1))*plotWidth,y=pad.top+(1-value)*plotHeight;index?context.lineTo(x,y):context.moveTo(x,y)});context.stroke()}
     drawLine(btHistory,'#c879f0');drawLine(combHistory,'#5fd2a3')
-    context.fillStyle='#c879f0';context.fillText('BTL + Elo',width-94,pad.top+10);context.fillStyle='#5fd2a3';context.fillText('Comb-UCB',width-94,pad.top+24);context.fillStyle='#9aa8bd';context.fillText(`decision rounds: ${round}`,pad.left+2,height-6)
+    context.fillStyle='#5fd2a3';context.fillText('10-item benchmark batch',width-150,pad.top+10);context.fillStyle='#c879f0';context.fillText('one BTL duel',width-150,pad.top+24);context.fillStyle='#9aa8bd';context.fillText(`benchmark rounds: ${round}`,pad.left+2,height-6)
   }
 
   function advance(count) { for (let index = 0; index < count; index += 1) oneRound(); evaluate(); draw() }
-  function loop() { if (!running) return; advance(3); frame=requestAnimationFrame(loop) }
+  function loop() { if (!running) return; advance(2); frame=requestAnimationFrame(loop) }
   $('btcb-play').onclick=()=>{running=!running;$('btcb-play').textContent=running?'⏸ pause':'▶ run';if(running)loop()}
   $('step').onclick=()=>{running=false;$('btcb-play').textContent='▶ run';advance(25)}
   $('reset').onclick=reset
