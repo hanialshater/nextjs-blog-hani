@@ -25,7 +25,7 @@
     <div><canvas class="ladder" id="ladder" height="270"></canvas><div class="hint">In <b>you scout</b>, click two players in the ladder to stage a match.</div></div>
   </div>
   <canvas class="chart" id="chart" height="104"></canvas>
-  <div class="legend" id="note"><b>Model:</b> match outcomes come from a Bradley–Terry logistic probability. The ladder is an online-Elo estimate, one stochastic-gradient implementation of that model. Kendall τ ranges from −1 (reversed table) to +1 (perfect table). The information scheduler is a transparent heuristic, not a named optimal active-ranking algorithm.</div>
+  <div class="legend" id="note"><b>What the pitch means:</b> the stochastic event is the <b>1v1 duel</b>. Bradley–Terry skill changes who is likely to beat the other player; the goal afterwards is only a visual consequence of winning the comparison, not a second random event. The ladder is an online-Elo estimate.</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
@@ -36,6 +36,10 @@
   const n = names.length
   const $ = (id) => document.getElementById(id)
   let rng, trueSkills, ratings, games, totalGames, trueRanks, matchCount, selected, playing, animationId, history, reveal, matchAnimation, matchTimer, ladderBoxes, ladderHeight
+
+  const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value))
+  const ease = (value) => { const x = clamp(value); return x * x * (3 - 2 * x) }
+  const lerp = (a, b, t) => a + (b - a) * ease(t)
 
   function shuffledSkills() {
     const values = [1.8,1.25,.75,.25,-.25,-.75,-1.25,-1.8]
@@ -91,7 +95,8 @@
   }
 
   function observeMatch(left, right) {
-    return rng() < sigmoid(1.15 * (trueSkills[left] - trueSkills[right]))
+    const probabilityLeftWins = sigmoid(1.15 * (trueSkills[left] - trueSkills[right]))
+    return { leftWon: rng() < probabilityLeftWins, probabilityLeftWins }
   }
 
   function recordMatch(left, right, leftWon) {
@@ -106,10 +111,21 @@
 
   function stageMatch(left, right) {
     if (matchAnimation) return false
-    const leftWon = observeMatch(left, right)
+    const { leftWon, probabilityLeftWins } = observeMatch(left, right)
     const winner = leftWon ? left : right
     const loser = leftWon ? right : left
-    matchAnimation = { left, right, winner, loser, leftWon, started: performance.now(), duration: 1100, shotY: .35 + rng() * .3 }
+    const upset = leftWon ? probabilityLeftWins < .35 : probabilityLeftWins > .65
+    matchAnimation = {
+      left,
+      right,
+      winner,
+      loser,
+      leftWon,
+      upset,
+      started: performance.now(),
+      duration: 1450,
+      shotY: .36 + rng() * .28,
+    }
     animationId = requestAnimationFrame(animateMatch)
     return true
   }
@@ -146,7 +162,8 @@
     clearTimeout(matchTimer)
     for (let i = 0; i < count; i += 1) {
       const [left, right] = choosePair()
-      recordMatch(left, right, observeMatch(left, right))
+      const { leftWon } = observeMatch(left, right)
+      recordMatch(left, right, leftWon)
     }
     render()
   }
@@ -172,109 +189,294 @@
     $('scheduler').textContent = $('policy').value.replace('_', ' ')
     $('leader').textContent = names[order[0]]
     drawPitch()
-    drawLadder(order, estimatedRanks)
+    drawLadder(order)
     drawChart()
   }
 
   function circle(context, x, y, r, fill, stroke) {
-    context.beginPath(); context.arc(x, y, r, 0, Math.PI * 2); context.fillStyle = fill; context.fill(); if (stroke) { context.strokeStyle = stroke; context.lineWidth = 2; context.stroke() }
+    context.beginPath()
+    context.arc(x, y, r, 0, Math.PI * 2)
+    context.fillStyle = fill
+    context.fill()
+    if (stroke) {
+      context.strokeStyle = stroke
+      context.lineWidth = 2
+      context.stroke()
+    }
   }
 
   function drawGoalkeeper(context, x, y, dive, direction) {
     const dx = dive * direction * 17
-    context.save(); context.translate(dx, 0)
-    context.fillStyle = '#d8ecff'; context.fillRect(x - 8, y - 6, 16, 23)
-    context.fillStyle = '#11213a'; context.fillRect(x - 11, y + 15, 7, 14); context.fillRect(x + 4, y + 15, 7, 14)
+    context.save()
+    context.translate(dx, 0)
+    context.fillStyle = '#d8ecff'
+    context.fillRect(x - 8, y - 6, 16, 23)
+    context.fillStyle = '#11213a'
+    context.fillRect(x - 11, y + 15, 7, 14)
+    context.fillRect(x + 4, y + 15, 7, 14)
     circle(context, x, y - 13, 8, '#f0c59b')
-    context.strokeStyle = '#d8ecff'; context.lineWidth = 5; context.lineCap = 'round'
-    context.beginPath(); context.moveTo(x - 7, y); context.lineTo(x - 18 * direction, y - 5); context.moveTo(x + 7, y); context.lineTo(x + 18 * direction, y - 5); context.stroke()
+    context.strokeStyle = '#d8ecff'
+    context.lineWidth = 5
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(x - 7, y)
+    context.lineTo(x - 18 * direction, y - 5)
+    context.moveTo(x + 7, y)
+    context.lineTo(x + 18 * direction, y - 5)
+    context.stroke()
     context.restore()
   }
 
-  function drawPlayer(context, x, y, player, active) {
-    const scale = active ? 1.08 : 1
-    context.save(); context.translate(x, y); context.scale(scale, scale)
-    context.fillStyle = colors[player]; context.fillRect(-9, -3, 18, 25)
-    context.fillStyle = '#101a2b'; context.fillRect(-11, 20, 7, 14); context.fillRect(4, 20, 7, 14)
+  function drawPlayer(context, x, y, player, options = {}) {
+    const { active = false, defending = false, beaten = false, direction = 1 } = options
+    const scale = active ? 1.1 : 1
+    context.save()
+    context.translate(x, y)
+    context.scale(scale * direction, scale)
+    if (beaten) context.rotate(direction * .32)
+    context.fillStyle = colors[player]
+    context.fillRect(-9, -3, 18, 25)
+    context.fillStyle = '#101a2b'
+    context.fillRect(-11, 20, 7, 14)
+    context.fillRect(4, 20, 7, 14)
     circle(context, 0, -13, 8, '#efc395', active ? '#fff' : undefined)
-    context.fillStyle = '#f5f7fb'; context.font = '700 11px ui-monospace'; context.textAlign = 'center'; context.fillText(names[player].slice(0, 2).toUpperCase(), 0, 14)
+    context.strokeStyle = defending ? '#fff' : '#d6e1ef'
+    context.lineWidth = 3
+    context.lineCap = 'round'
+    context.beginPath()
+    if (defending) {
+      context.moveTo(-8, 2)
+      context.lineTo(-19, 11)
+      context.moveTo(8, 2)
+      context.lineTo(19, 11)
+    } else {
+      context.moveTo(-8, 2)
+      context.lineTo(-14, 11)
+      context.moveTo(8, 2)
+      context.lineTo(16, -1)
+    }
+    context.stroke()
+    context.fillStyle = '#f5f7fb'
+    context.font = '700 11px ui-monospace'
+    context.textAlign = 'center'
+    context.fillText(names[player].slice(0, 2).toUpperCase(), 0, 14)
     context.restore()
   }
 
   function drawPitch() {
     const targetHeight = window.matchMedia('(max-width:640px)').matches ? 195 : 270
     const { context, width, height } = resizeCanvas($('pitch'), targetHeight)
-    for (let stripe = 0; stripe < 8; stripe += 1) { context.fillStyle = stripe % 2 ? '#15692f' : '#19743a'; context.fillRect(stripe * width / 8, 0, width / 8 + 1, height) }
-    context.strokeStyle = 'rgba(255,255,255,.68)'; context.lineWidth = 2
+    for (let stripe = 0; stripe < 8; stripe += 1) {
+      context.fillStyle = stripe % 2 ? '#15692f' : '#19743a'
+      context.fillRect(stripe * width / 8, 0, width / 8 + 1, height)
+    }
+    context.strokeStyle = 'rgba(255,255,255,.68)'
+    context.lineWidth = 2
     context.strokeRect(9, 9, width - 18, height - 18)
-    context.beginPath(); context.moveTo(width / 2, 9); context.lineTo(width / 2, height - 9); context.stroke()
-    context.beginPath(); context.arc(width / 2, height / 2, Math.min(33, height * .17), 0, Math.PI * 2); context.stroke()
-    context.strokeRect(9, height * .28, width * .095, height * .44); context.strokeRect(width - 9 - width * .095, height * .28, width * .095, height * .44)
-    context.strokeRect(2, height * .37, 8, height * .26); context.strokeRect(width - 10, height * .37, 8, height * .26)
+    context.beginPath()
+    context.moveTo(width / 2, 9)
+    context.lineTo(width / 2, height - 9)
+    context.stroke()
+    context.beginPath()
+    context.arc(width / 2, height / 2, Math.min(33, height * .17), 0, Math.PI * 2)
+    context.stroke()
+    context.strokeRect(9, height * .28, width * .095, height * .44)
+    context.strokeRect(width - 9 - width * .095, height * .28, width * .095, height * .44)
+    context.strokeRect(2, height * .37, 8, height * .26)
+    context.strokeRect(width - 10, height * .37, 8, height * .26)
 
-    let left, right, winner, progress, shotY
-    if (matchAnimation) ({ left, right, winner, progress, shotY } = matchAnimation)
-    const leftX = width * .32, rightX = width * .68, leftY = height * .57, rightY = height * .43
+    if (!matchAnimation) {
+      drawGoalkeeper(context, width * .06, height * .5, 0, -1)
+      drawGoalkeeper(context, width * .94, height * .5, 0, 1)
+      context.fillStyle = 'rgba(255,255,255,.9)'
+      context.font = '13px ui-monospace'
+      context.textAlign = 'center'
+      context.fillText('Choose two players — then watch the 1v1', width / 2, height / 2)
+      return
+    }
+
+    const { left, right, winner, loser, progress, shotY, upset } = matchAnimation
     const winnerOnLeft = winner === left
-    const ballTargetX = winnerOnLeft ? width - 6 : 6
-    const targetY = height * (shotY || .5)
-    const keeperDive = progress ? Math.max(0, Math.min(1, (progress - .64) / .22)) : 0
-    drawGoalkeeper(context, width * .06, height * .5, keeperDive, -1)
-    drawGoalkeeper(context, width * .94, height * .5, keeperDive, 1)
+    const loserOnLeft = loser === left
+    const centerX = width * .5
+    const centerY = height * .5
+    const leftStart = { x: width * .27, y: height * .6 }
+    const rightStart = { x: width * .73, y: height * .4 }
+    const leftDuel = { x: centerX - 18, y: centerY + 8 }
+    const rightDuel = { x: centerX + 18, y: centerY - 8 }
+    const duelStart = .18
+    const duelEnd = .52
+    const shotStart = .78
 
-    if (matchAnimation) {
-      drawPlayer(context, leftX, leftY, left, winnerOnLeft)
-      drawPlayer(context, rightX, rightY, right, !winnerOnLeft)
-      const sourceX = winnerOnLeft ? leftX + 12 : rightX - 12
-      const sourceY = winnerOnLeft ? leftY : rightY
-      const shot = Math.max(0, Math.min(1, (progress - .27) / .63))
-      const arc = Math.sin(Math.PI * shot) * height * .14
-      const ballX = sourceX + (ballTargetX - sourceX) * shot
-      const ballY = sourceY + (targetY - sourceY) * shot - arc
-      context.strokeStyle = 'rgba(255,255,255,.35)'; context.setLineDash([4, 5]); context.beginPath(); context.moveTo(sourceX, sourceY); context.lineTo(ballTargetX, targetY); context.stroke(); context.setLineDash([])
-      circle(context, ballX, ballY, 6, '#fff', '#17243a')
-      if (progress > .77) { context.fillStyle = '#fff'; context.font = '700 17px ui-monospace'; context.textAlign = 'center'; context.fillText(`GOAL — ${names[winner]}`, width / 2, 28) }
-      else { context.fillStyle = 'rgba(255,255,255,.93)'; context.font = '700 13px ui-monospace'; context.textAlign = 'center'; context.fillText(`${names[left]}  vs  ${names[right]}`, width / 2, 28) }
+    const approach = clamp(progress / duelStart)
+    const winnerBreak = clamp((progress - duelEnd) / (shotStart - duelEnd))
+    const shot = clamp((progress - shotStart) / (1 - shotStart))
+
+    let leftPos = { x: lerp(leftStart.x, leftDuel.x, approach), y: lerp(leftStart.y, leftDuel.y, approach) }
+    let rightPos = { x: lerp(rightStart.x, rightDuel.x, approach), y: lerp(rightStart.y, rightDuel.y, approach) }
+    let ball = { x: centerX, y: centerY }
+
+    if (progress >= duelStart && progress < duelEnd) {
+      const feint = Math.sin((progress - duelStart) / (duelEnd - duelStart) * Math.PI * 5) * 8
+      leftPos = { x: leftDuel.x + feint, y: leftDuel.y }
+      rightPos = { x: rightDuel.x - feint, y: rightDuel.y }
+      ball = { x: centerX + Math.sin((progress - duelStart) * 34) * 5, y: centerY + Math.cos((progress - duelStart) * 28) * 4 }
+    }
+
+    if (progress >= duelEnd) {
+      const winnerStart = winnerOnLeft ? leftDuel : rightDuel
+      const loserStart = loserOnLeft ? leftDuel : rightDuel
+      const winnerTarget = { x: winnerOnLeft ? width * .77 : width * .23, y: height * .5 }
+      const loserTarget = { x: loserOnLeft ? width * .43 : width * .57, y: height * .55 }
+      const winnerPos = { x: lerp(winnerStart.x, winnerTarget.x, winnerBreak), y: lerp(winnerStart.y, winnerTarget.y, winnerBreak) }
+      const loserPos = { x: lerp(loserStart.x, loserTarget.x, winnerBreak), y: lerp(loserStart.y, loserTarget.y, winnerBreak) }
+      if (winnerOnLeft) {
+        leftPos = winnerPos
+        rightPos = loserPos
+      } else {
+        leftPos = loserPos
+        rightPos = winnerPos
+      }
+      ball = { x: winnerPos.x + (winnerOnLeft ? 13 : -13), y: winnerPos.y + 15 }
+      if (progress >= shotStart) {
+        const goalX = winnerOnLeft ? width - 5 : 5
+        const goalY = height * shotY
+        const origin = { ...ball }
+        ball = { x: lerp(origin.x, goalX, shot), y: lerp(origin.y, goalY, shot) - Math.sin(Math.PI * shot) * height * .11 }
+      }
+    }
+
+    const keeperDive = progress >= shotStart ? clamp((progress - shotStart) / .17) : 0
+    drawGoalkeeper(context, width * .06, height * .5, winnerOnLeft ? 0 : keeperDive, -1)
+    drawGoalkeeper(context, width * .94, height * .5, winnerOnLeft ? keeperDive : 0, 1)
+
+    const leftIsWinner = left === winner
+    drawPlayer(context, leftPos.x, leftPos.y, left, {
+      active: leftIsWinner && progress >= duelEnd,
+      defending: !leftIsWinner && progress < duelEnd,
+      beaten: !leftIsWinner && progress >= duelEnd,
+      direction: 1,
+    })
+    drawPlayer(context, rightPos.x, rightPos.y, right, {
+      active: !leftIsWinner && progress >= duelEnd,
+      defending: leftIsWinner && progress < duelEnd,
+      beaten: leftIsWinner && progress >= duelEnd,
+      direction: -1,
+    })
+
+    circle(context, ball.x, ball.y, 6, '#fff', '#17243a')
+    context.textAlign = 'center'
+    if (progress < duelStart) {
+      context.fillStyle = 'rgba(255,255,255,.94)'
+      context.font = '700 14px ui-monospace'
+      context.fillText(`${names[left]}  vs  ${names[right]}`, width / 2, 28)
+      context.font = '11px ui-monospace'
+      context.fillText('the comparison begins', width / 2, 44)
+    } else if (progress < duelEnd) {
+      context.fillStyle = '#f5c451'
+      context.font = '700 16px ui-monospace'
+      context.fillText('1v1 DUEL', width / 2, 28)
+      context.fillStyle = 'rgba(255,255,255,.9)'
+      context.font = '11px ui-monospace'
+      context.fillText('skill changes the odds — not the certainty', width / 2, 44)
+    } else if (progress < shotStart) {
+      context.fillStyle = '#fff'
+      context.font = '700 15px ui-monospace'
+      context.fillText(`${names[winner]} beats ${names[loser]}`, width / 2, 28)
+      if (upset) {
+        context.fillStyle = '#f5c451'
+        context.font = '11px ui-monospace'
+        context.fillText('upset', width / 2, 44)
+      }
     } else {
-      context.fillStyle = 'rgba(255,255,255,.9)'; context.font = '13px ui-monospace'; context.textAlign = 'center'; context.fillText('Choose a scheduler, then kick off', width / 2, height / 2)
+      context.fillStyle = '#fff'
+      context.font = '700 17px ui-monospace'
+      context.fillText(`GOAL — ${names[winner]}`, width / 2, 28)
+      context.fillStyle = 'rgba(255,255,255,.9)'
+      context.font = '11px ui-monospace'
+      context.fillText('the goal only visualizes the 1v1 outcome', width / 2, 44)
     }
   }
 
   function drawLadder(order) {
     const targetHeight = window.matchMedia('(max-width:640px)').matches ? 230 : 270
     const { context, width, height } = resizeCanvas($('ladder'), targetHeight)
-    ladderHeight = height; ladderBoxes = []
-    context.fillStyle = '#9aa8bd'; context.font = '10px ui-monospace'; context.fillText('ONLINE ELO LEAGUE LADDER', 12, 17)
-    const top = 28, bottom = 8, rowHeight = (height - top - bottom) / n
-    const min = Math.min(...ratings), max = Math.max(...ratings)
+    ladderHeight = height
+    ladderBoxes = []
+    context.fillStyle = '#9aa8bd'
+    context.font = '10px ui-monospace'
+    context.fillText('ONLINE ELO LEAGUE LADDER', 12, 17)
+    const top = 28
+    const bottom = 8
+    const rowHeight = (height - top - bottom) / n
+    const min = Math.min(...ratings)
+    const max = Math.max(...ratings)
     order.forEach((player, index) => {
       const y = top + index * rowHeight
       const isSelected = selected.includes(player)
       const current = matchAnimation && (matchAnimation.left === player || matchAnimation.right === player)
       context.fillStyle = isSelected ? 'rgba(76,141,246,.24)' : current ? 'rgba(245,196,81,.14)' : 'rgba(255,255,255,.025)'
       context.fillRect(7, y, width - 14, Math.max(18, rowHeight - 2))
-      context.fillStyle = '#9aa8bd'; context.font = '10px ui-monospace'; context.textAlign = 'left'; context.fillText(String(index + 1).padStart(2, '0'), 13, y + rowHeight * .64)
+      context.fillStyle = '#9aa8bd'
+      context.font = '10px ui-monospace'
+      context.textAlign = 'left'
+      context.fillText(String(index + 1).padStart(2, '0'), 13, y + rowHeight * .64)
       circle(context, 42, y + rowHeight * .5, 6, colors[player], isSelected ? '#fff' : undefined)
-      context.fillStyle = '#e6edf3'; context.font = '600 11px system-ui'; context.fillText(names[player], 54, y + rowHeight * .64)
-      const barX = Math.max(104, width * .39), barWidth = Math.max(42, width - barX - 47)
+      context.fillStyle = '#e6edf3'
+      context.font = '600 11px system-ui'
+      context.fillText(names[player], 54, y + rowHeight * .64)
+      const barX = Math.max(104, width * .39)
+      const barWidth = Math.max(42, width - barX - 47)
       const normalized = .12 + .82 * (ratings[player] - min) / ((max - min) || 1)
-      context.fillStyle = '#09111f'; context.fillRect(barX, y + rowHeight * .3, barWidth, Math.max(5, rowHeight * .22))
-      context.fillStyle = colors[player]; context.fillRect(barX, y + rowHeight * .3, barWidth * normalized, Math.max(5, rowHeight * .22))
-      context.fillStyle = reveal ? '#f5c451' : '#9aa8bd'; context.font = '10px ui-monospace'; context.textAlign = 'right'; context.fillText(reveal ? `#${trueRanks[player] + 1}` : `${totalGames[player]}g`, width - 13, y + rowHeight * .64)
+      context.fillStyle = '#09111f'
+      context.fillRect(barX, y + rowHeight * .3, barWidth, Math.max(5, rowHeight * .22))
+      context.fillStyle = colors[player]
+      context.fillRect(barX, y + rowHeight * .3, barWidth * normalized, Math.max(5, rowHeight * .22))
+      context.fillStyle = reveal ? '#f5c451' : '#9aa8bd'
+      context.font = '10px ui-monospace'
+      context.textAlign = 'right'
+      context.fillText(reveal ? `#${trueRanks[player] + 1}` : `${totalGames[player]}g`, width - 13, y + rowHeight * .64)
       ladderBoxes.push({ player, top: y, bottom: y + rowHeight })
     })
-    context.fillStyle = '#9aa8bd'; context.font = '10px ui-monospace'; context.textAlign = 'left'; context.fillText(reveal ? 'right edge = hidden true rank' : 'right edge = games played', 12, height - 3)
+    context.fillStyle = '#9aa8bd'
+    context.font = '10px ui-monospace'
+    context.textAlign = 'left'
+    context.fillText(reveal ? 'right edge = hidden true rank' : 'right edge = games played', 12, height - 3)
   }
 
   function drawChart() {
     const targetHeight = window.matchMedia('(max-width:640px)').matches ? 88 : 104
     const { context, width, height } = resizeCanvas($('chart'), targetHeight)
-    const top = 14, bottom = 18, left = 32, right = 10, plotHeight = height - top - bottom
+    const top = 14
+    const bottom = 18
+    const left = 32
+    const right = 10
+    const plotHeight = height - top - bottom
     const yOf = (value) => top + (1 - (value + 1) / 2) * plotHeight
-    context.strokeStyle = 'rgba(255,255,255,.08)'; context.fillStyle = '#9aa8bd'; context.font = '10px ui-monospace'
-    ;[-1, -.5, 0, .5, 1].forEach((value) => { const y = yOf(value); context.beginPath(); context.moveTo(left, y); context.lineTo(width - right, y); context.stroke(); context.fillText(value.toFixed(1), 2, y + 3) })
-    if (history.length > 1) { context.strokeStyle = '#5fd2a3'; context.lineWidth = 2; context.beginPath(); history.forEach((value, index) => { const x = left + index / (history.length - 1) * (width - left - right); const y = yOf(value); index ? context.lineTo(x, y) : context.moveTo(x, y) }); context.stroke() }
-    context.fillStyle = '#9aa8bd'; context.fillText('Kendall τ — table correctness', left + 4, 11)
+    context.strokeStyle = 'rgba(255,255,255,.08)'
+    context.fillStyle = '#9aa8bd'
+    context.font = '10px ui-monospace'
+    ;[-1, -.5, 0, .5, 1].forEach((value) => {
+      const y = yOf(value)
+      context.beginPath()
+      context.moveTo(left, y)
+      context.lineTo(width - right, y)
+      context.stroke()
+      context.fillText(value.toFixed(1), 2, y + 3)
+    })
+    if (history.length > 1) {
+      context.strokeStyle = '#5fd2a3'
+      context.lineWidth = 2
+      context.beginPath()
+      history.forEach((value, index) => {
+        const x = left + index / (history.length - 1) * (width - left - right)
+        const y = yOf(value)
+        index ? context.lineTo(x, y) : context.moveTo(x, y)
+      })
+      context.stroke()
+    }
+    context.fillStyle = '#9aa8bd'
+    context.fillText('Kendall τ — table correctness', left + 4, 11)
   }
 
   $('ladder').addEventListener('click', (event) => {
@@ -285,9 +487,19 @@
   })
   $('one').onclick = step
   $('many').onclick = () => fastForward(30)
-  $('truth').onclick = () => { reveal = !reveal; $('truth').textContent = reveal ? 'hide true skills' : 'show true skills'; render() }
+  $('truth').onclick = () => {
+    reveal = !reveal
+    $('truth').textContent = reveal ? 'hide true skills' : 'show true skills'
+    render()
+  }
   $('reset').onclick = reset
-  $('policy').onchange = () => { if ($('policy').value === 'manual') { playing = false; $('play').textContent = '▶ play' } render() }
+  $('policy').onchange = () => {
+    if ($('policy').value === 'manual') {
+      playing = false
+      $('play').textContent = '▶ play'
+    }
+    render()
+  }
   $('play').onclick = () => {
     if ($('policy').value === 'manual') return step()
     playing = !playing
