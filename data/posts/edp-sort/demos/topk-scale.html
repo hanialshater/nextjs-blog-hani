@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Top-K identification from BTL matches</title>
+<title>Top-K identification with overlapping BT leagues</title>
 <style>
 :root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{margin-top:3px;color:var(--muted);text-align:center;font:10px var(--mono)}button,select{padding:7px 9px;border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
@@ -11,288 +11,117 @@
 <div class="root">
   <div class="stats"><div class="stat"><div class="label">players</div><div class="value">5,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches / policy</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
   <div class="controls"><button class="primary" id="play">▶ play</button><button id="step">+1,000</button><button id="jump">+10,000</button><button id="reset">new world</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div>
-  <div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">persistent-frontier Elo estimate versus hidden skill</div></div></div>
+  <div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">bootstrap-Elo mean estimate; green = ensemble disagreement</div></div></div>
   <div class="note" id="note"></div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
 (() => {
   const { eloUpdate, mulberry32, normal, resizeCanvas, sigmoid, topK } = window.EDP
-  const N = 5000
+  const N = 5000, ENSEMBLE = 10
   const $ = (id) => document.getElementById(id)
-  let K = 100
-  let worldRng, randomRng, adaptiveRng, skill, randomRating, adaptiveRating, randomGames, adaptiveGames
-  let trueTop, trueCut, matches, randomHistory, adaptiveHistory, running, frame, sample
-  let coverageOrder, coverageCursor, frontier, challengers, cutlineCandidates, lastRefresh
+  let K = 100, worldRng, randomRng, adaptiveRng, modelRngs
+  let skill, randomRating, randomGames, models, adaptiveGames, meanRating, membership, rank, order
+  let trueTop, trueCut, matches, randomHistory, leagueHistory, running, frame, sample
+  let coverageOrder, coveragePair, leagues, lastRefresh, pairCounts
 
-  function makeOrder(values) {
-    return Array.from({ length: N }, (_, item) => item).sort((left, right) => values[right] - values[left])
-  }
+  function push(heap, node) { heap.push(node); let i=heap.length-1; while(i>0){const p=(i-1)>>1;if(heap[p].score<=node.score)break;heap[i]=heap[p];i=p}heap[i]=node }
+  function replaceMin(heap,node){let i=0;while(true){const l=i*2+1,r=l+1;if(l>=heap.length)break;const c=r<heap.length&&heap[r].score<heap[l].score?r:l;if(heap[c].score>=node.score)break;heap[i]=heap[c];i=c}heap[i]=node}
+  function topKFast(scores,k){const heap=[];for(let i=0;i<scores.length;i++){const node={item:i,score:scores[i]};if(heap.length<k)push(heap,node);else if(node.score>heap[0].score)replaceMin(heap,node)}return heap.map(x=>x.item).sort((a,b)=>scores[b]-scores[a])}
+  function shuffle(rng){const out=new Int32Array(N);for(let i=0;i<N;i++)out[i]=i;for(let i=N-1;i>0;i--){const j=Math.floor(rng()*(i+1));const x=out[i];out[i]=out[j];out[j]=x}return out}
+  function expWeight(rng){return Math.min(2.5,-Math.log(Math.max(rng(),1e-10)))}
+  function key(a,b){return Math.min(a,b)*N+Math.max(a,b)}
+  function pairGames(a,b){return pairCounts.get(key(a,b))||0}
+  function uncertainty(i){return membership[i]*(1-membership[i])+.08/Math.sqrt(adaptiveGames[i]+1)}
 
-  function shuffleIndices(rng) {
-    const order = new Int32Array(N)
-    for (let item = 0; item < N; item += 1) order[item] = item
-    for (let item = N - 1; item > 0; item -= 1) {
-      const other = Math.floor(rng() * (item + 1))
-      const hold = order[item]
-      order[item] = order[other]
-      order[other] = hold
+  function refreshPosterior(){
+    meanRating.fill(0); membership.fill(0)
+    for(let m=0;m<ENSEMBLE;m++){
+      const scores=models[m]
+      for(let i=0;i<N;i++)meanRating[i]+=scores[i]/ENSEMBLE
+      if(matches>=N)topKFast(scores,K).forEach(i=>membership[i]+=1/ENSEMBLE)
     }
-    return order
+    if(matches<N)membership.fill(.5)
+    order=Array.from({length:N},(_,i)=>i).sort((a,b)=>meanRating[b]-meanRating[a])
+    for(let i=0;i<N;i++)rank[order[i]]=i
+    buildLeagues();lastRefresh=matches
   }
 
-  function sampleUnique(items, count, rng) {
-    if (items.length <= count) return items.slice()
-    const picked = []
-    const used = new Set()
-    while (picked.length < count) {
-      const item = items[Math.floor(rng() * items.length)]
-      if (!used.has(item)) {
-        used.add(item)
-        picked.push(item)
-      }
+  function buildLeagues(){
+    const size=Math.max(72,Math.min(240,Math.ceil(Math.max(K*1.25,90)))),stride=Math.max(24,Math.floor(size*.48)),endLimit=Math.min(N,K+4*size)
+    leagues=[]
+    for(let start=0;start<endLimit;start+=stride){
+      const end=Math.min(N,start+size),members=order.slice(start,end),entropy=members.reduce((s,i)=>s+membership[i]*(1-membership[i]),0),center=(start+end)/2
+      const gate=.2+3*Math.exp(-Math.abs(center-K)/(size*.85))
+      leagues.push({members,score:(entropy+.05)*gate})
     }
-    return picked
   }
 
-  function refreshFrontier() {
-    const order = makeOrder(adaptiveRating)
-    const bandWidth = Math.max(70, Math.min(180, Math.ceil(K * 1.25)))
-    const lower = Math.max(0, K - bandWidth)
-    const upper = Math.min(N, K + bandWidth)
-    const rankBand = order.slice(lower, upper)
-    const optimistic = Array.from({ length: N }, (_, item) => item).sort((left, right) => {
-      const leftScore = adaptiveRating[left] + 1.2 / Math.sqrt(adaptiveGames[left] + 1)
-      const rightScore = adaptiveRating[right] + 1.2 / Math.sqrt(adaptiveGames[right] + 1)
-      return rightScore - leftScore
-    })
-    challengers = optimistic.slice(0, Math.min(220, N))
-    frontier = [...new Set([...rankBand, ...challengers.slice(0, 160), ...order.slice(0, Math.min(N, K + 30))])]
-    cutlineCandidates = order.slice(Math.max(0, K - 15), Math.min(N, K + 15))
-    lastRefresh = matches
-  }
+  function sampleLeague(){let total=leagues.reduce((s,l)=>s+l.score,0),x=adaptiveRng()*total;for(const league of leagues){x-=league.score;if(x<=0)return league}return leagues.at(-1)}
+  function coverageChoice(){if(coveragePair>=N/2){coverageOrder=shuffle(adaptiveRng);coveragePair=0}const a=coverageOrder[2*coveragePair],b=coverageOrder[2*coveragePair+1];coveragePair++;return[a,b]}
+  function best(items,fn){let chosen=items[0],value=fn(chosen);for(let n=1;n<items.length;n++){const item=items[n],next=fn(item);if(next>value){chosen=item;value=next}}return chosen}
 
-  function refreshMatchCount() {
-    $('matches').textContent = matches.toLocaleString()
-  }
-
-  function reset() {
-    worldRng = mulberry32((Date.now() >>> 0) || 7)
-    randomRng = mulberry32(1009)
-    adaptiveRng = mulberry32(9001)
-    skill = new Float32Array(N)
-    for (let item = 0; item < N; item += 1) skill[item] = normal(worldRng)
-    const truth = topK(skill, K)
-    trueTop = new Set(truth)
-    trueCut = skill[truth[K - 1]]
-    randomRating = new Float32Array(N)
-    adaptiveRating = new Float32Array(N)
-    randomGames = new Uint16Array(N)
-    adaptiveGames = new Uint16Array(N)
-    coverageOrder = shuffleIndices(worldRng)
-    coverageCursor = 0
-    frontier = []
-    challengers = []
-    cutlineCandidates = []
-    lastRefresh = -1
-    matches = 0
-    randomHistory = []
-    adaptiveHistory = []
-    running = false
-    cancelAnimationFrame(frame)
-    $('play').textContent = '▶ play'
-    sample = Array.from({ length: 600 }, () => Math.floor(worldRng() * N))
-    refreshMatchCount()
-    evaluate(true)
-    draw()
-  }
-
-  function randomPair(rng) {
-    const left = Math.floor(rng() * N)
-    let right = Math.floor(rng() * (N - 1))
-    if (right >= left) right += 1
-    return [left, right]
-  }
-
-  function chooseAdaptivePair() {
-    const coverageBudget = 3 * N
-    if (matches < coverageBudget) {
-      const left = coverageOrder[coverageCursor % N]
-      const shift = 337 * (1 + Math.floor(coverageCursor / N))
-      let right = coverageOrder[(coverageCursor + shift) % N]
-      coverageCursor += 1
-      if (left === right) right = (right + 1) % N
-      return [left, right]
+  function localPair(league,scores){
+    const inside=league.members.filter(i=>rank[i]<K),outside=league.members.filter(i=>rank[i]>=K)
+    if(inside.length&&outside.length){
+      const incumbent=best(inside,i=>-scores[i]+.35*uncertainty(i))
+      const challenger=best(outside,i=>scores[i]+.35*uncertainty(i))
+      if(incumbent!==challenger)return[incumbent,challenger]
     }
-
-    if (lastRefresh < 0 || matches - lastRefresh >= 250) refreshFrontier()
-
-    if (adaptiveRng() < 0.18 && cutlineCandidates.length && challengers.length) {
-      const cutline = cutlineCandidates.reduce((best, item) => adaptiveGames[item] < adaptiveGames[best] ? item : best, cutlineCandidates[0])
-      const orderedChallengers = challengers.filter((item) => item !== cutline)
-      const challenger = orderedChallengers.reduce((best, item) => {
-        const itemScore = adaptiveRating[item] + 1.2 / Math.sqrt(adaptiveGames[item] + 1)
-        const bestScore = adaptiveRating[best] + 1.2 / Math.sqrt(adaptiveGames[best] + 1)
-        return itemScore > bestScore ? item : best
-      }, orderedChallengers[0])
-      return [cutline, challenger]
+    const sorted=league.members.slice().sort((a,b)=>scores[b]-scores[a]);let result=[sorted[0],sorted[1]],value=-Infinity
+    for(let i=0;i<sorted.length-1;i++){
+      const a=sorted[i],b=sorted[i+1],p=sigmoid(scores[a]-scores[b]),score=p*(1-p)*(uncertainty(a)+uncertainty(b))/Math.sqrt(pairGames(a,b)+1)
+      if(score>value){value=score;result=[a,b]}
     }
-
-    const candidates = sampleUnique(frontier, Math.min(48, frontier.length), adaptiveRng)
-    let bestLeft = candidates[0]
-    let bestRight = candidates[1]
-    let bestScore = -Infinity
-    for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
-      for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
-        const left = candidates[leftIndex]
-        const right = candidates[rightIndex]
-        const probability = sigmoid(adaptiveRating[left] - adaptiveRating[right])
-        const uncertainty = 1 / Math.sqrt(adaptiveGames[left] + 1) + 1 / Math.sqrt(adaptiveGames[right] + 1)
-        const score = probability * (1 - probability) * uncertainty
-        if (score > bestScore) {
-          bestScore = score
-          bestLeft = left
-          bestRight = right
-        }
-      }
-    }
-    return [bestLeft, bestRight]
+    return result
   }
 
-  function playMatch(rating, games, left, right, rng) {
-    const leftWon = rng() < sigmoid(skill[left] - skill[right])
-    eloUpdate(rating, left, right, leftWon, 0.24)
-    games[left] += 1
-    games[right] += 1
+  function promotionPair(scores){
+    const size=Math.max(72,Math.min(240,Math.ceil(Math.max(K*1.25,90))))
+    const incumbents=order.slice(Math.max(0,K-30),Math.min(N,K+20)),outsiders=order.slice(Math.min(N,K+20),Math.min(N,K+size*3))
+    return [best(incumbents,i=>-scores[i]+.4*uncertainty(i)),best(outsiders,i=>scores[i]+.5*uncertainty(i))]
   }
 
-  function recall(rating) {
-    return topK(rating, K).filter((item) => trueTop.has(item)).length / K
+  function chooseAdaptive(){
+    if(matches<N)return coverageChoice()
+    if(lastRefresh<0||matches-lastRefresh>=250)refreshPosterior()
+    const scores=models[Math.floor(adaptiveRng()*ENSEMBLE)]
+    return adaptiveRng()<.16?promotionPair(scores):localPair(sampleLeague(),scores)
   }
 
-  function evaluate(force) {
-    if (!force && matches % 250 !== 0) return
-    const randomRecall = recall(randomRating)
-    const adaptiveRecall = recall(adaptiveRating)
-    randomHistory.push([matches, randomRecall])
-    adaptiveHistory.push([matches, adaptiveRecall])
-    $('target').textContent = `top ${K}`
-    $('recall').textContent = `${Math.round(adaptiveRecall * 100)}%`
-    $('note').innerHTML = `After <b>${matches.toLocaleString()}</b> matches per policy: the persistent cutline frontier reaches <b>${Math.round(adaptiveRecall * 100)}%</b> recall@${K}; random reaches ${Math.round(randomRecall * 100)}%. <strong>This remains a transparent heuristic, not a theorem-optimal top-K algorithm.</strong> It first gives every player three coverage matches, then keeps a persistent rank band around the cutline plus optimistic outside challengers.`
+  function updateEnsemble(a,b,aWon){
+    for(let m=0;m<ENSEMBLE;m++)eloUpdate(models[m],a,b,aWon,.24*expWeight(modelRngs[m]))
+    adaptiveGames[a]++;adaptiveGames[b]++;const k=key(a,b);pairCounts.set(k,(pairCounts.get(k)||0)+1)
+  }
+  function randomPair(){const a=Math.floor(randomRng()*N);let b=Math.floor(randomRng()*(N-1));if(b>=a)b++;return[a,b]}
+  function playRandom(a,b){const aWon=randomRng()<sigmoid(skill[a]-skill[b]);eloUpdate(randomRating,a,b,aWon,.24);randomGames[a]++;randomGames[b]++}
+  function playAdaptive(a,b){const aWon=adaptiveRng()<sigmoid(skill[a]-skill[b]);updateEnsemble(a,b,aWon)}
+  function recall(scores){return topK(scores,K).filter(i=>trueTop.has(i)).length/K}
+
+  function evaluate(force){
+    if(!force&&matches%250)return
+    if(lastRefresh<0)refreshPosterior()
+    const randomRecall=recall(randomRating),leagueRecall=recall(meanRating)
+    randomHistory.push([matches,randomRecall]);leagueHistory.push([matches,leagueRecall])
+    $('target').textContent=`top ${K}`;$('matches').textContent=matches.toLocaleString();$('recall').textContent=`${Math.round(leagueRecall*100)}%`
+    $('note').innerHTML=`After <b>${matches.toLocaleString()}</b> matches per policy: <b>overlapping bootstrap-Elo leagues</b> recover <b>${Math.round(leagueRecall*100)}%</b> of the true top-${K}; random recovers ${Math.round(randomRecall*100)}%. <strong>How it works:</strong> ten bootstrap-Elo worlds vote on top-${K} membership. The scheduler samples an overlapping league, then compares the sampled incumbent and challenger at that league’s local gate. Promotion matches give uncertain outsiders a route upward.`
   }
 
-  function advance(count) {
-    for (let step = 0; step < count; step += 1) {
-      const [randomLeft, randomRight] = randomPair(randomRng)
-      playMatch(randomRating, randomGames, randomLeft, randomRight, randomRng)
-      const [adaptiveLeft, adaptiveRight] = chooseAdaptivePair()
-      playMatch(adaptiveRating, adaptiveGames, adaptiveLeft, adaptiveRight, adaptiveRng)
-      matches += 1
-    }
-    refreshMatchCount()
-    evaluate(false)
+  function reset(){
+    worldRng=mulberry32((Date.now()>>>0)||7);randomRng=mulberry32(1009);adaptiveRng=mulberry32(9001);modelRngs=Array.from({length:ENSEMBLE},(_,i)=>mulberry32(7001+97*i))
+    skill=new Float32Array(N);for(let i=0;i<N;i++)skill[i]=normal(worldRng)
+    const truth=topK(skill,K);trueTop=new Set(truth);trueCut=skill[truth[K-1]]
+    randomRating=new Float32Array(N);randomGames=new Uint16Array(N);models=Array.from({length:ENSEMBLE},()=>new Float32Array(N));adaptiveGames=new Uint16Array(N);meanRating=new Float32Array(N);membership=new Float32Array(N);rank=new Int32Array(N);order=Array.from({length:N},(_,i)=>i)
+    coverageOrder=shuffle(adaptiveRng);coveragePair=0;leagues=[];lastRefresh=-1;pairCounts=new Map();matches=0;randomHistory=[];leagueHistory=[];running=false;cancelAnimationFrame(frame);$('play').textContent='▶ play';sample=Array.from({length:600},()=>Math.floor(worldRng()*N));refreshPosterior();evaluate(true);draw()
   }
 
-  function drawRace() {
-    const { context, width, height } = resizeCanvas($('race'), 240)
-    const pad = { left: 34, right: 12, top: 14, bottom: 22 }
-    const plotWidth = width - pad.left - pad.right
-    const plotHeight = height - pad.top - pad.bottom
-    context.strokeStyle = 'rgba(255,255,255,.08)'
-    context.fillStyle = '#9aa8bd'
-    context.font = '10px ui-monospace'
-    for (let tick = 0; tick <= 4; tick += 1) {
-      const value = tick / 4
-      const y = pad.top + (1 - value) * plotHeight
-      context.beginPath()
-      context.moveTo(pad.left, y)
-      context.lineTo(pad.left + plotWidth, y)
-      context.stroke()
-      context.fillText(`${Math.round(value * 100)}%`, 3, y + 3)
-    }
-    const drawLine = (history, color) => {
-      if (history.length < 2) return
-      context.strokeStyle = color
-      context.lineWidth = 2
-      context.beginPath()
-      history.forEach(([at, value], index) => {
-        const x = pad.left + at / Math.max(matches, 250) * plotWidth
-        const y = pad.top + (1 - value) * plotHeight
-        if (index) context.lineTo(x, y)
-        else context.moveTo(x, y)
-      })
-      context.stroke()
-    }
-    drawLine(randomHistory, '#8b95a8')
-    drawLine(adaptiveHistory, '#5fd2a3')
-    context.fillStyle = '#5fd2a3'
-    context.fillText('persistent cutline frontier', width - 166, pad.top + 10)
-    context.fillStyle = '#8b95a8'
-    context.fillText('random', width - 166, pad.top + 24)
-    context.fillStyle = '#9aa8bd'
-    context.fillText(`matches / policy: ${matches.toLocaleString()}`, pad.left + 2, height - 6)
-  }
-
-  function drawScatter() {
-    const { context, width, height } = resizeCanvas($('scatter'), 240)
-    const pad = { left: 30, right: 10, top: 12, bottom: 20 }
-    const plotWidth = width - pad.left - pad.right
-    const plotHeight = height - pad.top - pad.bottom
-    let skillMin = Infinity, skillMax = -Infinity, ratingMin = Infinity, ratingMax = -Infinity
-    sample.forEach((item) => {
-      skillMin = Math.min(skillMin, skill[item])
-      skillMax = Math.max(skillMax, skill[item])
-      ratingMin = Math.min(ratingMin, adaptiveRating[item])
-      ratingMax = Math.max(ratingMax, adaptiveRating[item])
-    })
-    if (ratingMax - ratingMin < 1e-6) ratingMax = ratingMin + 1
-    const x = (value) => pad.left + (value - skillMin) / (skillMax - skillMin || 1) * plotWidth
-    const y = (value) => pad.top + (1 - (value - ratingMin) / (ratingMax - ratingMin)) * plotHeight
-    context.strokeStyle = 'rgba(255,255,255,.08)'
-    context.strokeRect(pad.left, pad.top, plotWidth, plotHeight)
-    context.strokeStyle = 'rgba(245,196,81,.6)'
-    context.setLineDash([4, 3])
-    context.beginPath()
-    context.moveTo(x(trueCut), pad.top)
-    context.lineTo(x(trueCut), pad.top + plotHeight)
-    context.stroke()
-    context.setLineDash([])
-    sample.forEach((item) => {
-      context.fillStyle = trueTop.has(item) ? '#f5c451' : 'rgba(76,141,246,.48)'
-      context.beginPath()
-      context.arc(x(skill[item]), y(adaptiveRating[item]), trueTop.has(item) ? 2.2 : 1.3, 0, 2 * Math.PI)
-      context.fill()
-    })
-    context.fillStyle = '#f5c451'
-    context.font = '10px ui-monospace'
-    context.fillText(`true top-${K} cut`, x(trueCut) + 3, pad.top + 10)
-  }
-
-  function draw() {
-    drawRace()
-    drawScatter()
-  }
-
-  function loop() {
-    if (!running) return
-    advance(250)
-    draw()
-    frame = requestAnimationFrame(loop)
-  }
-
-  $('play').onclick = () => {
-    running = !running
-    $('play').textContent = running ? '⏸ pause' : '▶ play'
-    if (running) loop()
-  }
-  $('step').onclick = () => { running = false; $('play').textContent = '▶ play'; advance(1000); draw() }
-  $('jump').onclick = () => { running = false; $('play').textContent = '▶ play'; advance(10000); draw() }
-  $('reset').onclick = reset
-  $('k').onchange = (event) => { K = Number(event.target.value); reset() }
-  addEventListener('resize', draw)
-  reset()
+  function advance(count){for(let i=0;i<count;i++){const r=randomPair();playRandom(...r);const a=chooseAdaptive();playAdaptive(...a);matches++}evaluate(false)}
+  function drawRace(){const{context:c,width:w,height:h}=resizeCanvas($('race'),240),p={l:34,r:12,t:14,b:22},pw=w-p.l-p.r,ph=h-p.t-p.b;c.strokeStyle='rgba(255,255,255,.08)';c.fillStyle='#9aa8bd';c.font='10px ui-monospace';for(let i=0;i<=4;i++){const v=i/4,y=p.t+(1-v)*ph;c.beginPath();c.moveTo(p.l,y);c.lineTo(p.l+pw,y);c.stroke();c.fillText(`${Math.round(v*100)}%`,3,y+3)}const line=(history,color)=>{if(history.length<2)return;c.strokeStyle=color;c.lineWidth=2;c.beginPath();history.forEach(([at,v],i)=>{const x=p.l+at/Math.max(matches,250)*pw,y=p.t+(1-v)*ph;i?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()};line(randomHistory,'#8b95a8');line(leagueHistory,'#5fd2a3');c.fillStyle='#5fd2a3';c.fillText('overlapping BT leagues',w-146,p.t+10);c.fillStyle='#8b95a8';c.fillText('random',w-146,p.t+24);c.fillStyle='#9aa8bd';c.fillText(`matches / policy: ${matches.toLocaleString()}`,p.l+2,h-6)}
+  function drawScatter(){const{context:c,width:w,height:h}=resizeCanvas($('scatter'),240),p={l:30,r:10,t:12,b:20},pw=w-p.l-p.r,ph=h-p.t-p.b;let s0=Infinity,s1=-Infinity,r0=Infinity,r1=-Infinity;sample.forEach(i=>{s0=Math.min(s0,skill[i]);s1=Math.max(s1,skill[i]);r0=Math.min(r0,meanRating[i]);r1=Math.max(r1,meanRating[i])});if(r1-r0<1e-6)r1=r0+1;const x=v=>p.l+(v-s0)/(s1-s0||1)*pw,y=v=>p.t+(1-(v-r0)/(r1-r0))*ph;c.strokeStyle='rgba(255,255,255,.08)';c.strokeRect(p.l,p.t,pw,ph);c.strokeStyle='rgba(245,196,81,.6)';c.setLineDash([4,3]);c.beginPath();c.moveTo(x(trueCut),p.t);c.lineTo(x(trueCut),p.t+ph);c.stroke();c.setLineDash([]);sample.forEach(i=>{const q=membership[i];c.fillStyle=trueTop.has(i)?'#f5c451':q>.08&&q<.92?'#5fd2a3':'rgba(76,141,246,.48)';c.beginPath();c.arc(x(skill[i]),y(meanRating[i]),trueTop.has(i)?2.2:1.3,0,2*Math.PI);c.fill()});c.fillStyle='#f5c451';c.font='10px ui-monospace';c.fillText(`true top-${K} cut`,x(trueCut)+3,p.t+10)}
+  function draw(){drawRace();drawScatter()}
+  function loop(){if(!running)return;advance(100);draw();frame=requestAnimationFrame(loop)}
+  $('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ play';if(running)loop()};$('step').onclick=()=>{running=false;$('play').textContent='▶ play';advance(1000);draw()};$('jump').onclick=()=>{running=false;$('play').textContent='▶ play';advance(10000);draw()};$('reset').onclick=reset;$('k').onchange=e=>{K=Number(e.target.value);reset()};addEventListener('resize',draw);reset()
 })()
 </script>
 <script>(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,250)});addEventListener('resize',h);if(window.ResizeObserver)new ResizeObserver(h).observe(document.body)})();</script>
-</body>
-</html>
+</body></html>
