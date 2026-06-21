@@ -105,79 +105,150 @@ function RucbPanel() {
 }
 
 function SemiBanditPanel() {
+  const selectedCandidates = [
+    ['C-07', '81.4'], ['C-18', '73.2'], ['C-21', '79.8'], ['C-29', '66.1'], ['C-34', '76.9'],
+    ['C-42', '71.6'], ['C-51', '82.0'], ['C-59', '69.4'], ['C-66', '75.1'], ['C-73', '78.5'],
+  ]
+
   return (
     <aside className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
-      <h3 className="mt-0 text-lg font-semibold">The clean case: choose a benchmark batch</h3>
+      <h3 className="mt-0 text-xl font-semibold">One semi-bandit round, slowly</h3>
       <p>
-        Imagine eighty candidate models and enough evaluation budget to run only <strong>ten</strong> candidates
-        per round. Every selected candidate completes the same standardized benchmark and returns one noisy
-        numerical score. The benchmark score is directly comparable across candidates: it is not conditional
-        on an opponent, position, or the other candidates in the batch.
+        Put football aside for a moment. You have <strong>80 candidate models</strong>, but a fixed evaluation
+        budget: this week you can run only <strong>10</strong> candidates on the same standardized benchmark.
+        The benchmark has noise—hardware, random seeds, test samples—but a score belongs to the candidate that
+        produced it. That makes this a clean place to see semi-bandit feedback.
       </p>
-      <pre className="mt-4 overflow-x-auto rounded-md bg-gray-900 p-4 text-xs leading-5 text-gray-100">
-{`Action:     a_t ∈ {0, 1}^N,  Σ_i a_t[i] = 10
-Reward:     X[i, t] = benchmark_score(candidate i)  for every selected i
-Objective:  choose A_t = {i : a_t[i] = 1} to identify or deploy the best batch
-Feedback:   observe all 10 selected scores, and no scores for the other candidates`}
-      </pre>
-      <p className="mt-4">
-        This is <strong>combinatorial</strong> because the action is a whole batch, not one arm. It is a
-        <strong> semi-bandit</strong> because the batch decomposes into ten observed candidate-level rewards.
+
+      <div className="my-5 grid gap-3 md:grid-cols-4">
+        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">1. Action</div>
+          <strong>Choose a batch</strong>
+          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Pick 10 of the 80 candidates. The action is a set, not one arm.</p>
+        </div>
+        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">2. Run</div>
+          <strong>Same benchmark</strong>
+          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Every selected candidate faces the same test protocol.</p>
+        </div>
+        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">3. Observe</div>
+          <strong>Ten separate scores</strong>
+          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Each score updates the candidate that generated it.</p>
+        </div>
+        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">4. Learn</div>
+          <strong>Nothing about 70 others</strong>
+          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Unselected candidates remain counterfactual and uncertain.</p>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-300 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/40">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <strong>Round 17: the selected benchmark batch</strong>
+          <span className="font-mono text-xs text-gray-500 dark:text-gray-400">10 chosen · 10 scores returned</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {selectedCandidates.map(([candidate, score]) => (
+            <div key={candidate} className="rounded border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+              <div className="font-mono text-xs text-gray-500 dark:text-gray-400">{candidate}</div>
+              <div className="mt-1 font-mono text-base font-semibold text-green-700 dark:text-green-300">{score}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mb-0 mt-3 text-gray-600 dark:text-gray-300">
+          The crucial fact is not that the batch contains ten candidates. It is that the response comes back as
+          ten labelled observations: <code>C-07 → 81.4</code>, <code>C-18 → 73.2</code>, and so on. The learner
+          can assign credit correctly.
+        </p>
+      </div>
+
+      <h4 className="mb-2 mt-6 text-lg font-semibold">Why it is called a semi-bandit</h4>
+      <p>
+        A full-information evaluator would reveal every candidate score, including all 70 candidates you did not
+        run. A normal one-arm bandit would let you run only one candidate and observe one score. Here you get the
+        useful middle ground: feedback for <em>every selected component</em>, but none for the rest.
       </p>
       <div className="my-4 overflow-x-auto">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-gray-300 dark:border-gray-700">
-              <th className="p-2">Setting</th>
-              <th className="p-2">Action</th>
-              <th className="p-2">What one observation means</th>
+              <th className="p-2">What you choose</th>
+              <th className="p-2">What returns</th>
+              <th className="p-2">What can be updated</th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-b border-gray-200 dark:border-gray-800">
-              <td className="p-2 font-medium">Football / Bradley–Terry</td>
-              <td className="p-2">One 1v1</td>
-              <td className="p-2">A relative statement: one player beat the other</td>
+              <td className="p-2 font-medium">One candidate</td>
+              <td className="p-2">One benchmark score</td>
+              <td className="p-2">One candidate</td>
             </tr>
             <tr className="border-b border-gray-200 dark:border-gray-800">
-              <td className="p-2 font-medium">Benchmark semi-bandit</td>
-              <td className="p-2">Ten candidates</td>
-              <td className="p-2">Ten direct, comparable candidate scores</td>
+              <td className="p-2 font-medium">Ten-candidate batch</td>
+              <td className="p-2">Ten labelled benchmark scores</td>
+              <td className="p-2">All ten selected candidates</td>
             </tr>
             <tr>
-              <td className="p-2 font-medium">Full-bandit slate feedback</td>
-              <td className="p-2">Ten candidates</td>
-              <td className="p-2">Only one aggregate batch result</td>
+              <td className="p-2 font-medium">Ten-candidate batch</td>
+              <td className="p-2">Only one batch average: 75.4</td>
+              <td className="p-2">Not cleanly attributable: this is full-bandit feedback</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p>
-        Comb-UCB maintains a mean benchmark score and an uncertainty bonus for every candidate. It gives each
-        candidate an optimistic value, then passes those values to an optimizer:
+        That last row is the boundary. Seeing only “the batch averaged 75.4” is not semi-bandit feedback; you do
+        not know whether C-07 was excellent and C-29 poor, or the reverse. You have a single outcome for a whole
+        structured action and need a more difficult slate-level learner.
+      </p>
+
+      <h4 className="mb-2 mt-6 text-lg font-semibold">What Comb-UCB does with the ten scores</h4>
+      <p>
+        For every candidate <code>i</code>, it keeps an average benchmark score and a count of how often that
+        candidate has been evaluated. Then it adds an optimism bonus. A candidate that has looked strong gets a
+        high score; a barely tested candidate also gets a temporary chance because its true score might still be
+        higher than it looks.
       </p>
       <pre className="overflow-x-auto rounded-md bg-gray-900 p-4 text-xs leading-5 text-gray-100">
-{`U[i] = estimated_benchmark_mean[i] + confidence_bonus[i]
-A[t] = argmax over feasible batches A of sum_i A[i] * U[i]
-run the benchmark for every i in A[t]
-update only the ten observed candidates`}
+{`mean[i]  = total_benchmark_score[i] / benchmark_runs[i]
+bonus[i] = exploration * sqrt(log(round) / benchmark_runs[i])
+ucb[i]   = mean[i] + bonus[i]
+
+next_batch = 10 candidates with the largest ucb[i]
+run benchmark for all 10
+update only those 10 means and counts`}
       </pre>
       <p className="mt-4">
-        For the benchmark lab, the feasible set is simply “any ten candidates,” so the optimizer sorts the UCB
-        values and takes the top ten. That is the easy special case. Add hardware capacity, cost, fairness,
-        compatibility, or diversity constraints and the same learning rule calls a matching, knapsack, route,
-        or constrained-set optimizer instead.
+        This is not a benchmark scorer. It is a <strong>budget-allocation policy</strong>. It decides which
+        candidates deserve expensive evaluation next: established leaders because they may belong in the final
+        top ten, and uncertain challengers because they might displace one.
       </p>
+
+      <div className="my-5 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/25">
+        <div className="font-semibold text-blue-950 dark:text-blue-100">Where “combinatorial” enters</div>
+        <p className="mb-0 mt-2 text-blue-950/80 dark:text-blue-100/80">
+          The learner supplies optimistic values <code>ucb[i]</code>. An optimizer turns them into a valid batch.
+          With only the rule “choose any ten,” that optimizer is sorting. With costs, hardware capacity,
+          fairness, compatibility, routes, or assignments, it becomes a knapsack, matching, path, or constrained
+          set solver. The learning rule estimates uncertain component values; the optimizer enforces the shape of
+          the action.
+        </p>
+      </div>
+
+      <h4 className="mb-2 mt-6 text-lg font-semibold">Why this is not the football problem</h4>
       <p>
-        This also explains why the football result is not a Comb-UCB reward. “Ada beat Bruno” is an observation
-        about the difference between two latent skills; Ada does not own one opponent-independent win reward.
-        A standardized benchmark score does. The former calls for a shared preference model such as
-        Bradley–Terry; the latter permits per-candidate reward estimation.
+        In football, <code>Ada beat Bruno</code> is a relation. It tells us about the difference between their
+        latent skills, not Ada’s opponent-independent reward. Ada could beat Bruno often and still lose to Hana.
+        That requires a shared pairwise model such as Bradley–Terry. A standardized benchmark gives
+        <code>candidate C-07 scored 81.4</code>: a direct sample of C-07’s own unknown mean. That is why the
+        benchmark batch permits independent per-candidate UCB estimates.
       </p>
+
       <p className="mb-0">
         <strong>Production warning:</strong> product clicks are usually not standardized benchmark scores. They
-        depend on user context, position, price, inventory, the rest of the slate, and the exposure policy.
-        Independent Comb-UCB is faithful only when selected-item outcomes are genuinely comparable and the
+        depend on user context, position, price, inventory, the rest of the slate, and the policy that exposed
+        them. Independent Comb-UCB is faithful only when selected-item outcomes are genuinely comparable and
         slate value is close to additive; otherwise the reward model and optimizer must represent those
         interactions explicitly.
       </p>
