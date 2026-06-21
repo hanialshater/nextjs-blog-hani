@@ -1,127 +1,109 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pairing race — where to spend your matches</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where to spend noisy pairwise matches</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--card2:#1a2440;--fg:#e6edf3;--dim:#8b95a8;--faint:#5b6378;--accent:#4c8df6;--accent2:#2a4a7a;--good:#5fd2a3;--warn:#f0a058;--bad:#e16c6c;--gold:#f5c451;--purple:#c879f0;--border:#1f2a44;--code:#0e1626;--mono:ui-monospace,Menlo,Monaco,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif}
-*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--fg)}
-body{font-family:var(--sans);font-size:15px;line-height:1.5;padding:12px}
-button{font-family:var(--mono);font-size:13px;background:var(--card2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 13px;cursor:pointer;transition:all .12s}
-button:hover{background:var(--accent2);border-color:var(--accent)}
-button.primary{background:var(--accent);color:#0b1220;border-color:var(--accent);font-weight:600}
-canvas{display:block;width:100%;background:var(--code);border-radius:6px}
-/* ---- pairing-race component (scoped .pr-) ---- */
-.pr-root{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;color:var(--fg)}
-.pr-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-@media(max-width:600px){.pr-cards{grid-template-columns:repeat(2,1fr)}}
-.pr-card{background:var(--code);border:1px solid var(--border);border-left-width:3px;border-radius:8px;padding:8px 10px}
-.pr-card .n{font-family:var(--mono);font-size:11px;font-weight:600}
-.pr-card .row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:4px}
-.pr-card .row b{color:var(--fg)}
-.pr-canvas{display:block;width:100%;height:240px;background:var(--code);border:1px solid var(--border);border-radius:8px}
-.pr-controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}
-.pr-controls button{font-size:12.5px;padding:7px 12px}
-.pr-controls button.primary{background:var(--accent);color:#0b1220;border-color:var(--accent);font-weight:600}
-.pr-controls label{font-family:var(--mono);font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px}
-.pr-note{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px}
-.pr-note b{color:var(--good)}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--orange:#f0a058;--gray:#8b95a8;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.card{background:var(--panel);border:1px solid var(--edge);border-left-width:4px;border-radius:9px;padding:8px 10px}.name{font:11px var(--mono);font-weight:700}.line{display:flex;justify-content:space-between;margin-top:5px;color:var(--muted);font:10px var(--mono)}.line b{color:var(--text)}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}button,input{font:12px var(--mono)}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}@media(max-width:620px){.cards{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
 </head>
 <body>
-<div id="pairRace"></div>
+<div class="root">
+  <div class="cards" id="cards"></div>
+  <canvas id="chart" height="240"></canvas>
+  <div class="controls"><button class="primary" id="play">▶ race</button><button id="reset">new league</button><label>BTL noise β <input id="beta" type="range" min="0.5" max="2.5" step="0.1" value="1.1"></label><span id="betaValue">1.1</span></div>
+  <div class="note" id="note"><b>Same hidden league; different schedules.</b> Every policy observes one BTL winner per match and updates the same online-Elo estimator. “Information heuristic” is deliberately descriptive, not the name of a minimax-optimal active-ranking method.</div>
+</div>
+<script src="./edp-core.js"></script>
 <script>
-// ============ shared pure logic ============
-const COLORS={blue:'#4c8df6',green:'#5fd2a3',orange:'#f0a058',purple:'#c879f0',red:'#e16c6c',gold:'#f5c451',dim:'#8b95a8',fg:'#e6edf3'};
-function rng(seed){let s=seed|0||1;return function(){s=(s+0x6D2B79F5)|0;let t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
-function sigmoid(x){return 1/(1+Math.exp(-x));}
-function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
-function kendallTau(rA,rB){const n=rA.length;let c=0,d=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const a=Math.sign(rA[i]-rA[j]),b=Math.sign(rB[i]-rB[j]);if(a*b>0)c++;else if(a*b<0)d++;}const t=n*(n-1)/2;return t?(c-d)/t:1;}
-function ranksFromScores(sc){const idx=[...sc.keys()].sort((a,b)=>sc[b]-sc[a]);const r=new Array(sc.length);idx.forEach((v,k)=>r[v]=k);return r;}
-function bradleyTerry(wins,iters=80){const n=wins.length,W=new Array(n).fill(0),G=Array.from({length:n},()=>new Array(n).fill(0));for(let i=0;i<n;i++)for(let j=0;j<n;j++){W[i]+=wins[i][j];const g=wins[i][j]+wins[j][i];G[i][j]=g;G[j][i]=g;}let p=new Array(n).fill(1);for(let it=0;it<iters;it++){const np=new Array(n);for(let i=0;i<n;i++){let den=0;for(let j=0;j<n;j++){if(j!==i&&G[i][j]>0)den+=G[i][j]/(p[i]+p[j]);}np[i]=den>0?(W[i]+0.5)/den:p[i];}let ls=0;for(let i=0;i<n;i++)ls+=Math.log(np[i]);const gm=Math.exp(ls/n);for(let i=0;i<n;i++)p[i]=np[i]/gm;}return p.map(v=>Math.log(v));}
-function playMatch(skill,i,j,beta,rand){return rand()<sigmoid(beta*(skill[i]-skill[j]))?i:j;}
-function pickPair(policy,state,rand){
-  const {n,games,estRank}=state;
-  const allPairs=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)allPairs.push([i,j]);
-  if(policy==='random'){return allPairs[(rand()*allPairs.length)|0];}
-  if(policy==='roundrobin'){let best=allPairs[0],bn=Infinity;for(const[i,j]of allPairs){if(games[i][j]<bn){bn=games[i][j];best=[i,j];}}return best;}
-  if(policy==='ladder'){const adj=[];for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(estRank[j]-estRank[i]===1)adj.push([i,j]);if(!adj.length)return allPairs[(rand()*allPairs.length)|0];let best=adj[0],bn=Infinity;for(const[i,j]of adj){const g=games[i][j];if(g<bn){bn=g;best=[i,j];}}return best;}
-  if(policy==='active'){let best=allPairs[0],bs=-Infinity;for(const[i,j]of allPairs){const rankGap=Math.abs(estRank[i]-estRank[j]);const s=0.6/(1+rankGap)+0.4/(1+games[i][j]);if(s>bs){bs=s;best=[i,j];}}return best;}
-  return allPairs[0];
-}
+(() => {
+  const { eloUpdate, kendallTau, mulberry32, ranks, resizeCanvas, sigmoid } = window.EDP
+  const policies = [
+    { key: 'random', label: 'random draw', color: '#8b95a8' },
+    { key: 'round_robin', label: 'round-robin', color: '#f0a058' },
+    { key: 'ladder', label: 'ladder', color: '#4c8df6' },
+    { key: 'information', label: 'information heuristic', color: '#5fd2a3' },
+  ]
+  const n = 8, maxMatches = 420
+  const $ = (id) => document.getElementById(id)
+  let beta = 1.1, trueSkills, trueRanks, runs, running, animationId
 
-// ============ pairing-race component ============
-function mountPairingRace(root,opts){
-  opts=opts||{};
-  const N=8, POLICIES=[
-    {key:'random',label:'random draw',color:COLORS.dim},
-    {key:'roundrobin',label:'round-robin',color:COLORS.orange},
-    {key:'ladder',label:'ladder (adjacent)',color:COLORS.blue},
-    {key:'active',label:'active (boundary)',color:COLORS.green},
-  ];
-  const MAXM=opts.maxMatches||420;
-  let beta=opts.beta||1.1, seed=opts.seed||7, trueSkill, trueRank, runs, playing=false, raf=null;
-  root.classList.add('pr-root');
-  root.innerHTML=`<div class="pr-cards">${POLICIES.map(p=>`<div class="pr-card" data-card="${p.key}" style="border-left-color:${p.color}">
-      <div class="n" style="color:${p.color}">${p.label}</div>
-      <div class="row"><span>matches→τ=1</span><b data-f="conv-${p.key}">—</b></div>
-      <div class="row"><span>current τ</span><b data-f="tau-${p.key}">0.00</b></div></div>`).join('')}</div>
-    <canvas class="pr-canvas"></canvas>
-    <div class="pr-controls">
-      <button class="primary" data-f="play">▶ race</button>
-      <button data-f="reset">reset (new league)</button>
-      <label>match noise β <input type="range" min="0.5" max="2.5" step="0.1" value="${beta}" data-f="beta" style="width:90px"></label>
-      <span data-f="betaval" style="font-family:var(--mono);font-size:11px;color:var(--dim)">${beta.toFixed(1)}</span>
-    </div>
-    <div class="pr-note" data-f="note">Same hidden league for all four. Lower curve = correct table sooner.</div>`;
-  const $=s=>root.querySelector(`[data-f="${s}"]`);
-  const cv=root.querySelector('.pr-canvas');
-  function init(s){
-    const R=rng(s); const base=[];for(let i=0;i<N;i++)base.push(1.8-3.6*i/(N-1));
-    for(let i=N-1;i>0;i--){const k=(R()*(i+1))|0;[base[i],base[k]]=[base[k],base[i]];}
-    trueSkill=base; trueRank=ranksFromScores(base);
-    runs=POLICIES.map((p,pi)=>({key:p.key,color:p.color,rand:rng(s*131+pi*97+1),
-      wins:Array.from({length:N},()=>new Array(N).fill(0)),games:Array.from({length:N},()=>new Array(N).fill(0)),
-      estRank:[...Array(N).keys()],hist:[],m:0,tau:0,conv:null}));
+  function makeLeague(seed) {
+    const rng = mulberry32(seed)
+    const values = Array.from({ length: n }, (_, index) => 1.8 - 3.6 * index / (n - 1))
+    for (let index = n - 1; index > 0; index -= 1) { const swap = Math.floor(rng() * (index + 1)); [values[index], values[swap]] = [values[swap], values[index]] }
+    trueSkills = values
+    trueRanks = ranks(values)
+    runs = policies.map((policy, index) => ({
+      ...policy,
+      rng: mulberry32(seed * 97 + index * 101 + 11),
+      ratings: Array(n).fill(0),
+      games: Array.from({ length: n }, () => Array(n).fill(0)),
+      matches: 0,
+      history: [],
+      tau: 0,
+      convergence: null,
+    }))
   }
-  function stepRun(r){const[i,j]=pickPair(r.key,{n:N,games:r.games,estRank:r.estRank},r.rand);const w=playMatch(trueSkill,i,j,beta,r.rand),l=w===i?j:i;r.wins[w][l]++;r.games[i][j]++;r.games[j][i]++;r.m++;r.estRank=ranksFromScores(bradleyTerry(r.wins));r.tau=kendallTau(r.estRank,trueRank);r.hist.push(r.tau);if(r.conv===null&&r.tau>=0.999)r.conv=r.m;}
-  function stepAll(){runs.forEach(stepRun);}
-  function instant(n){for(let k=0;k<n;k++)stepAll();draw();}
-  function draw(){
-    const dpr=window.devicePixelRatio||1,W=cv.clientWidth||520,H=240;
-    if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr;}cv.style.height=H+'px';
-    const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
-    const pl=36,pr=12,pt=14,pb=22,pw=W-pl-pr,ph=H-pt-pb;
-    c.strokeStyle='rgba(255,255,255,.06)';c.fillStyle=COLORS.dim;c.font='10px ui-monospace,monospace';
-    for(const v of [0,0.25,0.5,0.75,1]){const y=pt+(1-v)*ph;c.beginPath();c.moveTo(pl,y);c.lineTo(pl+pw,y);c.stroke();c.fillText(v.toFixed(2),6,y+3);}
-    const xmax=Math.max(...runs.map(r=>r.m),MAXM/4,1);
-    c.fillText('matches: '+(runs[0]?runs[0].m:0),pl+2,H-6);
-    for(const r of runs){if(r.hist.length<2)continue;c.strokeStyle=r.color;c.lineWidth=2;c.beginPath();r.hist.forEach((v,i)=>{const x=pl+i/xmax*pw,y=pt+(1-clamp(v,0,1))*ph;i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();}
-    let ly=pt+10;c.textAlign='right';for(const r of runs){c.fillStyle=r.color;c.fillText(r.tau.toFixed(2),W-pr-2,ly);ly+=13;}c.textAlign='left';
-    for(const r of runs){$('tau-'+r.key).textContent=r.tau.toFixed(2);$('conv-'+r.key).textContent=r.conv?r.conv:(r.m>=MAXM?'>'+MAXM:'—');}
-  }
-  function loop(){if(!playing)return;const allDone=runs.every(r=>r.m>=MAXM);if(allDone){playing=false;$('play').textContent='▶ race';const order=[...runs].sort((a,b)=>(a.conv||1e9)-(b.conv||1e9));$('note').innerHTML=`fastest to a correct table: <b>${POLICIES.find(p=>p.key===order[0].key).label}</b> (${order[0].conv||'>'+MAXM} matches) vs ${POLICIES.find(p=>p.key===order[order.length-1].key).label} (${order[order.length-1].conv||'>'+MAXM}).`;return;}for(let k=0;k<3;k++)stepAll();draw();raf=requestAnimationFrame(loop);}
-  $('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'⏸ pause':'▶ race';if(playing)loop();};
-  $('reset').onclick=()=>{playing=false;$('play').textContent='▶ race';init((Date.now()&0xffff)+3);draw();$('note').textContent='Same hidden league for all four. Lower curve = correct table sooner.';};
-  $('beta').oninput=e=>{beta=parseFloat(e.target.value);$('betaval').textContent=beta.toFixed(1);};
-  window.addEventListener('resize',draw);
-  init(seed);draw();
-  if(opts.autoplay){playing=true;$('play').textContent='⏸ pause';loop();}
-  return {api:{instant,reset:init,play:()=>{if(!playing){playing=true;$('play').textContent='⏸ pause';loop();}},state:()=>({tau:runs.find(r=>r.key==='active').tau})}};
-}
 
-mountPairingRace(document.getElementById('pairRace'),{seed:7});
+  function pairs() { const result=[]; for(let left=0;left<n;left+=1)for(let right=left+1;right<n;right+=1)result.push([left,right]); return result }
+
+  function choosePair(run) {
+    const all = pairs()
+    if (run.key === 'random') return all[Math.floor(run.rng() * all.length)]
+    if (run.key === 'round_robin') return all.reduce((best, pair) => run.games[pair[0]][pair[1]] < run.games[best[0]][best[1]] ? pair : best, all[0])
+    const currentRanks = ranks(run.ratings)
+    if (run.key === 'ladder') {
+      const adjacent = all.filter(([left,right]) => Math.abs(currentRanks[left] - currentRanks[right]) === 1)
+      return adjacent.reduce((best, pair) => run.games[pair[0]][pair[1]] < run.games[best[0]][best[1]] ? pair : best, adjacent[0])
+    }
+    return all.reduce((best, pair) => information(pair, run) > information(best, run) ? pair : best, all[0])
+  }
+
+  function information([left, right], run) {
+    const p = sigmoid(run.ratings[left] - run.ratings[right])
+    return p * (1 - p) / Math.sqrt(run.games[left][right] + 1)
+  }
+
+  function stepRun(run) {
+    const [left, right] = choosePair(run)
+    const leftWon = run.rng() < sigmoid(beta * (trueSkills[left] - trueSkills[right]))
+    eloUpdate(run.ratings, left, right, leftWon, 0.34)
+    run.games[left][right] += 1
+    run.games[right][left] += 1
+    run.matches += 1
+    run.tau = kendallTau(ranks(run.ratings), trueRanks)
+    run.history.push(run.tau)
+    if (run.convergence === null && run.tau >= 0.999) run.convergence = run.matches
+  }
+
+  function stepAll(count = 1) { for (let step = 0; step < count; step += 1) runs.forEach(stepRun) }
+
+  function draw() {
+    const cards = $('cards')
+    cards.innerHTML = runs.map((run) => `<div class="card" style="border-left-color:${run.color}"><div class="name" style="color:${run.color}">${run.label}</div><div class="line"><span>current τ</span><b>${run.tau.toFixed(2)}</b></div><div class="line"><span>τ = 1</span><b>${run.convergence ?? (run.matches >= maxMatches ? '>'+maxMatches : '—')}</b></div></div>`).join('')
+    const { context, width, height } = resizeCanvas($('chart'), 240)
+    const pad = { left: 36, right: 14, top: 14, bottom: 24 }, plotWidth = width-pad.left-pad.right, plotHeight=height-pad.top-pad.bottom
+    context.strokeStyle='rgba(255,255,255,.08)';context.fillStyle='#9aa8bd';context.font='10px ui-monospace'
+    for(let tick=0;tick<=4;tick+=1){const value=tick/4;const y=pad.top+(1-value)*plotHeight;context.beginPath();context.moveTo(pad.left,y);context.lineTo(pad.left+plotWidth,y);context.stroke();context.fillText(value.toFixed(2),4,y+3)}
+    const xMax=Math.max(...runs.map((run)=>run.matches),1)
+    runs.forEach((run)=>{if(run.history.length<2)return;context.strokeStyle=run.color;context.lineWidth=2;context.beginPath();run.history.forEach((tau,index)=>{const x=pad.left+index/Math.max(run.history.length-1,1)*plotWidth;const y=pad.top+(1-Math.max(0,tau))*plotHeight;index?context.lineTo(x,y):context.moveTo(x,y)});context.stroke()})
+    context.fillStyle='#9aa8bd';context.fillText(`matches per policy: ${xMax}`,pad.left+2,height-6)
+  }
+
+  function loop() {
+    if (!running) return
+    if (runs.every((run) => run.matches >= maxMatches)) { running=false; $('play').textContent='▶ race'; return }
+    stepAll(3); draw(); animationId=requestAnimationFrame(loop)
+  }
+
+  $('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ race';if(running)loop()}
+  $('reset').onclick=()=>{running=false;cancelAnimationFrame(animationId);$('play').textContent='▶ race';makeLeague((Date.now()>>>0)||7);draw()}
+  $('beta').oninput=(event)=>{beta=Number(event.target.value);$('betaValue').textContent=beta.toFixed(1)}
+  window.addEventListener('resize',draw)
+  makeLeague(7);draw()
+})()
 </script>
-<script>
-/* report content height to the embedding page so the iframe can auto-size */
-(function(){
-  if(window.parent===window)return;
-  function postHeight(){var h=Math.ceil(document.documentElement.getBoundingClientRect().height);window.parent.postMessage({type:'demo-height',height:h},'*');}
-  window.addEventListener('load',function(){postHeight();setTimeout(postHeight,250);setTimeout(postHeight,700);});
-  window.addEventListener('resize',postHeight);
-  if(window.ResizeObserver){try{new ResizeObserver(postHeight).observe(document.body);}catch(e){}}
-})();
-</script>
+<script>(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,250)});addEventListener('resize',h);if(window.ResizeObserver)new ResizeObserver(h).observe(document.body)})();</script>
 </body>
 </html>
