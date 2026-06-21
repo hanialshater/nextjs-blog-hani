@@ -17,7 +17,7 @@
     <div class="stat"><div class="label">leader</div><div class="value" id="leader">—</div></div>
   </div>
   <div class="controls">
-    <button class="primary" id="play">▶ play</button><button id="one">+1 match</button><button id="many">+30 matches</button><button id="truth">show true skills</button><button id="reset">new league</button>
+    <button class="primary" id="play">▶ play</button><button id="one">+1 match</button><button id="many">fast +30</button><button id="truth">show true skills</button><button id="reset">new league</button>
     <label>scheduler <select id="policy"><option value="manual">you scout</option><option value="random">random</option><option value="round_robin">round-robin</option><option value="ladder" selected>ladder</option><option value="information">information heuristic</option></select></label>
   </div>
   <div class="main">
@@ -80,7 +80,7 @@
     const estimatedRanks = ranks(ratings)
     if (policy === 'ladder') {
       const adjacent = pairs.filter(([left, right]) => Math.abs(estimatedRanks[left] - estimatedRanks[right]) === 1)
-      return adjacent.reduce((best, pair) => games[pair[0]][pair[1]] < games[pair[0]][best[1]] ? pair : best, adjacent[0])
+      return adjacent.reduce((best, pair) => games[pair[0]][pair[1]] < games[best[0]][best[1]] ? pair : best, adjacent[0])
     }
     return pairs.reduce((best, pair) => informationScore(pair) > informationScore(best) ? pair : best, pairs[0])
   }
@@ -90,9 +90,23 @@
     return probability * (1 - probability) / Math.sqrt(games[left][right] + 1)
   }
 
+  function observeMatch(left, right) {
+    return rng() < sigmoid(1.15 * (trueSkills[left] - trueSkills[right]))
+  }
+
+  function recordMatch(left, right, leftWon) {
+    eloUpdate(ratings, left, right, leftWon, 0.34)
+    games[left][right] += 1
+    games[right][left] += 1
+    totalGames[left] += 1
+    totalGames[right] += 1
+    matchCount += 1
+    history.push(kendallTau(ranks(ratings), trueRanks))
+  }
+
   function stageMatch(left, right) {
     if (matchAnimation) return false
-    const leftWon = rng() < sigmoid(1.15 * (trueSkills[left] - trueSkills[right]))
+    const leftWon = observeMatch(left, right)
     const winner = leftWon ? left : right
     const loser = leftWon ? right : left
     matchAnimation = { left, right, winner, loser, leftWon, started: performance.now(), duration: 1100, shotY: .35 + rng() * .3 }
@@ -103,18 +117,10 @@
   function finishMatch() {
     if (!matchAnimation) return
     const { left, right, leftWon } = matchAnimation
-    eloUpdate(ratings, left, right, leftWon, 0.34)
-    games[left][right] += 1
-    games[right][left] += 1
-    totalGames[left] += 1
-    totalGames[right] += 1
-    matchCount += 1
-    history.push(kendallTau(ranks(ratings), trueRanks))
+    recordMatch(left, right, leftWon)
     matchAnimation = null
     render()
-    if (playing) {
-      matchTimer = setTimeout(() => { if (playing) step() }, 260)
-    }
+    if (playing) matchTimer = setTimeout(() => { if (playing) step() }, 260)
   }
 
   function animateMatch(now) {
@@ -131,6 +137,18 @@
       return false
     }
     return stageMatch(...choosePair())
+  }
+
+  function fastForward(count) {
+    if ($('policy').value === 'manual') return step()
+    playing = false
+    $('play').textContent = '▶ play'
+    clearTimeout(matchTimer)
+    for (let i = 0; i < count; i += 1) {
+      const [left, right] = choosePair()
+      recordMatch(left, right, observeMatch(left, right))
+    }
+    render()
   }
 
   function rowClick(player) {
@@ -199,7 +217,7 @@
     const leftX = width * .32, rightX = width * .68, leftY = height * .57, rightY = height * .43
     const winnerOnLeft = winner === left
     const ballTargetX = winnerOnLeft ? width - 6 : 6
-    const targetY = height * shotY
+    const targetY = height * (shotY || .5)
     const keeperDive = progress ? Math.max(0, Math.min(1, (progress - .64) / .22)) : 0
     drawGoalkeeper(context, width * .06, height * .5, keeperDive, -1)
     drawGoalkeeper(context, width * .94, height * .5, keeperDive, 1)
@@ -218,13 +236,11 @@
       if (progress > .77) { context.fillStyle = '#fff'; context.font = '700 17px ui-monospace'; context.textAlign = 'center'; context.fillText(`GOAL — ${names[winner]}`, width / 2, 28) }
       else { context.fillStyle = 'rgba(255,255,255,.93)'; context.font = '700 13px ui-monospace'; context.textAlign = 'center'; context.fillText(`${names[left]}  vs  ${names[right]}`, width / 2, 28) }
     } else {
-      drawGoalkeeper(context, width * .06, height * .5, 0, -1)
-      drawGoalkeeper(context, width * .94, height * .5, 0, 1)
       context.fillStyle = 'rgba(255,255,255,.9)'; context.font = '13px ui-monospace'; context.textAlign = 'center'; context.fillText('Choose a scheduler, then kick off', width / 2, height / 2)
     }
   }
 
-  function drawLadder(order, estimatedRanks) {
+  function drawLadder(order) {
     const targetHeight = window.matchMedia('(max-width:640px)').matches ? 230 : 270
     const { context, width, height } = resizeCanvas($('ladder'), targetHeight)
     ladderHeight = height; ladderBoxes = []
@@ -268,7 +284,7 @@
     if (hit) rowClick(hit.player)
   })
   $('one').onclick = step
-  $('many').onclick = () => { if ($('policy').value === 'manual') return step(); for (let count = 0; count < 30; count += 1) { if (!stageMatch(...choosePair())) break; break } }
+  $('many').onclick = () => fastForward(30)
   $('truth').onclick = () => { reveal = !reveal; $('truth').textContent = reveal ? 'hide true skills' : 'show true skills'; render() }
   $('reset').onclick = reset
   $('policy').onchange = () => { if ($('policy').value === 'manual') { playing = false; $('play').textContent = '▶ play' } render() }
