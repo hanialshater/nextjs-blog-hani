@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>League table from noisy BTL matches</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--orange:#f0a058;--gold:#f5c451;--red:#e16c6c;--purple:#c879f0;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:16px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat,.board,.legend{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.main{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}.pitch{display:block;width:100%;height:250px;background:#15692f;border:1px solid var(--edge);border-radius:10px}.board h3{margin:0 0 7px;font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:5px 4px;border-radius:7px;cursor:pointer}.row:hover,.row.selected{background:rgba(76,141,246,.14)}.rank,.meta{font:11px var(--mono);color:var(--muted);text-align:right}.name{font-weight:650;font-size:13px}.bar{height:5px;border-radius:4px;background:#09111f;margin-top:4px;overflow:hidden}.bar i{display:block;height:100%;border-radius:4px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}button,select{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);padding:7px 9px;cursor:pointer}button:hover,select:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#07101e;font-weight:700}.legend{margin-top:12px;color:var(--muted);font-size:12px}.legend b{color:var(--green)}canvas.chart{display:block;width:100%;height:96px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}@media(max-width:640px){.main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:16px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr);gap:8px}.stat,.board,.legend{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}button,select{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);padding:7px 9px;cursor:pointer}button:hover,select:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#07101e;font-weight:700}.main{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}.pitch{display:block;width:100%;height:250px;background:#15692f;border:1px solid var(--edge);border-radius:10px}.board h3{margin:0 0 7px;font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:5px 4px;border-radius:7px;cursor:pointer}.row:hover,.row.selected{background:rgba(76,141,246,.14)}.rank,.meta{font:11px var(--mono);color:var(--muted);text-align:right}.name{font-weight:650;font-size:13px}.bar{height:5px;border-radius:4px;background:#09111f;margin-top:4px;overflow:hidden}.bar i{display:block;height:100%;border-radius:4px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}.legend{margin-top:12px;color:var(--muted);font-size:12px}.legend b{color:var(--green)}canvas.chart{display:block;width:100%;height:112px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}@media(max-width:640px){.main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -16,16 +16,16 @@
     <div class="stat"><div class="label">scheduler</div><div class="value" id="scheduler">ladder</div></div>
     <div class="stat"><div class="label">leader</div><div class="value" id="leader">—</div></div>
   </div>
-  <div class="main">
-    <canvas class="pitch" id="pitch" height="250"></canvas>
-    <div class="board"><h3>Online Elo estimate</h3><div id="rows"></div></div>
-  </div>
   <div class="controls">
     <button class="primary" id="play">▶ play</button><button id="one">+1 match</button><button id="many">+30 matches</button><button id="truth">show true skills</button><button id="reset">new league</button>
     <label>scheduler <select id="policy"><option value="manual">you scout</option><option value="random">random</option><option value="round_robin">round-robin</option><option value="ladder" selected>ladder</option><option value="information">information heuristic</option></select></label>
   </div>
-  <canvas class="chart" id="chart" height="96"></canvas>
-  <div class="legend" id="note"><b>Model:</b> match outcomes come from a Bradley–Terry logistic probability. The table uses online Elo, which is one stochastic-gradient implementation of that model. The information scheduler is a transparent heuristic: it prefers close predicted matches that have been played less often; it is not a named optimal active-ranking algorithm.</div>
+  <div class="main">
+    <canvas class="pitch" id="pitch" height="250"></canvas>
+    <div class="board"><h3>Online Elo estimate</h3><div id="rows"></div></div>
+  </div>
+  <canvas class="chart" id="chart" height="112"></canvas>
+  <div class="legend" id="note"><b>Model:</b> match outcomes come from a Bradley–Terry logistic probability. The table uses online Elo, one stochastic-gradient implementation of that model. Kendall τ ranges from −1 (reversed table) to +1 (perfect table). The information scheduler is a transparent heuristic, not a named optimal active-ranking algorithm.</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
@@ -79,12 +79,7 @@
       const adjacent = pairs.filter(([left, right]) => Math.abs(estimatedRanks[left] - estimatedRanks[right]) === 1)
       return adjacent.reduce((best, pair) => games[pair[0]][pair[1]] < games[best[0]][best[1]] ? pair : best, adjacent[0])
     }
-    // Expected Fisher information for one BTL observation is p(1-p).
-    // Down-weight pairs already sampled many times.
-    return pairs.reduce((best, pair) => {
-      const score = informationScore(pair)
-      return score > informationScore(best) ? pair : best
-    }, pairs[0])
+    return pairs.reduce((best, pair) => informationScore(pair) > informationScore(best) ? pair : best, pairs[0])
   }
 
   function informationScore([left, right]) {
@@ -108,10 +103,11 @@
 
   function step() {
     if ($('policy').value === 'manual') {
-      $('note').innerHTML = '<b>You scout:</b> click two rows in the league table to stage a match.'
-      return
+      $('note').innerHTML = '<b>You scout:</b> click two rows in the league table to stage a match. Switch scheduler to ladder, random, round-robin, or information heuristic before pressing Play.'
+      return false
     }
     playPair(...choosePair())
+    return true
   }
 
   function rowClick(player) {
@@ -157,19 +153,27 @@
   }
 
   function drawChart() {
-    const { context, width, height } = resizeCanvas($('chart'), 96)
+    const { context, width, height } = resizeCanvas($('chart'), 112)
+    const top = 14, bottom = 20, left = 32, right = 10, plotHeight = height - top - bottom
+    const yOf = (value) => top + (1 - (value + 1) / 2) * plotHeight
     context.strokeStyle='rgba(255,255,255,.08)'; context.fillStyle='#9aa8bd'; context.font='10px ui-monospace'
-    for (let value = 0; value <= 1; value += .25) { const y = 12 + (1-value)*(height-30); context.beginPath(); context.moveTo(32,y); context.lineTo(width-10,y); context.stroke(); context.fillText(value.toFixed(2),2,y+3) }
-    if (history.length > 1) { context.strokeStyle='#5fd2a3'; context.lineWidth=2; context.beginPath(); history.forEach((value,index)=>{const x=32+index/(history.length-1)*(width-42);const y=12+(1-(value+1)/2)*(height-30);index?context.lineTo(x,y):context.moveTo(x,y)}); context.stroke() }
-    context.fillStyle='#9aa8bd'; context.fillText('Kendall τ',36,10)
+    ;[-1,-.5,0,.5,1].forEach((value) => { const y = yOf(value); context.beginPath(); context.moveTo(left,y); context.lineTo(width-right,y); context.stroke(); context.fillText(value.toFixed(1),2,y+3) })
+    if (history.length > 1) { context.strokeStyle='#5fd2a3'; context.lineWidth=2; context.beginPath(); history.forEach((value,index)=>{const x=left+index/(history.length-1)*(width-left-right);const y=yOf(value);index?context.lineTo(x,y):context.moveTo(x,y)}); context.stroke() }
+    context.fillStyle='#9aa8bd'; context.fillText('Kendall τ (−1 to +1)',left+4,11)
   }
 
   $('one').onclick = step
   $('many').onclick = () => { if ($('policy').value === 'manual') return step(); for (let count = 0; count < 30; count += 1) step() }
   $('truth').onclick = () => { reveal = !reveal; $('truth').textContent = reveal ? 'hide true skills' : 'show true skills'; render() }
   $('reset').onclick = reset
-  $('policy').onchange = render
-  $('play').onclick = () => { playing = !playing; $('play').textContent = playing ? '⏸ pause' : '▶ play'; const loop = () => { if (!playing) return; step(); animationId = requestAnimationFrame(loop) }; if (playing) loop() }
+  $('policy').onchange = () => { if ($('policy').value === 'manual') { playing = false; $('play').textContent = '▶ play' } render() }
+  $('play').onclick = () => {
+    if ($('policy').value === 'manual') return step()
+    playing = !playing
+    $('play').textContent = playing ? '⏸ pause' : '▶ play'
+    const loop = () => { if (!playing) return; step(); animationId = requestAnimationFrame(loop) }
+    if (playing) loop()
+  }
   window.addEventListener('resize', render)
   reset()
 })()
