@@ -10,6 +10,41 @@ interface DemoProps {
   height?: number | string
 }
 
+function AutoHeightFrame({ src, title, height = 480 }: DemoProps) {
+  const ref = useRef<HTMLIFrameElement>(null)
+  const [measured, setMeasured] = useState<number | null>(null)
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      const iframe = ref.current
+      if (!iframe || event.source !== iframe.contentWindow) return
+      const data = event.data
+      if (data && data.type === 'demo-height' && typeof data.height === 'number') {
+        setMeasured(Math.ceil(data.height))
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
+  const resolvedHeight = measured != null ? `${measured}px` : typeof height === 'number' ? `${height}px` : height
+
+  return (
+    <figure className="my-6">
+      <iframe
+        ref={ref}
+        src={src}
+        title={title || 'Interactive demo'}
+        loading="lazy"
+        scrolling="no"
+        className="w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700"
+        style={{ height: resolvedHeight }}
+      />
+    </figure>
+  )
+}
+
 function RucbPanel() {
   return (
     <section className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
@@ -47,13 +82,10 @@ function RucbPanel() {
         The live demo below has one Condorcet winner while several other items form a deliberate preference
         cycle. That makes the distinction from BTL visible.
       </p>
-      <iframe
+      <AutoHeightFrame
         src="/demos/posts/edp-sort/dueling-rucb.html"
         title="RUCB dueling bandit demo"
-        loading="lazy"
-        scrolling="no"
-        className="my-4 w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700"
-        style={{ height: '590px' }}
+        height={900}
       />
       <p className="mb-0 text-gray-600 dark:text-gray-300">
         Source: M. Zoghi et al.,{' '}
@@ -131,55 +163,13 @@ update only selected items`}
       <details>
         <summary className="cursor-pointer font-medium">Primary sources and assumptions</summary>
         <ul className="mt-3 list-disc space-y-2 pl-5">
-          <li>
-            Auer, Cesa-Bianchi, Fischer (2002):{' '}
-            <a href="https://link.springer.com/article/10.1023/A:1013689704352" target="_blank" rel="noreferrer">
-              UCB1
-            </a>
-            .
-          </li>
-          <li>
-            Garivier, Cappé (2011):{' '}
-            <a href="https://arxiv.org/abs/1102.2490" target="_blank" rel="noreferrer">
-              KL-UCB
-            </a>
-            .
-          </li>
-          <li>
-            Agrawal, Goyal (2011):{' '}
-            <a href="https://arxiv.org/abs/1111.1797" target="_blank" rel="noreferrer">
-              Thompson sampling
-            </a>
-            .
-          </li>
-          <li>
-            Li et al. (2010):{' '}
-            <a href="https://arxiv.org/abs/1003.0146" target="_blank" rel="noreferrer">
-              LinUCB
-            </a>
-            .
-          </li>
-          <li>
-            Yue, Joachims (2009):{' '}
-            <a href="https://www.cs.cornell.edu/people/tj/publications/yue_joachims_09a.pdf" target="_blank" rel="noreferrer">
-              dueling-bandit feedback
-            </a>
-            .
-          </li>
-          <li>
-            Kveton et al. (2015):{' '}
-            <a href="https://arxiv.org/abs/1410.0949" target="_blank" rel="noreferrer">
-              stochastic combinatorial semi-bandits
-            </a>
-            .
-          </li>
-          <li>
-            Wen, Kveton, Ashkan (2017):{' '}
-            <a href="https://arxiv.org/abs/1406.7443" target="_blank" rel="noreferrer">
-              large-scale combinatorial semi-bandits
-            </a>
-            .
-          </li>
+          <li>Auer, Cesa-Bianchi, Fischer (2002): UCB1.</li>
+          <li>Garivier, Cappé (2011): KL-UCB.</li>
+          <li>Agrawal, Goyal (2011): Thompson sampling.</li>
+          <li>Li et al. (2010): LinUCB.</li>
+          <li>Yue, Joachims (2009): dueling-bandit feedback.</li>
+          <li>Kveton et al. (2015): stochastic combinatorial semi-bandits.</li>
+          <li>Wen, Kveton, Ashkan (2017): large-scale combinatorial semi-bandits.</li>
         </ul>
       </details>
     </aside>
@@ -187,41 +177,13 @@ update only selected items`}
 }
 
 export default function Demo({ src, title = 'Interactive demo', height = 480 }: DemoProps) {
-  const ref = useRef<HTMLIFrameElement>(null)
-  const [measured, setMeasured] = useState<number | null>(null)
   const pathname = src.split('?')[0]
   const showRucb = pathname === '/demos/posts/edp-sort/pairing-race.html'
   const showSemiBandit = pathname === '/demos/posts/edp-sort/bt-vs-combucb.html'
 
-  useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      const iframe = ref.current
-      if (!iframe || event.source !== iframe.contentWindow) return
-      const data = event.data
-      if (data && data.type === 'demo-height' && typeof data.height === 'number') {
-        setMeasured(Math.ceil(data.height))
-      }
-    }
-
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [])
-
-  const resolvedHeight = measured != null ? `${measured}px` : typeof height === 'number' ? `${height}px` : height
-
   return (
     <>
-      <figure className="my-6">
-        <iframe
-          ref={ref}
-          src={src}
-          title={title}
-          loading="lazy"
-          scrolling="no"
-          className="w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700"
-          style={{ height: resolvedHeight }}
-        />
-      </figure>
+      <AutoHeightFrame src={src} title={title} height={height} />
       {showRucb && <RucbPanel />}
       {showSemiBandit && <SemiBanditPanel />}
     </>
