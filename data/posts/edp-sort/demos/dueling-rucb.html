@@ -11,8 +11,8 @@
 <body>
 <div class="root">
   <div class="stats"><div class="stat"><div class="label">round</div><div class="value" id="round">0</div></div><div class="stat"><div class="label">potential champions</div><div class="value" id="champions">A B C D E F</div></div><div class="stat"><div class="label">last RUCB candidate</div><div class="value" id="leader">—</div></div><div class="stat"><div class="label">true target</div><div class="value champion" id="target">hidden</div></div></div>
-  <div class="grid"><div class="matrix"><h3>Empirical pairwise wins: row beats column</h3><table id="table"></table><div class="formula">uᵢⱼ(t) = p̂ᵢⱼ(t) + √(α log t / nᵢⱼ(t)); &nbsp; Cₜ = { i : uᵢⱼ ≥ 1/2 ∀ j }</div></div><div class="events"><h3>RUCB decisions</h3><div id="events"></div></div></div>
   <div class="controls"><button class="primary" id="step">+1 duel</button><button id="many">+50 duels</button><button id="play">▶ run</button><button id="reveal">reveal matrix</button><button id="reset">new run</button></div>
+  <div class="grid"><div class="matrix"><h3>Empirical pairwise wins: row beats column</h3><table id="table"></table><div class="formula">uᵢⱼ(t) = p̂ᵢⱼ(t) + √(α log t / nᵢⱼ(t)); &nbsp; Cₜ = { i : uᵢⱼ ≥ 1/2 ∀ j }</div></div><div class="events"><h3>RUCB decisions</h3><div id="events"></div></div></div>
   <div class="note"><b>What this demonstrates:</b> RUCB does not fit a global score. It keeps optimistic pairwise win probabilities, chooses a possible Condorcet champion, then challenges it with the arm most likely to beat it. In this world A is a Condorcet winner, while B/C/D contain a preference cycle—so no Bradley–Terry score vector can represent the full matrix exactly.</div>
 </div>
 <script>
@@ -65,9 +65,9 @@
       if (viable) candidates.push(candidate)
     }
     const champion = candidates.length ? candidates[Math.floor(rng() * candidates.length)] : Math.floor(rng() * n)
-    let challenger = 0
-    for (let opponent = 1; opponent < n; opponent += 1) {
-      if (ucb(opponent, champion) > ucb(challenger, champion)) challenger = opponent
+    let challenger = champion === 0 ? 1 : 0
+    for (let opponent = 0; opponent < n; opponent += 1) {
+      if (opponent !== champion && ucb(opponent, champion) > ucb(challenger, champion)) challenger = opponent
     }
     return { champion, challenger, candidates }
   }
