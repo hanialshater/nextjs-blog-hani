@@ -10,8 +10,9 @@
 <body>
 <div class="root">
 <div class="stats"><div class="stat"><div class="label">players</div><div class="value">10,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches / policy</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
+<div class="controls"><button class="primary" id="play">▶ run matches</button><button id="step">+1,000</button><button id="reset">reset</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div>
 <div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">adaptive Elo estimate versus hidden skill</div></div></div>
-<div class="controls"><button class="primary" id="play">▶ run matches</button><button id="step">+1,000</button><button id="reset">reset</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div><div class="note" id="note"></div>
+<div class="note" id="note"></div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
