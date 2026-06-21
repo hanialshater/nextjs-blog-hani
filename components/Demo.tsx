@@ -107,14 +107,22 @@ function RucbPanel() {
 function SemiBanditPanel() {
   return (
     <aside className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
-      <h3 className="mt-0 text-lg font-semibold">What “combinatorial” and “semi-bandit” mean</h3>
+      <h3 className="mt-0 text-lg font-semibold">The clean case: choose a benchmark batch</h3>
       <p>
-        <strong>Combinatorial</strong> describes the action. Instead of selecting one arm, the learner chooses
-        a feasible structure built from base items: a top-K slate, a matching, a path, or a budgeted set.
+        Imagine eighty candidate models and enough evaluation budget to run only <strong>ten</strong> candidates
+        per round. Every selected candidate completes the same standardized benchmark and returns one noisy
+        numerical score. The benchmark score is directly comparable across candidates: it is not conditional
+        on an opponent, position, or the other candidates in the batch.
       </p>
-      <p>
-        <strong>Semi-bandit</strong> describes the feedback. After choosing a slate, the learner observes the
-        outcome of every selected base item, but observes nothing for unselected items.
+      <pre className="mt-4 overflow-x-auto rounded-md bg-gray-900 p-4 text-xs leading-5 text-gray-100">
+{`Action:     a_t ∈ {0, 1}^N,  Σ_i a_t[i] = 10
+Reward:     X[i, t] = benchmark_score(candidate i)  for every selected i
+Objective:  choose A_t = {i : a_t[i] = 1} to identify or deploy the best batch
+Feedback:   observe all 10 selected scores, and no scores for the other candidates`}
+      </pre>
+      <p className="mt-4">
+        This is <strong>combinatorial</strong> because the action is a whole batch, not one arm. It is a
+        <strong> semi-bandit</strong> because the batch decomposes into ten observed candidate-level rewards.
       </p>
       <div className="my-4 overflow-x-auto">
         <table className="w-full border-collapse text-left">
@@ -122,49 +130,56 @@ function SemiBanditPanel() {
             <tr className="border-b border-gray-300 dark:border-gray-700">
               <th className="p-2">Setting</th>
               <th className="p-2">Action</th>
-              <th className="p-2">Feedback</th>
+              <th className="p-2">What one observation means</th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-b border-gray-200 dark:border-gray-800">
-              <td className="p-2 font-medium">Ordinary bandit</td>
-              <td className="p-2">One item</td>
-              <td className="p-2">One reward for that item</td>
+              <td className="p-2 font-medium">Football / Bradley–Terry</td>
+              <td className="p-2">One 1v1</td>
+              <td className="p-2">A relative statement: one player beat the other</td>
             </tr>
             <tr className="border-b border-gray-200 dark:border-gray-800">
-              <td className="p-2 font-medium">Semi-bandit</td>
-              <td className="p-2">A constrained subset / slate</td>
-              <td className="p-2">One reward for each selected base item</td>
+              <td className="p-2 font-medium">Benchmark semi-bandit</td>
+              <td className="p-2">Ten candidates</td>
+              <td className="p-2">Ten direct, comparable candidate scores</td>
             </tr>
             <tr>
               <td className="p-2 font-medium">Full-bandit slate feedback</td>
-              <td className="p-2">A constrained subset / slate</td>
-              <td className="p-2">One aggregate reward for the whole slate</td>
+              <td className="p-2">Ten candidates</td>
+              <td className="p-2">Only one aggregate batch result</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p>
-        In the independent additive case, each selected item has a stochastic weight and slate reward is the
-        sum of those selected weights. The learner forms an optimistic score for each base item, then calls
-        a deterministic optimizer:
+        Comb-UCB maintains a mean benchmark score and an uncertainty bonus for every candidate. It gives each
+        candidate an optimistic value, then passes those values to an optimizer:
       </p>
       <pre className="overflow-x-auto rounded-md bg-gray-900 p-4 text-xs leading-5 text-gray-100">
-{`U[e] = estimated_mean[e] + confidence_bonus[e]
-A[t] = argmax over feasible slates A of sum_e A[e] * U[e]
-observe rewards for every selected e in A[t]
-update only selected items`}
+{`U[i] = estimated_benchmark_mean[i] + confidence_bonus[i]
+A[t] = argmax over feasible batches A of sum_i A[i] * U[i]
+run the benchmark for every i in A[t]
+update only the ten observed candidates`}
       </pre>
       <p className="mt-4">
-        Top-K is the easy special case because the optimizer is sorting the optimistic item scores. For a
-        matching, route, or budgeted package, the optimizer is respectively a matching, shortest-path, or
-        knapsack solver. The learning rule estimates item weights; the optimizer enforces the structure.
+        For the benchmark lab, the feasible set is simply “any ten candidates,” so the optimizer sorts the UCB
+        values and takes the top ten. That is the easy special case. Add hardware capacity, cost, fairness,
+        compatibility, or diversity constraints and the same learning rule calls a matching, knapsack, route,
+        or constrained-set optimizer instead.
       </p>
       <p>
-        This is why Comb-UCB is only faithful when rewards are observed per selected item and slate value is
-        additive. Product ranking often violates additivity through position effects, substitution, price,
-        inventory, and slate interaction. Observing a click for every displayed item does not make independent
-        top-K UCB correct if those item rewards depend on the slate.
+        This also explains why the football result is not a Comb-UCB reward. “Ada beat Bruno” is an observation
+        about the difference between two latent skills; Ada does not own one opponent-independent win reward.
+        A standardized benchmark score does. The former calls for a shared preference model such as
+        Bradley–Terry; the latter permits per-candidate reward estimation.
+      </p>
+      <p className="mb-0">
+        <strong>Production warning:</strong> product clicks are usually not standardized benchmark scores. They
+        depend on user context, position, price, inventory, the rest of the slate, and the exposure policy.
+        Independent Comb-UCB is faithful only when selected-item outcomes are genuinely comparable and the
+        slate value is close to additive; otherwise the reward model and optimizer must represent those
+        interactions explicitly.
       </p>
     </aside>
   )
