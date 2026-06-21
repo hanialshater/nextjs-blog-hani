@@ -13,22 +13,6 @@ interface DemoProps {
   height?: number | string
 }
 
-const englishVariants: Record<string, string> = {
-  '/demos/posts/edp-sort/pitch-match.html': '/demos/posts/edp-sort/pitch-match.en.html',
-  '/demos/posts/edp-sort/topk-scale.html': '/demos/posts/edp-sort/topk-scale.en.html',
-}
-
-function resolveSrc(src: string) {
-  const [pathname, query = ''] = src.split('?')
-  const params = new URLSearchParams(query)
-
-  if (params.get('lang') === 'en' && englishVariants[pathname]) {
-    return englishVariants[pathname]
-  }
-
-  return src
-}
-
 function EDPImplementationNotes() {
   return (
     <aside className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
@@ -135,7 +119,6 @@ function EDPImplementationNotes() {
 export default function Demo({ src, title = 'Interactive demo', height = 480 }: DemoProps) {
   const ref = useRef<HTMLIFrameElement>(null)
   const [measured, setMeasured] = useState<number | null>(null)
-  const resolvedSrc = resolveSrc(src)
   const isEDPFinalDemo = src.split('?')[0] === '/demos/posts/edp-sort/bt-vs-combucb.html'
 
   useEffect(() => {
@@ -159,7 +142,7 @@ export default function Demo({ src, title = 'Interactive demo', height = 480 }: 
       <figure className="my-6">
         <iframe
           ref={ref}
-          src={resolvedSrc}
+          src={src}
           title={title}
           loading="lazy"
           scrolling="no"
