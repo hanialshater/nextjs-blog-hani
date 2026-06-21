@@ -2,155 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>10,000 players: top-K identification from BTL matches</title>
+<title>Top-K identification from BTL matches</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--gray:#8b95a8;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:8px 10px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{text-align:center;color:var(--muted);font:10px var(--mono);margin-top:3px}.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}button,select{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);padding:7px 9px;cursor:pointer}button:hover,select:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{margin-top:3px;color:var(--muted);text-align:center;font:10px var(--mono)}.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}button,select{padding:7px 9px;border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div class="root">
-  <div class="stats"><div class="stat"><div class="label">players</div><div class="value">10,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches each</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
-  <div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by the estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">adaptive Elo estimate versus hidden skill · 600 sampled players</div></div></div>
-  <div class="controls"><button class="primary" id="play">▶ run matches</button><button id="step">+1,000</button><button id="reset">reset</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div>
-  <div class="note" id="note"></div>
+<div class="stats"><div class="stat"><div class="label">players</div><div class="value">10,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches each</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
+<div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">adaptive Elo estimate versus hidden skill</div></div></div>
+<div class="controls"><button class="primary" id="play">▶ run matches</button><button id="step">+1,000</button><button id="reset">reset</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div><div class="note" id="note"></div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
-(() => {
-  const { eloUpdate, mulberry32, normal, ranks, resizeCanvas, sigmoid, topK } = window.EDP
-  const n = 10000
-  const $ = (id) => document.getElementById(id)
-  let k = 100, rng, skills, ratingsRandom, ratingsCutline, gamesRandom, gamesCutline, trueTop, trueCutline, matches, randomHistory, cutlineHistory, running, frame, sample
-
-  function reset() {
-    rng = mulberry32((Date.now() >>> 0) || 7)
-    skills = new Float32Array(n)
-    for (let index = 0; index < n; index += 1) skills[index] = normal(rng)
-    const truth = topK(skills, k)
-    trueTop = new Set(truth)
-    trueCutline = skills[truth[k - 1]]
-    ratingsRandom = new Float32Array(n)
-    ratingsCutline = new Float32Array(n)
-    gamesRandom = new Uint16Array(n)
-    gamesCutline = new Uint16Array(n)
-    matches = 0
-    randomHistory = []
-    cutlineHistory = []
-    running = false
-    cancelAnimationFrame(frame)
-    $('play').textContent = '▶ run matches'
-    sample = Array.from({ length: 600 }, () => Math.floor(rng() * n))
-    evaluate(true)
-    draw()
-  }
-
-  function randomPair(localRng) {
-    const left = Math.floor(localRng() * n)
-    let right = Math.floor(localRng() * n)
-    if (left === right) right = (right + 1) % n
-    return [left, right]
-  }
-
-  function candidatePool(localRng, size = 512) {
-    const pool = new Set()
-    while (pool.size < size) pool.add(Math.floor(localRng() * n))
-    return [...pool]
-  }
-
-  function chooseCutlinePair(localRng) {
-    // Early broad exploration prevents a candidate from being permanently hidden.
-    if (matches < 2500 || localRng() < Math.min(0.30, 1200 / (matches + 1))) return randomPair(localRng)
-    const pool = candidatePool(localRng)
-    const ordered = pool.slice().sort((left, right) => ratingsCutline[right] - ratingsCutline[left])
-    const poolCutIndex = Math.max(0, Math.min(ordered.length - 1, Math.ceil(k / n * ordered.length) - 1))
-    const cut = ratingsCutline[ordered[poolCutIndex]]
-    const uncertainty = (item) => 1 / Math.sqrt(gamesCutline[item] + 1)
-    const localBand = pool.filter((item) => Math.abs(ratingsCutline[item] - cut) <= 2.5 * uncertainty(item))
-    const candidates = localBand.length >= 2 ? localBand : ordered.slice(Math.max(0, poolCutIndex - 8), Math.min(ordered.length, poolCutIndex + 9))
-    let bestPair = [candidates[0], candidates[1] ?? candidates[0]]
-    let bestScore = -Infinity
-    for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
-      for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
-        const left = candidates[leftIndex], right = candidates[rightIndex]
-        const p = sigmoid(ratingsCutline[left] - ratingsCutline[right])
-        const pairUncertainty = uncertainty(left) + uncertainty(right)
-        const score = p * (1 - p) * pairUncertainty
-        if (score > bestScore) { bestScore = score; bestPair = [left, right] }
-      }
-    }
-    return bestPair
-  }
-
-  function play(ratings, games, left, right, localRng) {
-    const leftWon = localRng() < sigmoid(skills[left] - skills[right])
-    // A common step size keeps the update a symmetric Elo/BTL SGD step.
-    eloUpdate(ratings, left, right, leftWon, 0.22)
-    games[left] += 1
-    games[right] += 1
-  }
-
-  function recall(ratings) {
-    const estimated = topK(ratings, k)
-    let hits = 0
-    estimated.forEach((item) => { if (trueTop.has(item)) hits += 1 })
-    return hits / k
-  }
-
-  function evaluate(force) {
-    if (!force && matches % 1000 !== 0) return
-    const randomRecall = recall(ratingsRandom)
-    const cutlineRecall = recall(ratingsCutline)
-    randomHistory.push([matches, randomRecall])
-    cutlineHistory.push([matches, cutlineRecall])
-    $('matches').textContent = matches.toLocaleString()
-    $('recall').textContent = `${Math.round(cutlineRecall * 100)}%`
-    $('target').textContent = `top ${k}`
-    $('note').innerHTML = `After <b>${matches.toLocaleString()}</b> matches per policy: cutline-focused recall@${k} is <b>${Math.round(cutlineRecall * 100)}%</b>; random is ${Math.round(randomRecall * 100)}%. <strong>This is a transparent cutline-focused heuristic, not a claim to implement a provably optimal top-K identification algorithm.</strong> It uses early random exploration, a sampled band around the estimated K-th score, and BTL information ${'p(1-p)'} weighted by uncertainty.`
-  }
-
-  function advance(count) {
-    const randomRng = mulberry32(1009 + matches * 3)
-    const cutlineRng = mulberry32(9001 + matches * 5)
-    for (let step = 0; step < count; step += 1) {
-      const [randomLeft, randomRight] = randomPair(randomRng)
-      play(ratingsRandom, gamesRandom, randomLeft, randomRight, randomRng)
-      const [cutlineLeft, cutlineRight] = chooseCutlinePair(cutlineRng)
-      play(ratingsCutline, gamesCutline, cutlineLeft, cutlineRight, cutlineRng)
-      matches += 1
-    }
-    evaluate(false)
-  }
-
-  function draw() { drawRace(); drawScatter() }
-  function drawRace() {
-    const { context, width, height } = resizeCanvas($('race'), 240)
-    const pad={left:34,right:12,top:14,bottom:22}, pw=width-pad.left-pad.right, ph=height-pad.top-pad.bottom
-    context.strokeStyle='rgba(255,255,255,.08)';context.fillStyle='#9aa8bd';context.font='10px ui-monospace'
-    for(let tick=0;tick<=4;tick+=1){const value=tick/4,y=pad.top+(1-value)*ph;context.beginPath();context.moveTo(pad.left,y);context.lineTo(pad.left+pw,y);context.stroke();context.fillText(`${Math.round(value*100)}%`,3,y+3)}
-    const drawLine=(history,color)=>{if(history.length<2)return;context.strokeStyle=color;context.lineWidth=2;context.beginPath();history.forEach(([at,value],index)=>{const x=pad.left+at/Math.max(matches,1000)*pw,y=pad.top+(1-value)*ph;index?context.lineTo(x,y):context.moveTo(x,y)});context.stroke()}
-    drawLine(randomHistory,'#8b95a8');drawLine(cutlineHistory,'#5fd2a3');context.fillStyle='#5fd2a3';context.fillText('cutline heuristic',width-130,pad.top+10);context.fillStyle='#8b95a8';context.fillText('random',width-130,pad.top+24);context.fillStyle='#9aa8bd';context.fillText(`matches: ${matches.toLocaleString()}`,pad.left+2,height-6)
-  }
-  function drawScatter() {
-    const { context, width, height } = resizeCanvas($('scatter'), 240)
-    const pad={left:30,right:10,top:12,bottom:20}, pw=width-pad.left-pad.right, ph=height-pad.top-pad.bottom
-    let sMin=Infinity,sMax=-Infinity,rMin=Infinity,rMax=-Infinity
-    sample.forEach((item)=>{sMin=Math.min(sMin,skills[item]);sMax=Math.max(sMax,skills[item]);rMin=Math.min(rMin,ratingsCutline[item]);rMax=Math.max(rMax,ratingsCutline[item])})
-    if(rMax-rMin<1e-6)rMax=rMin+1
-    const x=(value)=>pad.left+(value-sMin)/(sMax-sMin||1)*pw, y=(value)=>pad.top+(1-(value-rMin)/(rMax-rMin))*ph
-    context.strokeStyle='rgba(255,255,255,.08)';context.strokeRect(pad.left,pad.top,pw,ph);context.strokeStyle='rgba(245,196,81,.6)';context.setLineDash([4,3]);context.beginPath();context.moveTo(x(trueCutline),pad.top);context.lineTo(x(trueCutline),pad.top+ph);context.stroke();context.setLineDash([])
-    sample.forEach((item)=>{context.fillStyle=trueTop.has(item)?'#f5c451':'rgba(76,141,246,.48)';context.beginPath();context.arc(x(skills[item]),y(ratingsCutline[item]),trueTop.has(item)?2.2:1.3,0,2*Math.PI);context.fill()})
-    context.fillStyle='#f5c451';context.font='10px ui-monospace';context.fillText(`true top-${k} cut`,x(trueCutline)+3,pad.top+10)
-  }
-
-  function loop() { if (!running) return; advance(150); draw(); frame=requestAnimationFrame(loop) }
-  $('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ run matches';if(running)loop()}
-  $('step').onclick=()=>{running=false;$('play').textContent='▶ run matches';advance(1000);draw()}
-  $('reset').onclick=reset
-  $('k').onchange=(event)=>{k=Number(event.target.value);reset()}
-  window.addEventListener('resize',draw)
-  reset()
-})()
+(()=>{const{eloUpdate,mulberry32,normal,resizeCanvas,sigmoid,topK}=window.EDP;const N=10000,$=id=>document.getElementById(id);let K=100,rng,skill,randomRating,adaptiveRating,randomGames,adaptiveGames,trueTop,trueCut,matches,randomHistory,adaptiveHistory,running,frame,sample;
+function reset(){rng=mulberry32((Date.now()>>>0)||7);skill=new Float32Array(N);for(let i=0;i<N;i++)skill[i]=normal(rng);const truth=topK(skill,K);trueTop=new Set(truth);trueCut=skill[truth[K-1]];randomRating=new Float32Array(N);adaptiveRating=new Float32Array(N);randomGames=new Uint16Array(N);adaptiveGames=new Uint16Array(N);matches=0;randomHistory=[];adaptiveHistory=[];running=false;cancelAnimationFrame(frame);$('play').textContent='▶ run matches';sample=Array.from({length:600},()=>Math.floor(rng()*N));evaluate(true);draw()}
+function randomPair(r){const a=Math.floor(r()*N);let b=Math.floor(r()*N);if(a===b)b=(b+1)%N;return[a,b]}
+function adaptivePair(r){if(matches<2500||r()<Math.min(.3,1200/(matches+1)))return randomPair(r);const pool=[...new Set(Array.from({length:128},()=>Math.floor(r()*N)))];const ranked=pool.slice().sort((a,b)=>adaptiveRating[b]-adaptiveRating[a]);const q=Math.max(0,Math.min(ranked.length-1,Math.ceil(K/N*ranked.length)-1));const cut=adaptiveRating[ranked[q]],se=i=>1/Math.sqrt(adaptiveGames[i]+1);const candidates=pool.sort((a,b)=>Math.abs(adaptiveRating[a]-cut)/se(a)-Math.abs(adaptiveRating[b]-cut)/se(b)).slice(0,16);let best=[candidates[0],candidates[1]],bestScore=-Infinity;for(let x=0;x<candidates.length;x++)for(let y=x+1;y<candidates.length;y++){const a=candidates[x],b=candidates[y],p=sigmoid(adaptiveRating[a]-adaptiveRating[b]),score=p*(1-p)*(se(a)+se(b));if(score>bestScore){bestScore=score;best=[a,b]}}return best}
+function play(rating,games,a,b,r){const aWon=r()<sigmoid(skill[a]-skill[b]);eloUpdate(rating,a,b,aWon,.22);games[a]++;games[b]++}
+function recall(rating){return topK(rating,K).filter(i=>trueTop.has(i)).length/K}
+function evaluate(force){if(!force&&matches%1000)return;const rr=recall(randomRating),ar=recall(adaptiveRating);randomHistory.push([matches,rr]);adaptiveHistory.push([matches,ar]);$('target').textContent=`top ${K}`;$('matches').textContent=matches.toLocaleString();$('recall').textContent=`${Math.round(ar*100)}%`;$('note').innerHTML=`After <b>${matches.toLocaleString()}</b> matches per policy: cutline-focused recall@${K} is <b>${Math.round(ar*100)}%</b>; random is ${Math.round(rr*100)}%. <strong>This is a transparent heuristic, not a claimed optimal top-K algorithm.</strong> It uses early random exploration, a sampled 128-item pool, a 16-item cutline band, and BTL information p(1-p) weighted by uncertainty.`}
+function advance(n){const rr=mulberry32(1009+matches*3),ar=mulberry32(9001+matches*5);for(let t=0;t<n;t++){let[a,b]=randomPair(rr);play(randomRating,randomGames,a,b,rr);[a,b]=adaptivePair(ar);play(adaptiveRating,adaptiveGames,a,b,ar);matches++}evaluate(false)}
+function draw(){race();scatter()}function race(){const{context:c,width:w,height:h}=resizeCanvas($('race'),240),p={l:34,r:12,t:14,b:22},pw=w-p.l-p.r,ph=h-p.t-p.b;c.strokeStyle='rgba(255,255,255,.08)';c.fillStyle='#9aa8bd';c.font='10px ui-monospace';for(let i=0;i<=4;i++){const v=i/4,y=p.t+(1-v)*ph;c.beginPath();c.moveTo(p.l,y);c.lineTo(p.l+pw,y);c.stroke();c.fillText(`${Math.round(v*100)}%`,3,y+3)}const line=(hist,color)=>{if(hist.length<2)return;c.strokeStyle=color;c.lineWidth=2;c.beginPath();hist.forEach(([t,v],i)=>{const x=p.l+t/Math.max(matches,1000)*pw,y=p.t+(1-v)*ph;i?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()};line(randomHistory,'#8b95a8');line(adaptiveHistory,'#5fd2a3');c.fillStyle='#5fd2a3';c.fillText('cutline heuristic',w-130,p.t+10);c.fillStyle='#8b95a8';c.fillText('random',w-130,p.t+24);c.fillStyle='#9aa8bd';c.fillText(`matches: ${matches.toLocaleString()}`,p.l+2,h-6)}
+function scatter(){const{context:c,width:w,height:h}=resizeCanvas($('scatter'),240),p={l:30,r:10,t:12,b:20},pw=w-p.l-p.r,ph=h-p.t-p.b;let s0=Infinity,s1=-Infinity,r0=Infinity,r1=-Infinity;sample.forEach(i=>{s0=Math.min(s0,skill[i]);s1=Math.max(s1,skill[i]);r0=Math.min(r0,adaptiveRating[i]);r1=Math.max(r1,adaptiveRating[i])});if(r1-r0<1e-6)r1=r0+1;const x=v=>p.l+(v-s0)/(s1-s0||1)*pw,y=v=>p.t+(1-(v-r0)/(r1-r0))*ph;c.strokeStyle='rgba(255,255,255,.08)';c.strokeRect(p.l,p.t,pw,ph);c.strokeStyle='rgba(245,196,81,.6)';c.setLineDash([4,3]);c.beginPath();c.moveTo(x(trueCut),p.t);c.lineTo(x(trueCut),p.t+ph);c.stroke();c.setLineDash([]);sample.forEach(i=>{c.fillStyle=trueTop.has(i)?'#f5c451':'rgba(76,141,246,.48)';c.beginPath();c.arc(x(skill[i]),y(adaptiveRating[i]),trueTop.has(i)?2.2:1.3,0,2*Math.PI);c.fill()});c.fillStyle='#f5c451';c.font='10px ui-monospace';c.fillText(`true top-${K} cut`,x(trueCut)+3,p.t+10)}
+function loop(){if(!running)return;advance(150);draw();frame=requestAnimationFrame(loop)}$('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ run matches';if(running)loop()};$('step').onclick=()=>{running=false;$('play').textContent='▶ run matches';advance(1000);draw()};$('reset').onclick=reset;$('k').onchange=e=>{K=Number(e.target.value);reset()};addEventListener('resize',draw);reset()})();
 </script>
 <script>(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,250)});addEventListener('resize',h);if(window.ResizeObserver)new ResizeObserver(h).observe(document.body)})();</script>
-</body>
-</html>
+</body></html>
