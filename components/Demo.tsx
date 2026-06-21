@@ -9,7 +9,7 @@ interface DemoProps {
    */
   src: string
   title?: string
-  /** Initial / fallback height. The demo auto-resizes to its content if it reports a height. */
+  /** Initial /fallback height. The demo auto-resizes to its content if it reports a height. */
   height?: number | string
 }
 
@@ -19,11 +19,11 @@ function DuelingBanditPanel() {
       <h3 className="mt-0 text-lg font-semibold">A real dueling-bandit algorithm: RUCB</h3>
       <p>
         A <strong>dueling bandit</strong> does not need latent scores. It maintains an unknown preference
-        matrix \(P\), where \(p_{{ij}}\) is the probability that item <em>i</em> beats item <em>j</em>. The
-        standard RUCB algorithm assumes only a <strong>Condorcet winner</strong>: one item that beats every
-        other item with probability above one half. It does not require the rest of the matrix to be
-        transitive or Bradley–Terry shaped. Zoghi et al. define the interaction exactly this way and give
-        the RUCB rule below.{' '}
+        matrix <code>P</code>, where <code>p[i, j]</code> is the probability that item <em>i</em> beats item
+        <em>j</em>. The standard RUCB algorithm assumes only a <strong>Condorcet winner</strong>: one item
+        that beats every other item with probability above one half. It does not require the rest of the
+        matrix to be transitive or Bradley–Terry shaped. Zoghi et al. define the interaction exactly this
+        way and give the RUCB rule below.{' '}
         <a href="https://arxiv.org/abs/1312.3393" target="_blank" rel="noreferrer">
           Read the RUCB paper
         </a>
@@ -97,12 +97,12 @@ function EDPImplementationNotes() {
       <p>
         A standard bandit chooses <em>one</em> arm. A <strong>combinatorial bandit</strong> chooses a feasible
         structure made of base items: a top-K slate, a matching, a path, a budgeted set, or a set of ads
-        subject to business rules. Formally, choose \(A_t \in \mathcal{{F}} \subseteq \{{0,1\}}^L\), where
-        \(A_{t,e}=1\) means that base item <em>e</em> is selected.
+        subject to business rules. Formally, it chooses a binary selection vector <code>A[t]</code> from a
+        feasible family <code>F</code>; <code>A[t, e] = 1</code> means base item <em>e</em> is selected.
       </p>
       <p>
-        In the independent additive version, every selected item has a stochastic weight \(X_{t,e}\), and
-        the slate reward is \(R_t(A_t)=\sum_e A_{t,e}X_{t,e}\). The feedback model is the essential
+        In the independent additive version, every selected item has a stochastic weight <code>X[t, e]</code>,
+        and the slate reward is the sum of the selected weights. The feedback model is the essential
         distinction:
       </p>
       <div className="my-4 overflow-x-auto">
@@ -149,20 +149,20 @@ function EDPImplementationNotes() {
       </p>
       <h4 className="mb-2 mt-5 text-base font-semibold">Why top-K UCB is only the easy special case</h4>
       <p>
-        Give each base item an optimistic score \(U_e=\hat\mu_e+b_e\), then solve the deterministic
-        optimization problem using those scores:
+        Give each base item an optimistic score <code>U[e] = estimated_mean[e] + bonus[e]</code>, then solve
+        the deterministic optimization problem using those scores:
       </p>
       <pre className="overflow-x-auto rounded-md bg-gray-900 p-4 text-xs leading-5 text-gray-100">
-{`U_e(t) = empirical_mean_e + confidence_bonus_e
-A_t = argmax_{A in F} sum_e A_e * U_e(t)
-observe X_{t,e} for every e selected in A_t
+{`U[e] = empirical_mean[e] + confidence_bonus[e]
+A[t] = argmax over A in F of sum_e A[e] * U[e]
+observe X[t, e] for every selected e in A[t]
 update only those selected items`}
       </pre>
       <p>
-        For top-K, \(\mathcal{{F}}\) is simply “all subsets of size K,” so the oracle is a sort. For a
-        matching it could be a matching solver; for a route it could be a shortest-path solver; for a
-        budgeted set it could be a knapsack solver. The bandit part learns optimistic item weights. The
-        combinatorial optimizer enforces the feasible structure.
+        For top-K, <code>F</code> is simply “all subsets of size K,” so the oracle is a sort. For a matching
+        it could be a matching solver; for a route it could be a shortest-path solver; for a budgeted set it
+        could be a knapsack solver. The bandit part learns optimistic item weights. The combinatorial
+        optimizer enforces the feasible structure.
       </p>
       <p>
         This is why the current Comb-UCB demo is faithful only under its stated assumptions: independent
