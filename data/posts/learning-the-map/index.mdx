@@ -1,0 +1,303 @@
+---
+title: 'Learning the Map: Semi-Bandits on Berlin52'
+date: '2026-06-21'
+draft: true
+section: 'free-writing'
+summary: 'Part II begins when sorting is no longer enough: choose a whole valid route while the costs of its roads are still unknown. A pedagogical semi-bandit TSP on Berlin52.'
+authors: ['default']
+layout: 'PostLayout'
+tags: ['algorithms', 'bandits', 'semi-bandits', 'tsp', 'optimization', 'interactive', 'edp']
+---
+
+# Part II — Learning the Map
+
+Part I was about **sorting unknown numbers**.
+
+A restaurant has an unknown average quality. A football player has an unknown skill. A candidate model has an unknown benchmark score. The decision may be difficult, but at least its shape is simple: choose one thing, compare two things, or take the best few things.
+
+Part II begins when sorting is no longer enough.
+
+Imagine a city with 52 stops. Every morning, a driver must leave the depot, visit every stop exactly once, and return home. There is no option to choose only the roads that look cheap. A route is a whole object. One bad edge can ruin an otherwise elegant plan; one beautiful cheap shortcut is useless if it leaves you with an impossible route.
+
+Now make the map uncertain.
+
+Every road has a real average travel time, but the value is hidden. Traffic, weather, loading time, random delays, and the small cruelty of urban life mean that one trip gives only a noisy observation. The driver learns the roads they actually drive. The roads they skip remain counterfactual.
+
+> **You do not learn the city at once. You learn the roads you drive.**
+
+That is the seed of a semi-bandit.
+
+## The thing we are choosing is a tour
+
+Let the city be a graph:
+
+$$G = (V, E)$$
+
+The vertices are the 52 stops. Each edge $e \in E$ has an unknown mean travel cost:
+
+$$\mu_e = \mathbb{E}[X_e]$$
+
+A legal TSP action is not one edge. It is a Hamiltonian cycle: a closed tour that visits every vertex exactly once.
+
+$$T_t \in \mathcal{T}$$
+
+where $\mathcal{T}$ is the set of valid tours.
+
+On day $t$, the driver chooses a complete tour $T_t$. Then the world returns a noisy cost for every road in that tour:
+
+$$\{X_{t,e} : e \in T_t\}$$
+
+The total route cost is just the sum:
+
+$$C_t = \sum_{e \in T_t} X_{t,e}$$
+
+The ideal tour is:
+
+$$T^* = \arg\min_{T \in \mathcal{T}} \sum_{e \in T} \mu_e$$
+
+The optimization target is familiar: find the cheapest valid tour.
+
+The twist is that the edge costs that determine the answer are not known when we must choose the route.
+
+## One route, 52 observations
+
+A complete Berlin52 tour uses 52 edges.
+
+There are 1,326 possible undirected edges in a complete 52-node graph. One day of driving reveals costs for 52 of them. It reveals nothing directly about the other 1,274.
+
+That is neither full information nor ordinary one-arm feedback.
+
+It is the useful middle ground:
+
+| What happens after one action? | What the learner sees |
+| --- | --- |
+| Full information | Every road cost in the city |
+| Ordinary bandit | One number for the entire route |
+| **Semi-bandit** | The realized cost of every road actually driven |
+
+Suppose the selected tour includes these edges:
+
+```text
+Depot → A       6.4 min
+A → M           3.1 min
+M → Q           8.7 min
+Q → Depot       5.0 min
+...
+```
+
+The learner can update each of those road estimates separately.
+
+It does **not** need to guess whether the expensive day came from Depot → A, M → Q, or some other part of the tour. Credit assignment is local. The city is still mostly unknown, but the information inside the chosen action decomposes into labelled pieces.
+
+That is exactly what “semi-bandit feedback” means here.
+
+## Why this is harder than top-K
+
+In the benchmark example from Part I, the learner could choose ten candidates by sorting ten optimistic scores.
+
+A route is not like that.
+
+Suppose we estimate that these edges are individually cheap:
+
+```text
+A → B
+B → C
+C → A
+D → E
+E → F
+```
+
+Taking the cheapest edges independently can create tiny loops, disconnected islands, or a node with three incoming roads and none leaving.
+
+A legal tour must satisfy global constraints:
+
+- every stop has degree two;
+- all stops belong to one connected cycle;
+- the driver returns to the depot.
+
+So the semi-bandit has two separate jobs:
+
+```text
+Learning:
+estimate uncertain edge costs
+
+Optimization:
+turn those edge costs into one valid tour
+```
+
+This is the real pattern beneath combinatorial semi-bandits:
+
+> **A semi-bandit is an optimizer wrapped around uncertainty.**
+
+The learner provides uncertain component values. The solver respects the structure of the decision.
+
+For top-K, the solver is sorting.
+
+For a route, the solver is a TSP optimizer.
+
+For a customer-to-expert allocation, it is a matching solver.
+
+For a budgeted package, it is a knapsack solver.
+
+The feedback pattern can remain the same while the geometry of the action changes completely.
+
+## Optimism for a minimization problem
+
+For every edge $e$, maintain:
+
+- an estimated average cost $\hat{\mu}_e$;
+- a count $n_e$ of how often we have driven it;
+- an uncertainty radius that shrinks as $n_e$ grows.
+
+For a maximization problem, UCB gives uncertain items an optimistic *high* value.
+
+For travel cost, we are minimizing. Optimism therefore makes uncertain roads temporarily look cheaper than they are:
+
+$$\tilde{\mu}_e = \hat{\mu}_e - \beta \sqrt{\frac{\log t}{n_e}}$$
+
+where $\tilde{\mu}_e$ is an optimistic travel cost.
+
+Then choose the route that minimizes those optimistic costs:
+
+$$T_t = \arg\min_{T \in \mathcal{T}} \sum_{e \in T} \tilde{\mu}_e$$
+
+The strange-looking minus sign is the entire exploration mechanism.
+
+A road that looks reliably slow will rarely enter a good route.
+
+A road that looks cheap will be used because it may genuinely improve the route.
+
+A road we barely know gets a temporary discount because it might be the shortcut we have not discovered yet.
+
+Then the route is driven, its 52 selected edges reveal their actual noisy costs, and the estimates update.
+
+Repeat.
+
+## One plausible city instead of one optimistic city
+
+There is another way to tell the same story.
+
+Instead of subtracting a confidence bonus, sample one plausible travel-time map from the current beliefs:
+
+```text
+Edge A → B might be 6.1 minutes today.
+Edge M → Q might be 7.4 minutes.
+Edge R → S might be 3.2 minutes.
+```
+
+Then solve the TSP in that sampled world.
+
+This is Thompson sampling on edges:
+
+1. sample a plausible cost for every edge;
+2. solve the best tour under those sampled costs;
+3. drive that tour;
+4. update the edges that were actually traversed.
+
+The benefit is conceptual. The policy is not saying, “Let us explore randomly.” It is saying:
+
+> “Here is one city that could plausibly be real. What route would be best there?”
+
+Over many rounds, uncertainty makes unfamiliar roads occasionally appear in the sampled best route. As evidence accumulates, implausible shortcuts stop winning those imagined worlds.
+
+## The Berlin52 demo
+
+The demo should be map-first.
+
+The coordinates are rendered as a stylized city map. The goal is not to imitate live Berlin street geometry; it is to make the structure of a tour and the location of uncertainty visible.
+
+### What the reader sees
+
+On the map:
+
+- 52 stops;
+- the current tour as a bright loop;
+- the vehicle moving through the selected edges;
+- every traversed edge revealing a noisy realized travel time;
+- uncertain edges shown faintly or with a wider glow;
+- well-measured edges shown more confidently.
+
+Beside the map:
+
+- current route cost;
+- best estimated route cost;
+- number of observed edges;
+- fraction of the map still weakly measured;
+- regret or gap to the hidden oracle route.
+
+At the bottom:
+
+- route cost over days;
+- best route found over days;
+- perhaps an edge-uncertainty histogram.
+
+### Three policies to compare
+
+1. **Random tours**
+   - valid tours sampled without using the learned map;
+   - a baseline for wasting route budget.
+
+2. **Greedy mean route**
+   - solve on the current estimated mean edge costs;
+   - demonstrates premature exploitation and early false shortcuts.
+
+3. **Optimistic or Thompson semi-bandit route**
+   - solve on uncertain optimistic costs, or sampled plausible costs;
+   - learns roads that could actually improve the final tour.
+
+The visual lesson should be immediate:
+
+> Random explores the city without purpose. Greedy commits to its first sketch of the city. The semi-bandit revisits uncertainty where it could still change the route.
+
+## What this model deliberately ignores
+
+The clean model assumes that each edge has its own stable noisy mean cost and that the route cost is the sum of the selected edges.
+
+Real routing breaks both assumptions.
+
+Traffic is correlated. If one road is slow because of rain or an accident, nearby roads may also be slow. Travel time depends on time of day, direction, vehicle load, and the route itself. Edges may not even exist in a complete graph. A practical system needs context, time-dependent state, road-network constraints, and often forecasts rather than stationary means.
+
+But the simplification earns its place.
+
+It lets us see the architecture without hiding it behind a traffic stack:
+
+```text
+uncertain component costs
+        ↓
+optimistic or sampled edge map
+        ↓
+TSP solver
+        ↓
+selected route
+        ↓
+edge-level observations
+        ↓
+updated map
+```
+
+That architecture survives the realism.
+
+The model changes. The solver changes. The feedback becomes contextual or correlated.
+
+But the central problem remains:
+
+> **How do you make a valid plan when the values of the pieces are learned only by using them?**
+
+## The promise of Part II
+
+Part I asked where the next observation should go when the answer was a restaurant, a match, or a top-K list.
+
+Part II asks the harder question:
+
+> What happens when the next decision is a route, a matching, a budgeted package, or an entire plan?
+
+The answer will not be one universal bandit algorithm.
+
+It will be a recurring construction:
+
+1. choose a structured action;
+2. observe some of its components;
+3. update uncertain local values;
+4. call an optimizer again.
+
+The city is our first map.
