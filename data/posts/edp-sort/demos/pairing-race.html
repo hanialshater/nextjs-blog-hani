@@ -12,7 +12,7 @@
   <div class="cards" id="cards"></div>
   <canvas id="chart" height="240"></canvas>
   <div class="controls"><button class="primary" id="play">▶ race</button><button id="reset">new league</button><label>BTL noise β <input id="beta" type="range" min="0.5" max="2.5" step="0.1" value="1.1"></label><span id="betaValue">1.1</span></div>
-  <div class="note" id="note"><b>Same hidden league; different schedules.</b> Every policy observes one BTL winner per match and updates the same online-Elo estimator. “Information heuristic” is deliberately descriptive, not the name of a minimax-optimal active-ranking method.</div>
+  <div class="note" id="note"><b>Same hidden league; different schedules.</b> Every policy observes one BTL winner per match and updates the same online-Elo estimator. “Stable τ=1” means the estimated table stayed exactly correct for 20 consecutive matches. No scheduler is universally best: compare the trajectories and stability, not one lucky first hit.</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
@@ -24,7 +24,7 @@
     { key: 'ladder', label: 'ladder', color: '#4c8df6' },
     { key: 'information', label: 'information heuristic', color: '#5fd2a3' },
   ]
-  const n = 8, maxMatches = 420
+  const n = 8, maxMatches = 420, stableWindow = 20
   const $ = (id) => document.getElementById(id)
   let beta = 1.1, trueSkills, trueRanks, runs, running, animationId
 
@@ -42,7 +42,9 @@
       matches: 0,
       history: [],
       tau: 0,
-      convergence: null,
+      bestTau: 0,
+      perfectStreak: 0,
+      stableAt: null,
     }))
   }
 
@@ -73,15 +75,17 @@
     run.games[right][left] += 1
     run.matches += 1
     run.tau = kendallTau(ranks(run.ratings), trueRanks)
+    run.bestTau = Math.max(run.bestTau, run.tau)
+    run.perfectStreak = run.tau >= 0.999 ? run.perfectStreak + 1 : 0
+    if (run.stableAt === null && run.perfectStreak >= stableWindow) run.stableAt = run.matches
     run.history.push(run.tau)
-    if (run.convergence === null && run.tau >= 0.999) run.convergence = run.matches
   }
 
   function stepAll(count = 1) { for (let step = 0; step < count; step += 1) runs.forEach(stepRun) }
 
   function draw() {
     const cards = $('cards')
-    cards.innerHTML = runs.map((run) => `<div class="card" style="border-left-color:${run.color}"><div class="name" style="color:${run.color}">${run.label}</div><div class="line"><span>current τ</span><b>${run.tau.toFixed(2)}</b></div><div class="line"><span>τ = 1</span><b>${run.convergence ?? (run.matches >= maxMatches ? '>'+maxMatches : '—')}</b></div></div>`).join('')
+    cards.innerHTML = runs.map((run) => `<div class="card" style="border-left-color:${run.color}"><div class="name" style="color:${run.color}">${run.label}</div><div class="line"><span>current τ</span><b>${run.tau.toFixed(2)}</b></div><div class="line"><span>stable τ=1</span><b>${run.stableAt ?? (run.matches >= maxMatches ? '—' : '…')}</b></div></div>`).join('')
     const { context, width, height } = resizeCanvas($('chart'), 240)
     const pad = { left: 36, right: 14, top: 14, bottom: 24 }, plotWidth = width-pad.left-pad.right, plotHeight=height-pad.top-pad.bottom
     context.strokeStyle='rgba(255,255,255,.08)';context.fillStyle='#9aa8bd';context.font='10px ui-monospace'
