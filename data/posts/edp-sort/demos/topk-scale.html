@@ -4,30 +4,295 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Top-K identification from BTL matches</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{margin-top:3px;color:var(--muted);text-align:center;font:10px var(--mono)}.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}button,select{padding:7px 9px;border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{margin-top:3px;color:var(--muted);text-align:center;font:10px var(--mono)}button,select{padding:7px 9px;border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div class="root">
-<div class="stats"><div class="stat"><div class="label">players</div><div class="value">10,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches / policy</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
-<div class="controls"><button class="primary" id="play">▶ run matches</button><button id="step">+1,000</button><button id="reset">reset</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div>
-<div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">adaptive Elo estimate versus hidden skill</div></div></div>
-<div class="note" id="note"></div>
+  <div class="stats"><div class="stat"><div class="label">players</div><div class="value">5,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches / policy</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
+  <div class="controls"><button class="primary" id="play">▶ play</button><button id="step">+1,000</button><button id="jump">+10,000</button><button id="reset">new world</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div>
+  <div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">persistent-frontier Elo estimate versus hidden skill</div></div></div>
+  <div class="note" id="note"></div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
-(()=>{const{eloUpdate,mulberry32,normal,resizeCanvas,sigmoid,topK}=window.EDP;const N=10000,$=id=>document.getElementById(id);let K=100,rng,skill,randomRating,adaptiveRating,randomGames,adaptiveGames,trueTop,trueCut,matches,randomHistory,adaptiveHistory,running,frame,sample;
-function refreshMatchCount(){$('matches').textContent=matches.toLocaleString()}
-function reset(){rng=mulberry32((Date.now()>>>0)||7);skill=new Float32Array(N);for(let i=0;i<N;i++)skill[i]=normal(rng);const truth=topK(skill,K);trueTop=new Set(truth);trueCut=skill[truth[K-1]];randomRating=new Float32Array(N);adaptiveRating=new Float32Array(N);randomGames=new Uint16Array(N);adaptiveGames=new Uint16Array(N);matches=0;randomHistory=[];adaptiveHistory=[];running=false;cancelAnimationFrame(frame);$('play').textContent='▶ run matches';sample=Array.from({length:600},()=>Math.floor(rng()*N));refreshMatchCount();evaluate(true);draw()}
-function randomPair(r){const a=Math.floor(r()*N);let b=Math.floor(r()*N);if(a===b)b=(b+1)%N;return[a,b]}
-function adaptivePair(r){if(matches<2500||r()<Math.min(.3,1200/(matches+1)))return randomPair(r);const pool=[...new Set(Array.from({length:128},()=>Math.floor(r()*N)))];const ranked=pool.slice().sort((a,b)=>adaptiveRating[b]-adaptiveRating[a]);const q=Math.max(0,Math.min(ranked.length-1,Math.ceil(K/N*ranked.length)-1));const cut=adaptiveRating[ranked[q]],se=i=>1/Math.sqrt(adaptiveGames[i]+1);const candidates=pool.sort((a,b)=>Math.abs(adaptiveRating[a]-cut)/se(a)-Math.abs(adaptiveRating[b]-cut)/se(b)).slice(0,16);let best=[candidates[0],candidates[1]],bestScore=-Infinity;for(let x=0;x<candidates.length;x++)for(let y=x+1;y<candidates.length;y++){const a=candidates[x],b=candidates[y],p=sigmoid(adaptiveRating[a]-adaptiveRating[b]),score=p*(1-p)*(se(a)+se(b));if(score>bestScore){bestScore=score;best=[a,b]}}return best}
-function play(rating,games,a,b,r){const aWon=r()<sigmoid(skill[a]-skill[b]);eloUpdate(rating,a,b,aWon,.22);games[a]++;games[b]++}
-function recall(rating){return topK(rating,K).filter(i=>trueTop.has(i)).length/K}
-function evaluate(force){if(!force&&matches%1000)return;const rr=recall(randomRating),ar=recall(adaptiveRating);randomHistory.push([matches,rr]);adaptiveHistory.push([matches,ar]);$('target').textContent=`top ${K}`;$('recall').textContent=`${Math.round(ar*100)}%`;$('note').innerHTML=`After <b>${matches.toLocaleString()}</b> matches per policy: cutline-focused recall@${K} is <b>${Math.round(ar*100)}%</b>; random is ${Math.round(rr*100)}%. <strong>This is a transparent heuristic, not a claimed optimal top-K algorithm.</strong> It uses early random exploration, a sampled 128-item pool, a 16-item cutline band, and BTL information p(1-p) weighted by uncertainty.`}
-function advance(n){const rr=mulberry32(1009+matches*3),ar=mulberry32(9001+matches*5);for(let t=0;t<n;t++){let[a,b]=randomPair(rr);play(randomRating,randomGames,a,b,rr);[a,b]=adaptivePair(ar);play(adaptiveRating,adaptiveGames,a,b,ar);matches++}refreshMatchCount();evaluate(false)}
-function draw(){race();scatter()}function race(){const{context:c,width:w,height:h}=resizeCanvas($('race'),240),p={l:34,r:12,t:14,b:22},pw=w-p.l-p.r,ph=h-p.t-p.b;c.strokeStyle='rgba(255,255,255,.08)';c.fillStyle='#9aa8bd';c.font='10px ui-monospace';for(let i=0;i<=4;i++){const v=i/4,y=p.t+(1-v)*ph;c.beginPath();c.moveTo(p.l,y);c.lineTo(p.l+pw,y);c.stroke();c.fillText(`${Math.round(v*100)}%`,3,y+3)}const line=(hist,color)=>{if(hist.length<2)return;c.strokeStyle=color;c.lineWidth=2;c.beginPath();hist.forEach(([t,v],i)=>{const x=p.l+t/Math.max(matches,1000)*pw,y=p.t+(1-v)*ph;i?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()};line(randomHistory,'#8b95a8');line(adaptiveHistory,'#5fd2a3');c.fillStyle='#5fd2a3';c.fillText('cutline heuristic',w-130,p.t+10);c.fillStyle='#8b95a8';c.fillText('random',w-130,p.t+24);c.fillStyle='#9aa8bd';c.fillText(`matches / policy: ${matches.toLocaleString()}`,p.l+2,h-6)}
-function scatter(){const{context:c,width:w,height:h}=resizeCanvas($('scatter'),240),p={l:30,r:10,t:12,b:20},pw=w-p.l-p.r,ph=h-p.t-p.b;let s0=Infinity,s1=-Infinity,r0=Infinity,r1=-Infinity;sample.forEach(i=>{s0=Math.min(s0,skill[i]);s1=Math.max(s1,skill[i]);r0=Math.min(r0,adaptiveRating[i]);r1=Math.max(r1,adaptiveRating[i])});if(r1-r0<1e-6)r1=r0+1;const x=v=>p.l+(v-s0)/(s1-s0||1)*pw,y=v=>p.t+(1-(v-r0)/(r1-r0))*ph;c.strokeStyle='rgba(255,255,255,.08)';c.strokeRect(p.l,p.t,pw,ph);c.strokeStyle='rgba(245,196,81,.6)';c.setLineDash([4,3]);c.beginPath();c.moveTo(x(trueCut),p.t);c.lineTo(x(trueCut),p.t+ph);c.stroke();c.setLineDash([]);sample.forEach(i=>{c.fillStyle=trueTop.has(i)?'#f5c451':'rgba(76,141,246,.48)';c.beginPath();c.arc(x(skill[i]),y(adaptiveRating[i]),trueTop.has(i)?2.2:1.3,0,2*Math.PI);c.fill()});c.fillStyle='#f5c451';c.font='10px ui-monospace';c.fillText(`true top-${K} cut`,x(trueCut)+3,p.t+10)}
-function loop(){if(!running)return;advance(150);draw();frame=requestAnimationFrame(loop)}$('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ run matches';if(running)loop()};$('step').onclick=()=>{running=false;$('play').textContent='▶ run matches';advance(1000);draw()};$('reset').onclick=reset;$('k').onchange=e=>{K=Number(e.target.value);reset()};addEventListener('resize',draw);reset()})();
+(() => {
+  const { eloUpdate, mulberry32, normal, resizeCanvas, sigmoid, topK } = window.EDP
+  const N = 5000
+  const $ = (id) => document.getElementById(id)
+  let K = 100
+  let worldRng, randomRng, adaptiveRng, skill, randomRating, adaptiveRating, randomGames, adaptiveGames
+  let trueTop, trueCut, matches, randomHistory, adaptiveHistory, running, frame, sample
+  let coverageOrder, coverageCursor, frontier, challengers, cutlineCandidates, lastRefresh
+
+  function makeOrder(values) {
+    return Array.from({ length: N }, (_, item) => item).sort((left, right) => values[right] - values[left])
+  }
+
+  function shuffleIndices(rng) {
+    const order = new Int32Array(N)
+    for (let item = 0; item < N; item += 1) order[item] = item
+    for (let item = N - 1; item > 0; item -= 1) {
+      const other = Math.floor(rng() * (item + 1))
+      const hold = order[item]
+      order[item] = order[other]
+      order[other] = hold
+    }
+    return order
+  }
+
+  function sampleUnique(items, count, rng) {
+    if (items.length <= count) return items.slice()
+    const picked = []
+    const used = new Set()
+    while (picked.length < count) {
+      const item = items[Math.floor(rng() * items.length)]
+      if (!used.has(item)) {
+        used.add(item)
+        picked.push(item)
+      }
+    }
+    return picked
+  }
+
+  function refreshFrontier() {
+    const order = makeOrder(adaptiveRating)
+    const bandWidth = Math.max(70, Math.min(180, Math.ceil(K * 1.25)))
+    const lower = Math.max(0, K - bandWidth)
+    const upper = Math.min(N, K + bandWidth)
+    const rankBand = order.slice(lower, upper)
+    const optimistic = Array.from({ length: N }, (_, item) => item).sort((left, right) => {
+      const leftScore = adaptiveRating[left] + 1.2 / Math.sqrt(adaptiveGames[left] + 1)
+      const rightScore = adaptiveRating[right] + 1.2 / Math.sqrt(adaptiveGames[right] + 1)
+      return rightScore - leftScore
+    })
+    challengers = optimistic.slice(0, Math.min(220, N))
+    frontier = [...new Set([...rankBand, ...challengers.slice(0, 160), ...order.slice(0, Math.min(N, K + 30))])]
+    cutlineCandidates = order.slice(Math.max(0, K - 15), Math.min(N, K + 15))
+    lastRefresh = matches
+  }
+
+  function refreshMatchCount() {
+    $('matches').textContent = matches.toLocaleString()
+  }
+
+  function reset() {
+    worldRng = mulberry32((Date.now() >>> 0) || 7)
+    randomRng = mulberry32(1009)
+    adaptiveRng = mulberry32(9001)
+    skill = new Float32Array(N)
+    for (let item = 0; item < N; item += 1) skill[item] = normal(worldRng)
+    const truth = topK(skill, K)
+    trueTop = new Set(truth)
+    trueCut = skill[truth[K - 1]]
+    randomRating = new Float32Array(N)
+    adaptiveRating = new Float32Array(N)
+    randomGames = new Uint16Array(N)
+    adaptiveGames = new Uint16Array(N)
+    coverageOrder = shuffleIndices(worldRng)
+    coverageCursor = 0
+    frontier = []
+    challengers = []
+    cutlineCandidates = []
+    lastRefresh = -1
+    matches = 0
+    randomHistory = []
+    adaptiveHistory = []
+    running = false
+    cancelAnimationFrame(frame)
+    $('play').textContent = '▶ play'
+    sample = Array.from({ length: 600 }, () => Math.floor(worldRng() * N))
+    refreshMatchCount()
+    evaluate(true)
+    draw()
+  }
+
+  function randomPair(rng) {
+    const left = Math.floor(rng() * N)
+    let right = Math.floor(rng() * (N - 1))
+    if (right >= left) right += 1
+    return [left, right]
+  }
+
+  function chooseAdaptivePair() {
+    const coverageBudget = 3 * N
+    if (matches < coverageBudget) {
+      const left = coverageOrder[coverageCursor % N]
+      const shift = 337 * (1 + Math.floor(coverageCursor / N))
+      let right = coverageOrder[(coverageCursor + shift) % N]
+      coverageCursor += 1
+      if (left === right) right = (right + 1) % N
+      return [left, right]
+    }
+
+    if (lastRefresh < 0 || matches - lastRefresh >= 250) refreshFrontier()
+
+    if (adaptiveRng() < 0.18 && cutlineCandidates.length && challengers.length) {
+      const cutline = cutlineCandidates.reduce((best, item) => adaptiveGames[item] < adaptiveGames[best] ? item : best, cutlineCandidates[0])
+      const orderedChallengers = challengers.filter((item) => item !== cutline)
+      const challenger = orderedChallengers.reduce((best, item) => {
+        const itemScore = adaptiveRating[item] + 1.2 / Math.sqrt(adaptiveGames[item] + 1)
+        const bestScore = adaptiveRating[best] + 1.2 / Math.sqrt(adaptiveGames[best] + 1)
+        return itemScore > bestScore ? item : best
+      }, orderedChallengers[0])
+      return [cutline, challenger]
+    }
+
+    const candidates = sampleUnique(frontier, Math.min(48, frontier.length), adaptiveRng)
+    let bestLeft = candidates[0]
+    let bestRight = candidates[1]
+    let bestScore = -Infinity
+    for (let leftIndex = 0; leftIndex < candidates.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < candidates.length; rightIndex += 1) {
+        const left = candidates[leftIndex]
+        const right = candidates[rightIndex]
+        const probability = sigmoid(adaptiveRating[left] - adaptiveRating[right])
+        const uncertainty = 1 / Math.sqrt(adaptiveGames[left] + 1) + 1 / Math.sqrt(adaptiveGames[right] + 1)
+        const score = probability * (1 - probability) * uncertainty
+        if (score > bestScore) {
+          bestScore = score
+          bestLeft = left
+          bestRight = right
+        }
+      }
+    }
+    return [bestLeft, bestRight]
+  }
+
+  function playMatch(rating, games, left, right, rng) {
+    const leftWon = rng() < sigmoid(skill[left] - skill[right])
+    eloUpdate(rating, left, right, leftWon, 0.24)
+    games[left] += 1
+    games[right] += 1
+  }
+
+  function recall(rating) {
+    return topK(rating, K).filter((item) => trueTop.has(item)).length / K
+  }
+
+  function evaluate(force) {
+    if (!force && matches % 250 !== 0) return
+    const randomRecall = recall(randomRating)
+    const adaptiveRecall = recall(adaptiveRating)
+    randomHistory.push([matches, randomRecall])
+    adaptiveHistory.push([matches, adaptiveRecall])
+    $('target').textContent = `top ${K}`
+    $('recall').textContent = `${Math.round(adaptiveRecall * 100)}%`
+    $('note').innerHTML = `After <b>${matches.toLocaleString()}</b> matches per policy: the persistent cutline frontier reaches <b>${Math.round(adaptiveRecall * 100)}%</b> recall@${K}; random reaches ${Math.round(randomRecall * 100)}%. <strong>This remains a transparent heuristic, not a theorem-optimal top-K algorithm.</strong> It first gives every player three coverage matches, then keeps a persistent rank band around the cutline plus optimistic outside challengers.`
+  }
+
+  function advance(count) {
+    for (let step = 0; step < count; step += 1) {
+      const [randomLeft, randomRight] = randomPair(randomRng)
+      playMatch(randomRating, randomGames, randomLeft, randomRight, randomRng)
+      const [adaptiveLeft, adaptiveRight] = chooseAdaptivePair()
+      playMatch(adaptiveRating, adaptiveGames, adaptiveLeft, adaptiveRight, adaptiveRng)
+      matches += 1
+    }
+    refreshMatchCount()
+    evaluate(false)
+  }
+
+  function drawRace() {
+    const { context, width, height } = resizeCanvas($('race'), 240)
+    const pad = { left: 34, right: 12, top: 14, bottom: 22 }
+    const plotWidth = width - pad.left - pad.right
+    const plotHeight = height - pad.top - pad.bottom
+    context.strokeStyle = 'rgba(255,255,255,.08)'
+    context.fillStyle = '#9aa8bd'
+    context.font = '10px ui-monospace'
+    for (let tick = 0; tick <= 4; tick += 1) {
+      const value = tick / 4
+      const y = pad.top + (1 - value) * plotHeight
+      context.beginPath()
+      context.moveTo(pad.left, y)
+      context.lineTo(pad.left + plotWidth, y)
+      context.stroke()
+      context.fillText(`${Math.round(value * 100)}%`, 3, y + 3)
+    }
+    const drawLine = (history, color) => {
+      if (history.length < 2) return
+      context.strokeStyle = color
+      context.lineWidth = 2
+      context.beginPath()
+      history.forEach(([at, value], index) => {
+        const x = pad.left + at / Math.max(matches, 250) * plotWidth
+        const y = pad.top + (1 - value) * plotHeight
+        if (index) context.lineTo(x, y)
+        else context.moveTo(x, y)
+      })
+      context.stroke()
+    }
+    drawLine(randomHistory, '#8b95a8')
+    drawLine(adaptiveHistory, '#5fd2a3')
+    context.fillStyle = '#5fd2a3'
+    context.fillText('persistent cutline frontier', width - 166, pad.top + 10)
+    context.fillStyle = '#8b95a8'
+    context.fillText('random', width - 166, pad.top + 24)
+    context.fillStyle = '#9aa8bd'
+    context.fillText(`matches / policy: ${matches.toLocaleString()}`, pad.left + 2, height - 6)
+  }
+
+  function drawScatter() {
+    const { context, width, height } = resizeCanvas($('scatter'), 240)
+    const pad = { left: 30, right: 10, top: 12, bottom: 20 }
+    const plotWidth = width - pad.left - pad.right
+    const plotHeight = height - pad.top - pad.bottom
+    let skillMin = Infinity, skillMax = -Infinity, ratingMin = Infinity, ratingMax = -Infinity
+    sample.forEach((item) => {
+      skillMin = Math.min(skillMin, skill[item])
+      skillMax = Math.max(skillMax, skill[item])
+      ratingMin = Math.min(ratingMin, adaptiveRating[item])
+      ratingMax = Math.max(ratingMax, adaptiveRating[item])
+    })
+    if (ratingMax - ratingMin < 1e-6) ratingMax = ratingMin + 1
+    const x = (value) => pad.left + (value - skillMin) / (skillMax - skillMin || 1) * plotWidth
+    const y = (value) => pad.top + (1 - (value - ratingMin) / (ratingMax - ratingMin)) * plotHeight
+    context.strokeStyle = 'rgba(255,255,255,.08)'
+    context.strokeRect(pad.left, pad.top, plotWidth, plotHeight)
+    context.strokeStyle = 'rgba(245,196,81,.6)'
+    context.setLineDash([4, 3])
+    context.beginPath()
+    context.moveTo(x(trueCut), pad.top)
+    context.lineTo(x(trueCut), pad.top + plotHeight)
+    context.stroke()
+    context.setLineDash([])
+    sample.forEach((item) => {
+      context.fillStyle = trueTop.has(item) ? '#f5c451' : 'rgba(76,141,246,.48)'
+      context.beginPath()
+      context.arc(x(skill[item]), y(adaptiveRating[item]), trueTop.has(item) ? 2.2 : 1.3, 0, 2 * Math.PI)
+      context.fill()
+    })
+    context.fillStyle = '#f5c451'
+    context.font = '10px ui-monospace'
+    context.fillText(`true top-${K} cut`, x(trueCut) + 3, pad.top + 10)
+  }
+
+  function draw() {
+    drawRace()
+    drawScatter()
+  }
+
+  function loop() {
+    if (!running) return
+    advance(250)
+    draw()
+    frame = requestAnimationFrame(loop)
+  }
+
+  $('play').onclick = () => {
+    running = !running
+    $('play').textContent = running ? '⏸ pause' : '▶ play'
+    if (running) loop()
+  }
+  $('step').onclick = () => { running = false; $('play').textContent = '▶ play'; advance(1000); draw() }
+  $('jump').onclick = () => { running = false; $('play').textContent = '▶ play'; advance(10000); draw() }
+  $('reset').onclick = reset
+  $('k').onchange = (event) => { K = Number(event.target.value); reset() }
+  addEventListener('resize', draw)
+  reset()
+})()
 </script>
 <script>(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,250)});addEventListener('resize',h);if(window.ResizeObserver)new ResizeObserver(h).observe(document.body)})();</script>
-</body></html>
+</body>
+</html>
