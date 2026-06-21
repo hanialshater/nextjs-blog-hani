@@ -2,125 +2,561 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Top-K identification with overlapping BT leagues</title>
+<title>Top-K identification with overlapping bandit leagues</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{margin-top:3px;color:var(--muted);text-align:center;font:10px var(--mono)}button,select{padding:7px 9px;border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--coral:#ef7d74;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:12px}.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.caption{margin-top:3px;color:var(--muted);text-align:center;font:10px var(--mono)}button,select{padding:7px 9px;border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.selection{margin-top:12px;padding:10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel)}.selection-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font:11px var(--mono);color:var(--muted)}.selection-head b{color:var(--text)}.selected-grid{display:grid;gap:2px;margin-top:8px;max-height:180px;overflow:auto;padding:2px}.selected-token{aspect-ratio:1;border-radius:2px;background:var(--coral);border:1px solid rgba(255,255,255,.13)}.selected-token.correct{background:var(--gold)}.selected-token.uncertain{box-shadow:0 0 0 1px var(--green) inset}.selection-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:7px;color:var(--muted);font:10px var(--mono)}.key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.note strong{color:var(--gold)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div class="root">
-  <div class="stats"><div class="stat"><div class="label">players</div><div class="value">5,000</div></div><div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div><div class="stat"><div class="label">matches / policy</div><div class="value" id="matches">0</div></div><div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div></div>
-  <div class="controls"><button class="primary" id="play">▶ play</button><button id="step">+1,000</button><button id="jump">+10,000</button><button id="reset">new world</button><label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label></div>
-  <div class="grid"><div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div><div><canvas id="scatter" height="240"></canvas><div class="caption">bootstrap-Elo mean estimate; green = ensemble disagreement</div></div></div>
+  <div class="stats">
+    <div class="stat"><div class="label">players</div><div class="value">5,000</div></div>
+    <div class="stat"><div class="label">target</div><div class="value" id="target">top 100</div></div>
+    <div class="stat"><div class="label">matches / policy</div><div class="value" id="matches">0</div></div>
+    <div class="stat"><div class="label">cutline recall</div><div class="value" id="recall">0%</div></div>
+  </div>
+  <div class="controls">
+    <button class="primary" id="play">▶ play</button><button id="step">+1,000</button><button id="jump">+10,000</button><button id="reset">new world</button>
+    <label>find <select id="k"><option value="10">top 10</option><option value="100" selected>top 100</option><option value="500">top 500</option></select></label>
+  </div>
+  <div class="grid">
+    <div><canvas id="race" height="240"></canvas><div class="caption">true top-K recovered by estimated top-K</div></div>
+    <div><canvas id="scatter" height="240"></canvas><div class="caption">every selected player is shown below; scatter retains selected and true top-K points</div></div>
+  </div>
+  <div class="selection">
+    <div class="selection-head"><b>estimated top-K roster</b><span id="selection_meta">0 selected</span></div>
+    <div id="selected_grid" class="selected-grid"></div>
+    <div class="selection-legend"><span><i class="key" style="background:var(--gold)"></i>true positive</span><span><i class="key" style="background:var(--coral)"></i>false positive</span><span><i class="key" style="background:var(--green)"></i>green border: ensemble disagrees</span></div>
+  </div>
   <div class="note" id="note"></div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
 (() => {
   const { eloUpdate, mulberry32, normal, resizeCanvas, sigmoid, topK } = window.EDP
-  const N = 5000, ENSEMBLE = 10
+  const N = 5000
+  const ENSEMBLE = 12
+  const WARMUP_MATCHES = 2 * N
+  const REFRESH_EVERY = 250
   const $ = (id) => document.getElementById(id)
-  let K = 100, worldRng, randomRng, adaptiveRng, modelRngs
-  let skill, randomRating, randomGames, models, adaptiveGames, meanRating, membership, rank, order
-  let trueTop, trueCut, matches, randomHistory, leagueHistory, running, frame, sample
-  let coverageOrder, coveragePair, leagues, lastRefresh, pairCounts
+  let K = 100
+  let worldRng, randomRng, adaptiveRng, modelRngs
+  let skill, trueTop, trueRanks, trueCut, randomRating, randomGames
+  let models, adaptiveGames, meanRating, ratingStd, membership, rank, order, estimatedTop, estimatedSet
+  let matches, randomHistory, leagueHistory, running, frame
+  let coverageOrder, coveragePair, leagues, leagueStats, leagueBatchPicks, previousLeagueEntropy, lastRefresh, pairCounts, scatterItems, lastLeagueName
 
-  function push(heap, node) { heap.push(node); let i=heap.length-1; while(i>0){const p=(i-1)>>1;if(heap[p].score<=node.score)break;heap[i]=heap[p];i=p}heap[i]=node }
-  function replaceMin(heap,node){let i=0;while(true){const l=i*2+1,r=l+1;if(l>=heap.length)break;const c=r<heap.length&&heap[r].score<heap[l].score?r:l;if(heap[c].score>=node.score)break;heap[i]=heap[c];i=c}heap[i]=node}
-  function topKFast(scores,k){const heap=[];for(let i=0;i<scores.length;i++){const node={item:i,score:scores[i]};if(heap.length<k)push(heap,node);else if(node.score>heap[0].score)replaceMin(heap,node)}return heap.map(x=>x.item).sort((a,b)=>scores[b]-scores[a])}
-  function shuffle(rng){const out=new Int32Array(N);for(let i=0;i<N;i++)out[i]=i;for(let i=N-1;i>0;i--){const j=Math.floor(rng()*(i+1));const x=out[i];out[i]=out[j];out[j]=x}return out}
-  function expWeight(rng){return Math.min(2.5,-Math.log(Math.max(rng(),1e-10)))}
-  function key(a,b){return Math.min(a,b)*N+Math.max(a,b)}
-  function pairGames(a,b){return pairCounts.get(key(a,b))||0}
-  function uncertainty(i){return membership[i]*(1-membership[i])+.08/Math.sqrt(adaptiveGames[i]+1)}
-
-  function refreshPosterior(){
-    meanRating.fill(0); membership.fill(0)
-    for(let m=0;m<ENSEMBLE;m++){
-      const scores=models[m]
-      for(let i=0;i<N;i++)meanRating[i]+=scores[i]/ENSEMBLE
-      if(matches>=N)topKFast(scores,K).forEach(i=>membership[i]+=1/ENSEMBLE)
+  function push(heap, node) {
+    heap.push(node)
+    let i = heap.length - 1
+    while (i > 0) {
+      const parent = (i - 1) >> 1
+      if (heap[parent].score <= node.score) break
+      heap[i] = heap[parent]
+      i = parent
     }
-    if(matches<N)membership.fill(.5)
-    order=Array.from({length:N},(_,i)=>i).sort((a,b)=>meanRating[b]-meanRating[a])
-    for(let i=0;i<N;i++)rank[order[i]]=i
-    buildLeagues();lastRefresh=matches
+    heap[i] = node
   }
 
-  function buildLeagues(){
-    const size=Math.max(72,Math.min(240,Math.ceil(Math.max(K*1.25,90)))),stride=Math.max(24,Math.floor(size*.48)),endLimit=Math.min(N,K+4*size)
-    leagues=[]
-    for(let start=0;start<endLimit;start+=stride){
-      const end=Math.min(N,start+size),members=order.slice(start,end),entropy=members.reduce((s,i)=>s+membership[i]*(1-membership[i]),0),center=(start+end)/2
-      const gate=.2+3*Math.exp(-Math.abs(center-K)/(size*.85))
-      leagues.push({members,score:(entropy+.05)*gate})
+  function replaceMin(heap, node) {
+    let i = 0
+    while (true) {
+      const left = i * 2 + 1
+      const right = left + 1
+      if (left >= heap.length) break
+      const child = right < heap.length && heap[right].score < heap[left].score ? right : left
+      if (heap[child].score >= node.score) break
+      heap[i] = heap[child]
+      i = child
+    }
+    heap[i] = node
+  }
+
+  function topKFast(scores, k) {
+    const heap = []
+    for (let item = 0; item < scores.length; item += 1) {
+      const node = { item, score: scores[item] }
+      if (heap.length < k) push(heap, node)
+      else if (node.score > heap[0].score) replaceMin(heap, node)
+    }
+    return heap.map((node) => node.item).sort((left, right) => scores[right] - scores[left])
+  }
+
+  function shuffle(rng) {
+    const values = new Int32Array(N)
+    for (let item = 0; item < N; item += 1) values[item] = item
+    for (let item = N - 1; item > 0; item -= 1) {
+      const swap = Math.floor(rng() * (item + 1))
+      const hold = values[item]
+      values[item] = values[swap]
+      values[swap] = hold
+    }
+    return values
+  }
+
+  function expWeight(rng) {
+    return Math.min(2.5, -Math.log(Math.max(rng(), 1e-10)))
+  }
+
+  function pairKey(left, right) {
+    return Math.min(left, right) * N + Math.max(left, right)
+  }
+
+  function pairGames(left, right) {
+    return pairCounts.get(pairKey(left, right)) || 0
+  }
+
+  function localUncertainty(item) {
+    return membership[item] * (1 - membership[item]) + .14 * ratingStd[item] + .1 / Math.sqrt(adaptiveGames[item] + 1)
+  }
+
+  function confidenceUpper(item) {
+    return meanRating[item] + 1.5 * ratingStd[item] + 1.3 / Math.sqrt(adaptiveGames[item] + 1)
+  }
+
+  function createLeague(start, size) {
+    const end = Math.min(N, start + size)
+    const members = order.slice(start, end)
+    const center = (start + end) / 2
+    const entropy = members.reduce((sum, item) => sum + membership[item] * (1 - membership[item]), 0) / Math.max(members.length, 1)
+    const gateFocus = .18 + 2.7 * Math.exp(-Math.abs(center - K) / Math.max(size * .72, 1)) + .7 * Math.exp(-center / Math.max(size * .75, 1))
+    return { id: `league-${start}`, label: `ranks ${start + 1}–${end}`, members, entropy, prior: gateFocus }
+  }
+
+  function buildLeagues() {
+    const size = Math.max(90, Math.min(420, Math.ceil(Math.max(K * 2, 110))))
+    const stride = Math.max(36, Math.floor(size * .48))
+    const endLimit = Math.min(N, K + 7 * size)
+    leagues = []
+
+    for (let start = 0; start < endLimit; start += stride) {
+      leagues.push(createLeague(start, size))
+    }
+
+    const scoutCount = Math.min(N, Math.max(8 * K, 600))
+    const optimistic = topKFast(Array.from({ length: N }, (_, item) => confidenceUpper(item)), scoutCount)
+    const scoutEntropy = optimistic.reduce((sum, item) => sum + localUncertainty(item), 0) / optimistic.length
+    leagues.push({ id: 'scout', label: 'global scouts', members: optimistic, entropy: scoutEntropy, prior: .58 })
+
+    leagues.forEach((league) => {
+      if (!leagueStats[league.id]) leagueStats[league.id] = { rounds: 0, gainSum: 0, matchPicks: 0 }
+    })
+  }
+
+  function leagueEntropyMap() {
+    return new Map(leagues.map((league) => [league.id, league.entropy]))
+  }
+
+  function updateLeagueBandit() {
+    if (!previousLeagueEntropy) return
+    const current = leagueEntropyMap()
+    for (const [id, before] of previousLeagueEntropy.entries()) {
+      const picks = leagueBatchPicks[id] || 0
+      if (!picks || !current.has(id)) continue
+      const after = current.get(id)
+      const relativeGain = Math.max(0, (before - after) / Math.max(before, .015))
+      const stats = leagueStats[id]
+      stats.rounds += 1
+      stats.gainSum += relativeGain
+      stats.matchPicks += picks
     }
   }
 
-  function sampleLeague(){let total=leagues.reduce((s,l)=>s+l.score,0),x=adaptiveRng()*total;for(const league of leagues){x-=league.score;if(x<=0)return league}return leagues.at(-1)}
-  function coverageChoice(){if(coveragePair>=N/2){coverageOrder=shuffle(adaptiveRng);coveragePair=0}const a=coverageOrder[2*coveragePair],b=coverageOrder[2*coveragePair+1];coveragePair++;return[a,b]}
-  function best(items,fn){let chosen=items[0],value=fn(chosen);for(let n=1;n<items.length;n++){const item=items[n],next=fn(item);if(next>value){chosen=item;value=next}}return chosen}
+  function refreshPosterior() {
+    const sums = new Float64Array(N)
+    const squares = new Float64Array(N)
+    membership.fill(0)
 
-  function localPair(league,scores){
-    const inside=league.members.filter(i=>rank[i]<K),outside=league.members.filter(i=>rank[i]>=K)
-    if(inside.length&&outside.length){
-      const incumbent=best(inside,i=>-scores[i]+.35*uncertainty(i))
-      const challenger=best(outside,i=>scores[i]+.35*uncertainty(i))
-      if(incumbent!==challenger)return[incumbent,challenger]
+    for (let model = 0; model < ENSEMBLE; model += 1) {
+      const scores = models[model]
+      for (let item = 0; item < N; item += 1) {
+        sums[item] += scores[item]
+        squares[item] += scores[item] * scores[item]
+      }
+      topKFast(scores, K).forEach((item) => { membership[item] += 1 / ENSEMBLE })
     }
-    const sorted=league.members.slice().sort((a,b)=>scores[b]-scores[a]);let result=[sorted[0],sorted[1]],value=-Infinity
-    for(let i=0;i<sorted.length-1;i++){
-      const a=sorted[i],b=sorted[i+1],p=sigmoid(scores[a]-scores[b]),score=p*(1-p)*(uncertainty(a)+uncertainty(b))/Math.sqrt(pairGames(a,b)+1)
-      if(score>value){value=score;result=[a,b]}
+
+    for (let item = 0; item < N; item += 1) {
+      meanRating[item] = sums[item] / ENSEMBLE
+      ratingStd[item] = Math.sqrt(Math.max(0, squares[item] / ENSEMBLE - meanRating[item] * meanRating[item]))
     }
-    return result
+
+    order = Array.from({ length: N }, (_, item) => item).sort((left, right) => meanRating[right] - meanRating[left])
+    for (let position = 0; position < N; position += 1) rank[order[position]] = position
+    estimatedTop = topKFast(meanRating, K)
+    estimatedSet = new Set(estimatedTop)
+
+    buildLeagues()
+    updateLeagueBandit()
+    previousLeagueEntropy = leagueEntropyMap()
+    leagueBatchPicks = {}
+    lastRefresh = matches
+    rebuildScatterItems()
   }
 
-  function promotionPair(scores){
-    const size=Math.max(72,Math.min(240,Math.ceil(Math.max(K*1.25,90))))
-    const incumbents=order.slice(Math.max(0,K-30),Math.min(N,K+20)),outsiders=order.slice(Math.min(N,K+20),Math.min(N,K+size*3))
-    return [best(incumbents,i=>-scores[i]+.4*uncertainty(i)),best(outsiders,i=>scores[i]+.5*uncertainty(i))]
+  function chooseLeague() {
+    const totalRounds = Object.values(leagueStats).reduce((sum, stats) => sum + stats.rounds, 0)
+    let bestLeague = leagues[0]
+    let bestScore = -Infinity
+
+    for (const league of leagues) {
+      const stats = leagueStats[league.id]
+      const gain = stats.rounds ? stats.gainSum / stats.rounds : .05
+      const exploration = .18 * Math.sqrt(Math.log(totalRounds + 3) / (stats.rounds + 1))
+      const score = 1.7 * league.prior * league.entropy + 1.15 * gain + exploration
+      if (score > bestScore) {
+        bestScore = score
+        bestLeague = league
+      }
+    }
+
+    return bestLeague
   }
 
-  function chooseAdaptive(){
-    if(matches<N)return coverageChoice()
-    if(lastRefresh<0||matches-lastRefresh>=250)refreshPosterior()
-    const scores=models[Math.floor(adaptiveRng()*ENSEMBLE)]
-    return adaptiveRng()<.16?promotionPair(scores):localPair(sampleLeague(),scores)
+  function best(items, fn) {
+    let winner = items[0]
+    let value = fn(winner)
+    for (let index = 1; index < items.length; index += 1) {
+      const item = items[index]
+      const next = fn(item)
+      if (next > value) {
+        winner = item
+        value = next
+      }
+    }
+    return winner
   }
 
-  function updateEnsemble(a,b,aWon){
-    for(let m=0;m<ENSEMBLE;m++)eloUpdate(models[m],a,b,aWon,.24*expWeight(modelRngs[m]))
-    adaptiveGames[a]++;adaptiveGames[b]++;const k=key(a,b);pairCounts.set(k,(pairCounts.get(k)||0)+1)
-  }
-  function randomPair(){const a=Math.floor(randomRng()*N);let b=Math.floor(randomRng()*(N-1));if(b>=a)b++;return[a,b]}
-  function playRandom(a,b){const aWon=randomRng()<sigmoid(skill[a]-skill[b]);eloUpdate(randomRating,a,b,aWon,.24);randomGames[a]++;randomGames[b]++}
-  function playAdaptive(a,b){const aWon=adaptiveRng()<sigmoid(skill[a]-skill[b]);updateEnsemble(a,b,aWon)}
-  function recall(scores){return topK(scores,K).filter(i=>trueTop.has(i)).length/K}
-
-  function evaluate(force){
-    if(!force&&matches%250)return
-    if(lastRefresh<0)refreshPosterior()
-    const randomRecall=recall(randomRating),leagueRecall=recall(meanRating)
-    randomHistory.push([matches,randomRecall]);leagueHistory.push([matches,leagueRecall])
-    $('target').textContent=`top ${K}`;$('matches').textContent=matches.toLocaleString();$('recall').textContent=`${Math.round(leagueRecall*100)}%`
-    $('note').innerHTML=`After <b>${matches.toLocaleString()}</b> matches per policy: <b>overlapping bootstrap-Elo leagues</b> recover <b>${Math.round(leagueRecall*100)}%</b> of the true top-${K}; random recovers ${Math.round(randomRecall*100)}%. <strong>How it works:</strong> ten bootstrap-Elo worlds vote on top-${K} membership. The scheduler samples an overlapping league, then compares the sampled incumbent and challenger at that league’s local gate. Promotion matches give uncertain outsiders a route upward.`
+  function coverageChoice() {
+    if (coveragePair >= N / 2) {
+      coverageOrder = shuffle(adaptiveRng)
+      coveragePair = 0
+    }
+    const left = coverageOrder[2 * coveragePair]
+    const right = coverageOrder[2 * coveragePair + 1]
+    coveragePair += 1
+    return [left, right]
   }
 
-  function reset(){
-    worldRng=mulberry32((Date.now()>>>0)||7);randomRng=mulberry32(1009);adaptiveRng=mulberry32(9001);modelRngs=Array.from({length:ENSEMBLE},(_,i)=>mulberry32(7001+97*i))
-    skill=new Float32Array(N);for(let i=0;i<N;i++)skill[i]=normal(worldRng)
-    const truth=topK(skill,K);trueTop=new Set(truth);trueCut=skill[truth[K-1]]
-    randomRating=new Float32Array(N);randomGames=new Uint16Array(N);models=Array.from({length:ENSEMBLE},()=>new Float32Array(N));adaptiveGames=new Uint16Array(N);meanRating=new Float32Array(N);membership=new Float32Array(N);rank=new Int32Array(N);order=Array.from({length:N},(_,i)=>i)
-    coverageOrder=shuffle(adaptiveRng);coveragePair=0;leagues=[];lastRefresh=-1;pairCounts=new Map();matches=0;randomHistory=[];leagueHistory=[];running=false;cancelAnimationFrame(frame);$('play').textContent='▶ play';sample=Array.from({length:600},()=>Math.floor(worldRng()*N));refreshPosterior();evaluate(true);draw()
+  function localDuel(league, scores) {
+    const inside = league.members.filter((item) => rank[item] < K)
+    const outside = league.members.filter((item) => rank[item] >= K)
+
+    if (inside.length && outside.length) {
+      const incumbent = best(inside, (item) => -scores[item] + .45 * localUncertainty(item))
+      const challenger = best(outside, (item) => scores[item] + .55 * localUncertainty(item))
+      if (incumbent !== challenger) return [incumbent, challenger]
+    }
+
+    const sampledOrder = league.members.slice().sort((left, right) => scores[right] - scores[left])
+    let selected = [sampledOrder[0], sampledOrder[1]]
+    let selectedValue = -Infinity
+
+    for (let index = 0; index < sampledOrder.length - 1; index += 1) {
+      const left = sampledOrder[index]
+      const right = sampledOrder[index + 1]
+      const probability = sigmoid(scores[left] - scores[right])
+      const boundary = Math.exp(-Math.abs((rank[left] + rank[right]) / 2 - K) / Math.max(K, 35))
+      const value = boundary * probability * (1 - probability) * (localUncertainty(left) + localUncertainty(right)) / Math.sqrt(pairGames(left, right) + 1)
+      if (value > selectedValue) {
+        selectedValue = value
+        selected = [left, right]
+      }
+    }
+
+    return selected
   }
 
-  function advance(count){for(let i=0;i<count;i++){const r=randomPair();playRandom(...r);const a=chooseAdaptive();playAdaptive(...a);matches++}evaluate(false)}
-  function drawRace(){const{context:c,width:w,height:h}=resizeCanvas($('race'),240),p={l:34,r:12,t:14,b:22},pw=w-p.l-p.r,ph=h-p.t-p.b;c.strokeStyle='rgba(255,255,255,.08)';c.fillStyle='#9aa8bd';c.font='10px ui-monospace';for(let i=0;i<=4;i++){const v=i/4,y=p.t+(1-v)*ph;c.beginPath();c.moveTo(p.l,y);c.lineTo(p.l+pw,y);c.stroke();c.fillText(`${Math.round(v*100)}%`,3,y+3)}const line=(history,color)=>{if(history.length<2)return;c.strokeStyle=color;c.lineWidth=2;c.beginPath();history.forEach(([at,v],i)=>{const x=p.l+at/Math.max(matches,250)*pw,y=p.t+(1-v)*ph;i?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()};line(randomHistory,'#8b95a8');line(leagueHistory,'#5fd2a3');c.fillStyle='#5fd2a3';c.fillText('overlapping BT leagues',w-146,p.t+10);c.fillStyle='#8b95a8';c.fillText('random',w-146,p.t+24);c.fillStyle='#9aa8bd';c.fillText(`matches / policy: ${matches.toLocaleString()}`,p.l+2,h-6)}
-  function drawScatter(){const{context:c,width:w,height:h}=resizeCanvas($('scatter'),240),p={l:30,r:10,t:12,b:20},pw=w-p.l-p.r,ph=h-p.t-p.b;let s0=Infinity,s1=-Infinity,r0=Infinity,r1=-Infinity;sample.forEach(i=>{s0=Math.min(s0,skill[i]);s1=Math.max(s1,skill[i]);r0=Math.min(r0,meanRating[i]);r1=Math.max(r1,meanRating[i])});if(r1-r0<1e-6)r1=r0+1;const x=v=>p.l+(v-s0)/(s1-s0||1)*pw,y=v=>p.t+(1-(v-r0)/(r1-r0))*ph;c.strokeStyle='rgba(255,255,255,.08)';c.strokeRect(p.l,p.t,pw,ph);c.strokeStyle='rgba(245,196,81,.6)';c.setLineDash([4,3]);c.beginPath();c.moveTo(x(trueCut),p.t);c.lineTo(x(trueCut),p.t+ph);c.stroke();c.setLineDash([]);sample.forEach(i=>{const q=membership[i];c.fillStyle=trueTop.has(i)?'#f5c451':q>.08&&q<.92?'#5fd2a3':'rgba(76,141,246,.48)';c.beginPath();c.arc(x(skill[i]),y(meanRating[i]),trueTop.has(i)?2.2:1.3,0,2*Math.PI);c.fill()});c.fillStyle='#f5c451';c.font='10px ui-monospace';c.fillText(`true top-${K} cut`,x(trueCut)+3,p.t+10)}
-  function draw(){drawRace();drawScatter()}
-  function loop(){if(!running)return;advance(100);draw();frame=requestAnimationFrame(loop)}
-  $('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ play';if(running)loop()};$('step').onclick=()=>{running=false;$('play').textContent='▶ play';advance(1000);draw()};$('jump').onclick=()=>{running=false;$('play').textContent='▶ play';advance(10000);draw()};$('reset').onclick=reset;$('k').onchange=e=>{K=Number(e.target.value);reset()};addEventListener('resize',draw);reset()
+  function scoutDuel(league, scores) {
+    const gate = order.slice(Math.max(0, K - 35), Math.min(N, K + 45))
+    const outside = league.members.filter((item) => rank[item] >= K)
+    const incumbent = best(gate, (item) => -scores[item] + .45 * localUncertainty(item))
+    const challenger = best(outside, (item) => scores[item] + .8 * localUncertainty(item))
+    return incumbent === challenger ? localDuel(league, scores) : [incumbent, challenger]
+  }
+
+  function chooseAdaptive() {
+    if (matches < WARMUP_MATCHES) {
+      lastLeagueName = 'coverage'
+      return { pair: coverageChoice(), leagueId: 'coverage' }
+    }
+
+    if (lastRefresh < 0 || matches - lastRefresh >= REFRESH_EVERY) refreshPosterior()
+
+    const league = chooseLeague()
+    const sampledScores = models[Math.floor(adaptiveRng() * ENSEMBLE)]
+    const pair = league.id === 'scout' ? scoutDuel(league, sampledScores) : localDuel(league, sampledScores)
+    lastLeagueName = league.label
+    leagueBatchPicks[league.id] = (leagueBatchPicks[league.id] || 0) + 1
+    return { pair, leagueId: league.id }
+  }
+
+  function updateEnsemble(left, right, leftWon) {
+    for (let model = 0; model < ENSEMBLE; model += 1) {
+      eloUpdate(models[model], left, right, leftWon, .24 * expWeight(modelRngs[model]))
+    }
+    adaptiveGames[left] += 1
+    adaptiveGames[right] += 1
+    const key = pairKey(left, right)
+    pairCounts.set(key, (pairCounts.get(key) || 0) + 1)
+  }
+
+  function randomPair() {
+    const left = Math.floor(randomRng() * N)
+    let right = Math.floor(randomRng() * (N - 1))
+    if (right >= left) right += 1
+    return [left, right]
+  }
+
+  function playRandom(left, right) {
+    const leftWon = randomRng() < sigmoid(1.1 * (skill[left] - skill[right]))
+    eloUpdate(randomRating, left, right, leftWon, .24)
+    randomGames[left] += 1
+    randomGames[right] += 1
+  }
+
+  function playAdaptive(left, right) {
+    const leftWon = adaptiveRng() < sigmoid(1.1 * (skill[left] - skill[right]))
+    updateEnsemble(left, right, leftWon)
+  }
+
+  function recall(scores) {
+    return topK(scores, K).filter((item) => trueTop.has(item)).length / K
+  }
+
+  function rebuildScatterItems() {
+    const items = new Set()
+    for (let i = 0; i < 420; i += 1) items.add(Math.floor(worldRng() * N))
+    estimatedTop.forEach((item) => items.add(item))
+    trueTop.forEach((item) => items.add(item))
+    order.slice(Math.max(0, K - 120), Math.min(N, K + 180)).forEach((item) => items.add(item))
+    scatterItems = Array.from(items)
+  }
+
+  function renderSelection() {
+    const grid = $('selected_grid')
+    const columns = Math.min(42, Math.max(10, Math.ceil(Math.sqrt(K * 2.4))))
+    grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`
+    const correct = estimatedTop.filter((item) => trueTop.has(item)).length
+    $('selection_meta').textContent = `${correct}/${K} correct · all ${K} estimated selections`
+
+    grid.innerHTML = estimatedTop.map((item, index) => {
+      const classes = ['selected-token', trueTop.has(item) ? 'correct' : 'false']
+      if (membership[item] > .08 && membership[item] < .92) classes.push('uncertain')
+      const trueRank = trueRanks[item] + 1
+      return `<span class="${classes.join(' ')}" title="estimated #${index + 1}; hidden true #${trueRank}; top-K membership vote ${membership[item].toFixed(2)}"></span>`
+    }).join('')
+  }
+
+  function evaluate() {
+    const randomRecall = recall(randomRating)
+    const adaptiveRecall = recall(meanRating)
+    const lastAdaptive = leagueHistory.at(-1)
+    const lastRandom = randomHistory.at(-1)
+    if (!lastAdaptive || lastAdaptive[0] !== matches) {
+      randomHistory.push([matches, randomRecall])
+      leagueHistory.push([matches, adaptiveRecall])
+    } else {
+      lastAdaptive[1] = adaptiveRecall
+      lastRandom[1] = randomRecall
+    }
+
+    $('target').textContent = `top ${K}`
+    $('matches').textContent = matches.toLocaleString()
+    $('recall').textContent = `${Math.round(adaptiveRecall * 100)}%`
+    $('note').innerHTML = `After <b>${matches.toLocaleString()}</b> matches per policy: the hierarchy is currently working in <b>${lastLeagueName}</b>. <strong>Level 1:</strong> an information-gain UCB allocates matches among overlapping leagues and the scout arm. <strong>Level 2:</strong> a sampled bootstrap-Elo world chooses a local incumbent–challenger duel. The adaptive policy recovers <b>${Math.round(adaptiveRecall * 100)}%</b> of the true top-${K}; uniform random pairing recovers ${Math.round(randomRecall * 100)}%.`
+    renderSelection()
+  }
+
+  function reset() {
+    worldRng = mulberry32((Date.now() >>> 0) || 7)
+    randomRng = mulberry32(1009)
+    adaptiveRng = mulberry32(9001)
+    modelRngs = Array.from({ length: ENSEMBLE }, (_, index) => mulberry32(7001 + 97 * index))
+    skill = new Float32Array(N)
+    for (let item = 0; item < N; item += 1) skill[item] = normal(worldRng)
+    const truth = topK(skill, K)
+    trueTop = new Set(truth)
+    trueRanks = new Int32Array(N)
+    const truthOrder = Array.from({ length: N }, (_, item) => item).sort((left, right) => skill[right] - skill[left])
+    truthOrder.forEach((item, position) => { trueRanks[item] = position })
+    trueCut = skill[truth[K - 1]]
+
+    randomRating = new Float32Array(N)
+    randomGames = new Uint16Array(N)
+    models = Array.from({ length: ENSEMBLE }, () => new Float32Array(N))
+    adaptiveGames = new Uint16Array(N)
+    meanRating = new Float32Array(N)
+    ratingStd = new Float32Array(N)
+    membership = new Float32Array(N)
+    rank = new Int32Array(N)
+    order = Array.from({ length: N }, (_, item) => item)
+    estimatedTop = []
+    estimatedSet = new Set()
+    coverageOrder = shuffle(adaptiveRng)
+    coveragePair = 0
+    leagues = []
+    leagueStats = {}
+    leagueBatchPicks = {}
+    previousLeagueEntropy = null
+    lastRefresh = -1
+    pairCounts = new Map()
+    matches = 0
+    randomHistory = []
+    leagueHistory = []
+    running = false
+    lastLeagueName = 'coverage'
+    cancelAnimationFrame(frame)
+    $('play').textContent = '▶ play'
+
+    refreshPosterior()
+    evaluate()
+    draw()
+  }
+
+  function advance(count) {
+    for (let step = 0; step < count; step += 1) {
+      const random = randomPair()
+      playRandom(random[0], random[1])
+
+      const adaptive = chooseAdaptive()
+      playAdaptive(adaptive.pair[0], adaptive.pair[1])
+      matches += 1
+
+      if (matches % REFRESH_EVERY === 0) refreshPosterior()
+    }
+
+    if (matches - lastRefresh >= REFRESH_EVERY || !estimatedTop.length) refreshPosterior()
+    evaluate()
+  }
+
+  function drawRace() {
+    const { context, width, height } = resizeCanvas($('race'), 240)
+    const pad = { left: 34, right: 12, top: 14, bottom: 22 }
+    const plotWidth = width - pad.left - pad.right
+    const plotHeight = height - pad.top - pad.bottom
+    context.strokeStyle = 'rgba(255,255,255,.08)'
+    context.fillStyle = '#9aa8bd'
+    context.font = '10px ui-monospace'
+
+    for (let tick = 0; tick <= 4; tick += 1) {
+      const value = tick / 4
+      const y = pad.top + (1 - value) * plotHeight
+      context.beginPath()
+      context.moveTo(pad.left, y)
+      context.lineTo(pad.left + plotWidth, y)
+      context.stroke()
+      context.fillText(`${Math.round(value * 100)}%`, 3, y + 3)
+    }
+
+    const line = (history, color) => {
+      if (history.length < 2) return
+      context.strokeStyle = color
+      context.lineWidth = 2
+      context.beginPath()
+      history.forEach(([at, value], index) => {
+        const x = pad.left + at / Math.max(matches, 250) * plotWidth
+        const y = pad.top + (1 - value) * plotHeight
+        if (index) context.lineTo(x, y)
+        else context.moveTo(x, y)
+      })
+      context.stroke()
+    }
+
+    line(randomHistory, '#8b95a8')
+    line(leagueHistory, '#5fd2a3')
+    context.fillStyle = '#5fd2a3'
+    context.fillText('two-level league bandit', width - 142, pad.top + 10)
+    context.fillStyle = '#8b95a8'
+    context.fillText('uniform random', width - 142, pad.top + 24)
+    context.fillStyle = '#9aa8bd'
+    context.fillText(`matches / policy: ${matches.toLocaleString()}`, pad.left + 2, height - 6)
+  }
+
+  function drawScatter() {
+    const { context, width, height } = resizeCanvas($('scatter'), 240)
+    const pad = { left: 30, right: 10, top: 12, bottom: 20 }
+    const plotWidth = width - pad.left - pad.right
+    const plotHeight = height - pad.top - pad.bottom
+    let skillMin = Infinity, skillMax = -Infinity, ratingMin = Infinity, ratingMax = -Infinity
+
+    scatterItems.forEach((item) => {
+      skillMin = Math.min(skillMin, skill[item])
+      skillMax = Math.max(skillMax, skill[item])
+      ratingMin = Math.min(ratingMin, meanRating[item])
+      ratingMax = Math.max(ratingMax, meanRating[item])
+    })
+    if (ratingMax - ratingMin < 1e-6) ratingMax = ratingMin + 1
+
+    const x = (value) => pad.left + (value - skillMin) / (skillMax - skillMin || 1) * plotWidth
+    const y = (value) => pad.top + (1 - (value - ratingMin) / (ratingMax - ratingMin)) * plotHeight
+
+    context.strokeStyle = 'rgba(255,255,255,.08)'
+    context.strokeRect(pad.left, pad.top, plotWidth, plotHeight)
+    context.strokeStyle = 'rgba(245,196,81,.6)'
+    context.setLineDash([4, 3])
+    context.beginPath()
+    context.moveTo(x(trueCut), pad.top)
+    context.lineTo(x(trueCut), pad.top + plotHeight)
+    context.stroke()
+    context.setLineDash([])
+
+    scatterItems.forEach((item) => {
+      const selected = estimatedSet.has(item)
+      const correct = trueTop.has(item)
+      const uncertain = membership[item] > .08 && membership[item] < .92
+      context.fillStyle = selected ? (correct ? '#f5c451' : '#ef7d74') : (uncertain ? '#5fd2a3' : 'rgba(76,141,246,.45)')
+      context.beginPath()
+      context.arc(x(skill[item]), y(meanRating[item]), selected ? 3 : correct ? 2.3 : 1.35, 0, 2 * Math.PI)
+      context.fill()
+      if (selected && uncertain) {
+        context.strokeStyle = '#5fd2a3'
+        context.lineWidth = 1
+        context.stroke()
+      }
+    })
+
+    context.fillStyle = '#f5c451'
+    context.font = '10px ui-monospace'
+    context.fillText(`true top-${K} cut`, x(trueCut) + 3, pad.top + 10)
+  }
+
+  function draw() {
+    drawRace()
+    drawScatter()
+  }
+
+  function loop() {
+    if (!running) return
+    advance(120)
+    draw()
+    frame = requestAnimationFrame(loop)
+  }
+
+  $('play').onclick = () => {
+    running = !running
+    $('play').textContent = running ? '⏸ pause' : '▶ play'
+    if (running) loop()
+  }
+  $('step').onclick = () => {
+    running = false
+    $('play').textContent = '▶ play'
+    advance(1000)
+    draw()
+  }
+  $('jump').onclick = () => {
+    running = false
+    $('play').textContent = '▶ play'
+    advance(10000)
+    draw()
+  }
+  $('reset').onclick = reset
+  $('k').onchange = (event) => {
+    K = Number(event.target.value)
+    reset()
+  }
+  addEventListener('resize', draw)
+  reset()
 })()
 </script>
 <script>(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,250)});addEventListener('resize',h);if(window.ResizeObserver)new ResizeObserver(h).observe(document.body)})();</script>
