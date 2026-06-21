@@ -10,23 +10,9 @@ interface DemoProps {
   height?: number | string
 }
 
-const PLAY_TARGETS: Record<string, string[]> = {
-  '/demos/posts/edp-sort/mysterious-policy.en.html': ['#auto'],
-  '/demos/posts/edp-sort/bandit-race-averaged.en.html': ['#run'],
-  '/demos/posts/edp-sort/bandit-contextual.html': ['#ctx50'],
-  '/demos/posts/edp-sort/pitch-match.html': ['#play'],
-  '/demos/posts/edp-sort/pairing-race.html': ['#play'],
-  '/demos/posts/edp-sort/dueling-rucb.html': ['#play'],
-  '/demos/posts/edp-sort/topk-scale.html': ['#play'],
-  '/demos/posts/edp-sort/bt-vs-combucb.html': ['#btcb-play'],
-}
-
 function AutoHeightFrame({ src, title, height = 480 }: DemoProps) {
   const ref = useRef<HTMLIFrameElement>(null)
   const [measured, setMeasured] = useState<number | null>(null)
-  const [loaded, setLoaded] = useState(false)
-  const pathname = src.split('?')[0]
-  const playTargets = PLAY_TARGETS[pathname]
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -43,47 +29,19 @@ function AutoHeightFrame({ src, title, height = 480 }: DemoProps) {
   }, [])
 
   useEffect(() => {
-    setLoaded(false)
     setMeasured(null)
   }, [src])
-
-  function playDemo() {
-    const document = ref.current?.contentDocument
-    if (!document) return
-
-    for (const selector of playTargets || []) {
-      const button = document.querySelector<HTMLElement>(selector)
-      if (button) {
-        button.click()
-        return
-      }
-    }
-  }
 
   const resolvedHeight = measured != null ? `${measured}px` : typeof height === 'number' ? `${height}px` : height
 
   return (
     <figure className="my-6">
-      {playTargets && (
-        <div className="mb-2 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={playDemo}
-            disabled={!loaded}
-            className="rounded-md border border-blue-500 bg-blue-500 px-3 py-1.5 font-mono text-xs font-semibold text-slate-950 disabled:cursor-wait disabled:opacity-50"
-          >
-            ▶ play
-          </button>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Advance this simulation</span>
-        </div>
-      )}
       <iframe
         ref={ref}
         src={src}
         title={title || 'Interactive demo'}
         loading="lazy"
         scrolling="no"
-        onLoad={() => setLoaded(true)}
         className="w-full rounded-lg border border-gray-200 bg-white dark:border-gray-700"
         style={{ height: resolvedHeight }}
       />
