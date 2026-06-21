@@ -22,17 +22,17 @@ test.describe('EDP sort demos', () => {
         interact: '#ctx1',
       },
       {
-        path: '/demos/posts/edp-sort/pitch-match.en.html',
+        path: '/demos/posts/edp-sort/pitch-match.html?lang=en',
         ready: '#pitch',
         interact: '#one',
       },
       {
         path: '/demos/posts/edp-sort/pairing-race.html?lang=en',
-        ready: '.pr-canvas',
-        interact: '[data-f="play"]',
+        ready: '#chart',
+        interact: '#play',
       },
       {
-        path: '/demos/posts/edp-sort/topk-scale.en.html',
+        path: '/demos/posts/edp-sort/topk-scale.html?lang=en',
         ready: '#race',
         interact: '#step',
       },
