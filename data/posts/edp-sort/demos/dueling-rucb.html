@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RUCB: a dueling bandit without Bradley–Terry</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--purple:#c879f0;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}.matrix,.events{padding:10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.matrix h3,.events h3{margin:0 0 8px;font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}table{width:100%;border-collapse:collapse;font:11px var(--mono)}th,td{padding:4px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06)}th{color:var(--muted);font-weight:500}.champion{color:var(--gold)}.events{min-height:244px}.event{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font:11px var(--mono);color:var(--muted)}.event b{color:var(--text)}.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);padding:7px 9px;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.formula{margin-top:10px;padding:8px;border-radius:7px;background:#09111f;color:#cbd5e1;font:11px var(--mono)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--gold:#f5c451;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.stat{padding:8px 10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.value{font:18px var(--mono);margin-top:3px}.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px}.matrix,.events{padding:10px;background:var(--panel);border:1px solid var(--edge);border-radius:9px}.matrix h3,.events h3{margin:0 0 8px;font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}table{width:100%;border-collapse:collapse;font:11px var(--mono)}th,td{padding:4px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06)}th{color:var(--muted);font-weight:500}.champion{color:var(--gold)}.events{min-height:244px}.event{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font:11px var(--mono);color:var(--muted)}.event b{color:var(--text)}.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:12px}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);font:12px var(--mono);padding:7px 9px;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{margin-top:12px;padding:9px 10px;border:1px solid var(--edge);border-radius:9px;background:var(--panel);color:var(--muted);font-size:12px}.note b{color:var(--green)}.formula{margin-top:10px;padding:8px;border-radius:7px;background:#09111f;color:#cbd5e1;font:11px var(--mono)}@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div class="root">
-  <div class="stats"><div class="stat"><div class="label">round</div><div class="value" id="round">0</div></div><div class="stat"><div class="label">potential champions</div><div class="value" id="champions">A B C D E F</div></div><div class="stat"><div class="label">RUCB leader</div><div class="value" id="leader">—</div></div><div class="stat"><div class="label">true target</div><div class="value champion" id="target">hidden</div></div></div>
+  <div class="stats"><div class="stat"><div class="label">round</div><div class="value" id="round">0</div></div><div class="stat"><div class="label">potential champions</div><div class="value" id="champions">A B C D E F</div></div><div class="stat"><div class="label">last RUCB candidate</div><div class="value" id="leader">—</div></div><div class="stat"><div class="label">true target</div><div class="value champion" id="target">hidden</div></div></div>
   <div class="grid"><div class="matrix"><h3>Empirical pairwise wins: row beats column</h3><table id="table"></table><div class="formula">uᵢⱼ(t) = p̂ᵢⱼ(t) + √(α log t / nᵢⱼ(t)); &nbsp; Cₜ = { i : uᵢⱼ ≥ 1/2 ∀ j }</div></div><div class="events"><h3>RUCB decisions</h3><div id="events"></div></div></div>
   <div class="controls"><button class="primary" id="step">+1 duel</button><button id="many">+50 duels</button><button id="play">▶ run</button><button id="reveal">reveal matrix</button><button id="reset">new run</button></div>
   <div class="note"><b>What this demonstrates:</b> RUCB does not fit a global score. It keeps optimistic pairwise win probabilities, chooses a possible Condorcet champion, then challenges it with the arm most likely to beat it. In this world A is a Condorcet winner, while B/C/D contain a preference cycle—so no Bradley–Terry score vector can represent the full matrix exactly.</div>
@@ -19,12 +19,10 @@
 (() => {
   const names = ['A','B','C','D','E','F']
   const n = names.length
-  const alpha = 0.6 // RUCB requires alpha > 1/2.
+  const alpha = 0.6
   const $ = (id) => document.getElementById(id)
   let rng, wins, t, events, running, frame, reveal
 
-  // A beats every other arm: A is Condorcet.
-  // B, C, D form a deliberate cycle: B>C, C>D, D>B.
   const preference = [
     [.50,.70,.68,.72,.74,.76],
     [.30,.50,.62,.38,.65,.67],
@@ -57,8 +55,6 @@
     return empirical(i, j) + Math.sqrt(alpha * Math.log(Math.max(t, 2)) / count)
   }
 
-  // Algorithm 1 from Zoghi et al. (2014): choose c with u_cj >= 1/2 for all j;
-  // then choose d = argmax_j u_jc and compare c with d.
   function rucbPair() {
     const candidates = []
     for (let candidate = 0; candidate < n; candidate += 1) {
@@ -88,22 +84,11 @@
     render()
   }
 
-  function condorcetEstimate() {
-    const values = names.map((_, arm) => {
-      let count = 0
-      for (let opponent = 0; opponent < n; opponent += 1) if (arm !== opponent && empirical(arm, opponent) > .5) count += 1
-      return count
-    })
-    let best = 0
-    for (let arm = 1; arm < n; arm += 1) if (values[arm] > values[best]) best = arm
-    return best
-  }
-
   function render() {
     const latest = events[0]
     $('round').textContent = t
     $('champions').textContent = latest ? latest.candidates.map((item) => names[item]).join(' ') : names.join(' ')
-    $('leader').textContent = names[condorcetEstimate()]
+    $('leader').textContent = latest ? names[latest.champion] : '—'
     $('target').textContent = reveal ? 'A (Condorcet)' : 'hidden'
     const header = `<tr><th></th>${names.map((name) => `<th>${name}</th>`).join('')}</tr>`
     const rows = names.map((name, row) => `<tr><th class="${row === 0 && reveal ? 'champion' : ''}">${name}</th>${names.map((_, col) => {
