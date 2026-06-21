@@ -10,14 +10,14 @@
 <body>
 <div class="root">
   <div class="stats"><div class="stat"><div class="label">decision rounds</div><div class="value" id="round">0</div></div><div class="stat"><div class="label">BTL/Elo recall@5</div><div class="value" id="bt">0%</div></div><div class="stat"><div class="label">Comb-UCB recall@5</div><div class="value" id="comb">0%</div></div><div class="stat"><div class="label">observations / round</div><div class="value">1 vs 5</div></div></div>
-  <canvas id="btcb" height="220"></canvas>
   <div class="controls"><button class="primary" id="btcb-play">▶ run</button><button id="step">+25 rounds</button><button id="reset">new world</button></div>
+  <canvas id="btcb" height="220"></canvas>
   <div class="note" id="note"><b>Deliberately unequal feedback.</b> The BTL learner selects one pair and receives one relative winner; Comb-UCB selects five items and observes five direct Bernoulli rewards. The chart illustrates why the feedback channel—not merely the top-K objective—determines the learning speed.</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
 (() => {
-  const { argmax, eloUpdate, mulberry32, normal, resizeCanvas, sigmoid, topK } = window.EDP
+  const { eloUpdate, mulberry32, normal, resizeCanvas, sigmoid, topK } = window.EDP
   const n = 40, k = 5
   const $ = (id) => document.getElementById(id)
   let rng, skill, rewardProbability, trueTop, btRatings, btPairGames, combRewardSum, combPulls, round, btHistory, combHistory, running, frame
