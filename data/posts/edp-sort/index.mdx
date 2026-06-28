@@ -202,29 +202,35 @@ The useful action is not always the one with the highest current average. It is 
 
 The plain bandit gives each restaurant one number: $\mu_a$. That is clean, and often false.
 
-A quick lunch, a date, and a rainy solo dinner are not the same decision. A restaurant can be wrong for one and perfect for another. On a product surface, the same idea shows up as query, device, user intent, price band, time of day, or any feature known _before_ the decision.
+A quick lunch, a date, and a rainy solo dinner are not the same decision. A restaurant can be wrong for one and perfect for another. The point of context is to stop averaging those cases together.
 
 That is a **contextual bandit**: see the situation first, then choose.
 
-In the simplest linear version, action $a$ has a response vector $\theta_a$. The context $x_t$ describes tonight. The predicted reward is
+In a linear contextual bandit, the situation is a feature vector $x_t$. For dinner, features might be things like quick, social, spicy, or budget. Each arm has a response vector $\theta_a$ that says how much those features matter for that arm.
+
+The predicted reward is
 
 $$\mathbb{E}[r_t \mid x_t, a] = x_t^\top\theta_a$$
 
-The unknown thing is no longer “how good is this restaurant?” It is “what kinds of nights is this restaurant good for?”
+The dot product is the model's answer to: how well does this arm fit this context?
 
-LinUCB is UCB with that idea plugged in. For each arm, it keeps enough statistics to estimate $\theta_a$:
+This is where context helps. A dinner on one quick-budget night is not only evidence about that exact night. It also updates the coefficients attached to quick and budget, so it informs other contexts that share those features. The model learns from correlated contexts instead of treating every situation as unrelated.
+
+LinUCB is UCB with this linear model inside it. For each arm, it keeps the statistics needed to estimate $\theta_a$:
 
 $$A_a = \lambda I + \sum_{s:a_s=a} x_sx_s^\top, \qquad b_a = \sum_{s:a_s=a} r_sx_s$$
+
+Here $A_a$ records which contexts arm $a$ has been tried in, and $b_a$ records the rewards seen in those contexts. Together they give
+
+$$\hat{\theta}_a = A_a^{-1}b_a$$
 
 Then it chooses the arm with the largest optimistic score:
 
 $$x_t^\top\hat{\theta}_a + \alpha\sqrt{x_t^\top A_a^{-1}x_t}$$
 
-Again the shape is “estimate plus uncertainty.” But now the uncertainty is not vague uncertainty about the restaurant. It is uncertainty about **this kind of night**.
+The first term is predicted reward in the current context. The second term is the uncertainty bonus for this context. If the model has little evidence in this part of feature space, the bonus is larger. If it has seen many similar contexts, the bonus shrinks.
 
-You may know a place very well for weekday lunch and barely know it for date night. LinUCB can say: this restaurant is not unknown everywhere, but it is still unknown in this direction.
-
-That is what context buys you. Evidence transfers between related situations instead of being crushed into one global average.
+So the unknown thing is no longer “how good is this restaurant?” It is “what kinds of situations is this restaurant good for?”
 
 There is one hard rule: context must be known before the choice. “Clicked later,” “bought later,” or “returned later” is outcome information, not context. Sneak it into the feature vector and the model starts cheating.
 
