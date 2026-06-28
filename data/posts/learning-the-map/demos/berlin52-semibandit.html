@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Semi-bandit on Berlin52</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #6b7280; --line: #e5e7eb;
+    --card: #f8fafc; --random: #9aa0a6; --greedy: #e8833a; --ucb: #2f6fed;
+    --thompson: #2b8a4e; --oracle: #111827;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0f14; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2a313a;
+            --card: #111821; --oracle: #e6e8eb; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 14px; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 12px; }
+  button {
+    font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 7px;
+    background: var(--card); color: var(--fg); cursor: pointer;
+  }
+  button.primary { background: var(--ucb); color: #fff; border-color: var(--ucb); }
+  button:active { transform: translateY(1px); }
+  label.ctl { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  input[type=range] { width: 110px; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  canvas { display: block; max-width: 100%; }
+  .mapcard, .side { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 10px; }
+  .side { min-width: 220px; flex: 1 1 220px; }
+  .stat { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+  .stat:last-child { border-bottom: 0; }
+  .stat b { font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 2px; font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .legend i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+  .pillrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .pill { padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; font-size: 12px; color: var(--muted); }
+  .pill.on { background: var(--ucb); color: #fff; border-color: var(--ucb); }
+  .chartcard { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 10px; margin-top: 14px; }
+  .cap { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  .dim { color: var(--muted); }
+</style>
+</head>
+<body>
+  <h1>Semi-bandit on Berlin52 — learning the map by driving it</h1>
+  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Road costs are hidden; you only learn the roads you actually drive. Four policies race to the cheapest tour.</p>
+
+  <div class="controls">
+    <button id="play" class="primary">Pause</button>
+    <button id="step">Step</button>
+    <button id="reset">Reset</button>
+    <label class="ctl">Speed <input id="speed" type="range" min="1" max="30" value="10" /></label>
+    <label class="ctl">Noise <input id="noise" type="range" min="0" max="40" value="15" /><span id="noiseval" class="dim">15%</span></label>
+    <label class="ctl">Explore β <input id="beta" type="range" min="0" max="120" value="45" /><span id="betaval" class="dim">0.45</span></label>
+  </div>
+
+  <div class="wrap">
+    <div class="mapcard">
+      <canvas id="map" width="540" height="440"></canvas>
+      <div class="pillrow" id="viewpills"></div>
+    </div>
+    <div class="side">
+      <div class="stat"><span>Day</span><b id="s-day">0</b></div>
+      <div class="stat"><span>Shown policy</span><b id="s-pol">UCB semi-bandit</b></div>
+      <div class="stat"><span>Tour cost today</span><b id="s-cost">—</b></div>
+      <div class="stat"><span>Best tour so far</span><b id="s-best">—</b></div>
+      <div class="stat"><span>Oracle (full map)</span><b id="s-oracle">—</b></div>
+      <div class="stat"><span>Gap to oracle</span><b id="s-gap">—</b></div>
+      <div class="stat"><span>Roads measured</span><b id="s-meas">—</b></div>
+      <div class="legend" id="legend"></div>
+      <p class="cap" style="margin-bottom:0">Thick faint edges on the map are roads this policy is still uncertain about; thin solid edges are well measured. Click a legend entry to show that policy on the map.</p>
+    </div>
+  </div>
+
+  <div class="chartcard">
+    <canvas id="chart" width="900" height="200"></canvas>
+  </div>
+
+  <p class="cap">
+    True road cost = Euclidean distance (TSPLIB <b>berlin52</b>); each drive returns that cost times multiplicative noise. The optimizer is nearest-neighbour + 2-opt run on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. Watch greedy lock onto an early false shortcut while the semi-bandits keep probing uncertainty and slide toward the oracle line.
+  </p>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- Berlin52 coordinates (TSPLIB) ----
+  var COORD = [
+    [565,575],[25,185],[345,750],[945,685],[845,655],[880,660],[25,230],[525,1000],
+    [580,1175],[650,1130],[1605,620],[1220,580],[1465,200],[1530,5],[845,680],[725,370],
+    [145,665],[415,635],[510,875],[560,365],[300,465],[520,585],[480,415],[835,625],
+    [975,580],[1215,245],[1320,315],[1250,400],[660,180],[410,250],[420,555],[575,665],
+    [1150,1160],[700,580],[685,595],[685,610],[770,610],[795,645],[720,635],[760,650],
+    [475,960],[95,260],[875,920],[700,500],[555,815],[830,485],[1170,65],[830,610],
+    [605,625],[595,360],[1340,725],[1740,245]
+  ];
+  var N = COORD.length;           // 52
+  var NP = N * (N - 1) / 2;       // 1326 undirected edges
+
+  // ---- deterministic RNG (seeded) ----
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  var rng = mulberry32(20260621);
+  function gauss(){ var u=0,v=0; while(u===0)u=rng(); while(v===0)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+  // ---- true cost matrix (hidden means) ----
+  var D = []; for (var i=0;i<N;i++){ D.push(new Float64Array(N)); }
+  var priorSum=0;
+  for (var a=0;a<N;a++) for (var b=0;b<N;b++){ var dx=COORD[a][0]-COORD[b][0], dy=COORD[a][1]-COORD[b][1]; var d=Math.sqrt(dx*dx+dy*dy); D[a][b]=d; if(a<b) priorSum+=d; }
+  var PRIOR = priorSum / NP;          // mean edge length, used before a road is driven
+  var PRIOR_SD = PRIOR * 0.6;
+
+  // ---- TSP helpers (operate on a cost function f(i,j)) ----
+  function tourCostTrue(t){ var c=0; for(var k=0;k<t.length;k++){ c+=D[t[k]][t[(k+1)%t.length]]; } return c; }
+  function nearestNeighbour(f, start){
+    var seen=new Uint8Array(N), t=[start]; seen[start]=1; var cur=start;
+    for(var s=1;s<N;s++){ var best=-1,bc=Infinity; for(var j=0;j<N;j++){ if(seen[j])continue; var c=f(cur,j); if(c<bc){bc=c;best=j;} } t.push(best); seen[best]=1; cur=best; }
+    return t;
+  }
+  function twoOpt(t, f, maxPasses){
+    var n=t.length, improved=true, passes=0;
+    while(improved && passes<maxPasses){ improved=false; passes++;
+      for(var i=1;i<n-1;i++){ var aN=t[i-1], bN=t[i];
+        for(var j=i+1;j<n;j++){ var cN=t[j], dN=t[(j+1)%n];
+          if(aN===cN||bN===dN) continue;
+          var delta=(f(aN,cN)+f(bN,dN))-(f(aN,bN)+f(cN,dN));
+          if(delta<-1e-9){ var lo=i, hi=j; while(lo<hi){ var tmp=t[lo]; t[lo]=t[hi]; t[hi]=tmp; lo++; hi--; } improved=true; aN=t[i-1]; bN=t[i]; }
+        }
+      }
+    }
+    return t;
+  }
+  function lenF(t,f){ var c=0; for(var k=0;k<t.length;k++) c+=f(t[k],t[(k+1)%t.length]); return c; }
+  function orOptOnce(t,f){ var n=t.length;            // relocate one city to a better slot
+    for(var i=0;i<n;i++){ var prev=t[(i-1+n)%n], node=t[i], next=t[(i+1)%n];
+      var removeGain=f(prev,node)+f(node,next)-f(prev,next); if(removeGain<=1e-9) continue;
+      for(var j=0;j<n;j++){ var aa=t[j], bb=t[(j+1)%n]; if(aa===node||bb===node||(aa===prev&&bb===next)) continue;
+        if((f(aa,node)+f(node,bb)-f(aa,bb))-removeGain < -1e-7){
+          var arr=t.slice(0,i).concat(t.slice(i+1)); var idx=arr.indexOf(aa); arr.splice(idx+1,0,node);
+          for(var x=0;x<n;x++) t[x]=arr[x]; return true;
+        }
+      }
+    }
+    return false;
+  }
+  function localSearch(t,f,cap){ for(var it=0;it<cap;it++){ var before=lenF(t,f); twoOpt(t,f,8); var g=0; while(orOptOnce(t,f) && g<t.length) g++; if(lenF(t,f) > before-1e-6) break; } return t; }
+  function solve(f, starts, cap){
+    var best=null, bc=Infinity;
+    for(var s=0;s<starts.length;s++){ var t=localSearch(nearestNeighbour(f, starts[s]), f, cap); var c=lenF(t,f); if(c<bc){bc=c;best=t;} }
+    return best;
+  }
+  function randomPerm(){ var p=[]; for(var i=0;i<N;i++)p.push(i); for(var i=N-1;i>0;i--){ var j=Math.floor(rng()*(i+1)); var tmp=p[i];p[i]=p[j];p[j]=tmp; } return p; }
+
+  // ---- oracle: strong full-knowledge reference on the TRUE map (optimum is 7542) ----
+  var Df=function(i,j){return D[i][j];};
+  var oracleTour = solve(Df, [0,13,33,51,8,25,46,2,20,40,11,29], 40);
+  for(var rr=0; rr<40; rr++){ var rt=localSearch(randomPerm(), Df, 40); if(lenF(rt,Df) < tourCostTrue(oracleTour)) oracleTour=rt; }
+  var ORACLE = tourCostTrue(oracleTour);
+
+  // ---- policies ----
+  function newState(){ return { sum:new Float64Array(N*N), n:new Float64Array(N*N), tour:null, cost:0, best:Infinity, hist:[] }; }
+  function mean(st,i,j){ var k=i*N+j; return st.n[k]>0 ? st.sum[k]/st.n[k] : PRIOR; }
+  function observe(st, t){
+    for(var k=0;k<t.length;k++){ var a=t[k], b=t[(k+1)%t.length];
+      var x=D[a][b]*(1+ NOISE*gauss()); if(x<1) x=1;
+      var p=a*N+b, q=b*N+a; st.sum[p]+=x; st.n[p]+=1; st.sum[q]+=x; st.n[q]+=1;
+    }
+  }
+  var POLICIES = {
+    random:   { name:"Random",          color:getVar('--random'),   on:true,
+                pick:function(st,t){ var perm=[]; for(var i=0;i<N;i++)perm.push(i); for(var i=N-1;i>0;i--){var j=Math.floor(rng()*(i+1)); var tmp=perm[i];perm[i]=perm[j];perm[j]=tmp;} return perm; } },
+    greedy:   { name:"Greedy mean",     color:getVar('--greedy'),   on:true,
+                pick:function(st,t){ return solve(function(i,j){return mean(st,i,j);}, [0], 8); } },
+    ucb:      { name:"UCB semi-bandit",  color:getVar('--ucb'),      on:true,
+                // bonus is scaled to PRIOR so it is comparable to real edge costs; an
+                // unseen road (n=0) looks near-free, which is what forces exploration.
+                pick:function(st,t){ var lt=Math.log(t+1); return solve(function(i,j){ var k=i*N+j; var b=BETA*PRIOR*Math.sqrt(lt/(st.n[k]+1)); var v=mean(st,i,j)-b; return v<0.02*PRIOR?0.02*PRIOR:v; }, [0], 8); } },
+    thompson: { name:"Thompson",        color:getVar('--thompson'), on:true,
+                pick:function(st,t){ return solve(function(i,j){ var k=i*N+j; var se = st.n[k]>0 ? (NOISE*mean(st,i,j))/Math.sqrt(st.n[k]) : PRIOR_SD; var v=mean(st,i,j)+se*gauss(); return v<0.05*PRIOR?0.05*PRIOR:v; }, [0], 8); } }
+  };
+  var ORDER = ["random","greedy","ucb","thompson"];
+  function getVar(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888"; }
+
+  // ---- simulation state ----
+  var NOISE=0.15, BETA=0.45, day=0, states={}, view="ucb", playing=true, frame=0;
+  function reset(){
+    rng = mulberry32(20260621); day=0; frame=0;
+    states={}; ORDER.forEach(function(p){ states[p]=newState(); });
+    draw(); chart(); stats();
+  }
+
+  function stepDay(){
+    day++;
+    ORDER.forEach(function(p){ if(!POLICIES[p].on && p!==view) { /* still simulate so toggling on later is fair? keep simple: simulate all */ }
+      var st=states[p]; var t=POLICIES[p].pick(st, day); var c=tourCostTrue(t);
+      st.tour=t; st.cost=c; if(c<st.best)st.best=c; st.hist.push(c); observe(st,t);
+    });
+  }
+
+  // ---- map drawing ----
+  var mc=document.getElementById('map'), mctx=mc.getContext('2d');
+  var bounds=(function(){ var xs=COORD.map(function(c){return c[0];}), ys=COORD.map(function(c){return c[1];});
+    return { xmin:Math.min.apply(null,xs), xmax:Math.max.apply(null,xs), ymin:Math.min.apply(null,ys), ymax:Math.max.apply(null,ys) }; })();
+  function P(c){ var pad=22, w=mc.width-2*pad, h=mc.height-2*pad;
+    var x=pad+(c[0]-bounds.xmin)/(bounds.xmax-bounds.xmin)*w;
+    var y=pad+(1-(c[1]-bounds.ymin)/(bounds.ymax-bounds.ymin))*h; return [x,y]; }
+  function draw(){
+    mctx.clearRect(0,0,mc.width,mc.height);
+    var st=states[view], col=POLICIES[view].color;
+    if(st && st.tour){
+      for(var k=0;k<st.tour.length;k++){ var a=st.tour[k], b=st.tour[(k+1)%st.tour.length];
+        var ne=st.n[a*N+b]; var u=1/Math.sqrt(ne+1);            // 1 (unknown) .. ~0 (known)
+        var pa=P(COORD[a]), pb=P(COORD[b]);
+        mctx.beginPath(); mctx.moveTo(pa[0],pa[1]); mctx.lineTo(pb[0],pb[1]);
+        mctx.lineWidth = 1 + 5*u; mctx.strokeStyle = col;
+        mctx.globalAlpha = 0.22 + 0.7*(1-u); mctx.stroke(); mctx.globalAlpha=1;
+      }
+      // vehicle marker advancing along the loop
+      var pos = frame % st.tour.length, a=st.tour[pos], b=st.tour[(pos+1)%st.tour.length];
+      var fr=(frame*0.25)%1, pa=P(COORD[a]), pb=P(COORD[b]);
+      var vx=pa[0]+(pb[0]-pa[0])*fr, vy=pa[1]+(pb[1]-pa[1])*fr;
+      mctx.beginPath(); mctx.arc(vx,vy,4,0,7); mctx.fillStyle=col; mctx.fill();
+    }
+    for(var i=0;i<N;i++){ var p=P(COORD[i]); mctx.beginPath(); mctx.arc(p[0],p[1], i===0?5:2.6, 0, 7);
+      mctx.fillStyle = i===0 ? '#e11d48' : getVar('--fg'); mctx.globalAlpha = i===0?1:0.7; mctx.fill(); mctx.globalAlpha=1; }
+  }
+
+  // ---- chart drawing ----
+  var cc=document.getElementById('chart'), cctx=cc.getContext('2d');
+  function chart(){
+    cctx.clearRect(0,0,cc.width,cc.height);
+    var pad=34, w=cc.width-pad-10, h=cc.height-pad-18;
+    var maxLen=0, maxY=ORACLE*1.05, minY=ORACLE*0.96;
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; maxLen=Math.max(maxLen,hh.length);
+      for(var i=0;i<hh.length;i++){ if(hh[i]>maxY)maxY=hh[i]; if(hh[i]<minY)minY=hh[i]; } });
+    maxLen=Math.max(maxLen,2);
+    function X(d){ return pad + d/(maxLen-1)*w; }
+    function Y(v){ return 8 + (1-(v-minY)/(maxY-minY))*h; }
+    // axes
+    cctx.strokeStyle=getVar('--line'); cctx.lineWidth=1; cctx.beginPath();
+    cctx.moveTo(pad,8); cctx.lineTo(pad,8+h); cctx.lineTo(pad+w,8+h); cctx.stroke();
+    cctx.fillStyle=getVar('--muted'); cctx.font='11px ui-sans-serif,system-ui';
+    cctx.fillText(Math.round(maxY), 2, 12); cctx.fillText(Math.round(minY), 2, 8+h);
+    cctx.fillText('day '+ (maxLen-1), pad+w-44, 8+h+14);
+    // oracle line
+    cctx.strokeStyle=getVar('--oracle'); cctx.setLineDash([5,4]); cctx.globalAlpha=0.7;
+    cctx.beginPath(); cctx.moveTo(pad,Y(ORACLE)); cctx.lineTo(pad+w,Y(ORACLE)); cctx.stroke();
+    cctx.setLineDash([]); cctx.globalAlpha=1;
+    cctx.fillStyle=getVar('--oracle'); cctx.fillText('oracle '+Math.round(ORACLE), pad+4, Y(ORACLE)-4);
+    // policy curves
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return;
+      cctx.strokeStyle=POLICIES[p].color; cctx.lineWidth = p===view?2.4:1.4; cctx.globalAlpha = p===view?1:0.8;
+      cctx.beginPath(); for(var i=0;i<hh.length;i++){ var x=X(i),y=Y(hh[i]); if(i===0)cctx.moveTo(x,y); else cctx.lineTo(x,y); } cctx.stroke(); cctx.globalAlpha=1; });
+  }
+
+  // ---- stats ----
+  function stats(){
+    var st=states[view];
+    document.getElementById('s-day').textContent=day;
+    document.getElementById('s-pol').textContent=POLICIES[view].name;
+    document.getElementById('s-cost').textContent= st&&st.tour?Math.round(st.cost):'—';
+    document.getElementById('s-best').textContent= st&&isFinite(st.best)?Math.round(st.best):'—';
+    document.getElementById('s-oracle').textContent=Math.round(ORACLE);
+    var gap= st&&isFinite(st.best)?((st.best-ORACLE)/ORACLE*100):0;
+    document.getElementById('s-gap').textContent= st&&isFinite(st.best)? (gap>=0?'+':'')+gap.toFixed(1)+'%':'—';
+    var meas=0; if(st){ for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){ if(st.n[i*N+j]>0)meas++; } }
+    document.getElementById('s-meas').textContent= meas+' / '+NP;
+  }
+
+  // ---- legend + view pills ----
+  function buildLegend(){
+    var L=document.getElementById('legend'); L.innerHTML='';
+    ORDER.forEach(function(p){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name+(POLICIES[p].on?'':' <span class="dim">(off)</span>');
+      s.onclick=function(){ view=p; POLICIES[p].on=true; render(); }; L.appendChild(s); });
+    var V=document.getElementById('viewpills'); V.innerHTML='<span class="dim" style="font-size:12px;margin-right:4px">show on map:</span>';
+    ORDER.forEach(function(p){ var b=document.createElement('span'); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name;
+      b.onclick=function(){ view=p; render(); }; V.appendChild(b); });
+  }
+
+  function render(){ buildLegend(); draw(); chart(); stats(); reportHeight(); }
+
+  // ---- loop ----
+  var acc=0, SPEED=10;
+  function tick(){ frame++;
+    if(playing){ acc+=SPEED; while(acc>=10){ stepDay(); acc-=10; } }
+    draw(); if(frame%3===0){ chart(); stats(); }
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls ----
+  document.getElementById('play').onclick=function(){ playing=!playing; this.textContent=playing?'Pause':'Play'; };
+  document.getElementById('step').onclick=function(){ playing=false; document.getElementById('play').textContent='Play'; stepDay(); render(); };
+  document.getElementById('reset').onclick=function(){ reset(); buildLegend(); };
+  document.getElementById('speed').oninput=function(){ SPEED=+this.value; };
+  document.getElementById('noise').oninput=function(){ NOISE=+this.value/100; document.getElementById('noiseval').textContent=this.value+'%'; };
+  document.getElementById('beta').oninput=function(){ BETA=+this.value/100; document.getElementById('betaval').textContent=(+this.value/100).toFixed(2); };
+
+  // ---- embed: report height to parent (Demo component) ----
+  function reportHeight(){ try{ parent.postMessage({type:'demo-height', height:Math.ceil(document.documentElement.scrollHeight)},'*'); }catch(e){} }
+  window.addEventListener('resize', function(){ chart(); reportHeight(); });
+  window.addEventListener('load', reportHeight);
+
+  // ---- go ----
+  reset(); buildLegend(); SPEED=10; tick();
+})();
+</script>
+</body>
+</html>
