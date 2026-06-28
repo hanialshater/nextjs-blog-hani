@@ -302,6 +302,8 @@ This is sorting, except the comparison oracle is unreliable. In a textbook, you 
 
 The action is now a **pair**. The feedback is not a score for each player; it is only the winner of that pair.
 
+This section uses a Bradley-Terry/Elo model because the goal is a reusable ranking. For the broader dueling-bandit setting where no single skill score is assumed, see [the RUCB appendix](#appendix-where-rucb-fits).
+
 One common model for this is **Bradley-Terry**. It assumes every player has one hidden skill number, and match probabilities come from skill differences:
 
 $$P(i \succ j) = \sigma(s_i-s_j)$$
@@ -558,6 +560,18 @@ The next demo is not a fair race between two solutions to the same feedback prob
 Comb-UCB receives several direct rewards each round; Bradley-Terry receives one comparison bit. Bradley-Terry gives a global latent ranking, reusable for any K. Comb-UCB gives per-item reward estimates for the items it has selected, but says little about items it never observed.
 
 Same goal. Different feedback. Different machinery.
+
+## Appendix: where RUCB fits
+
+RUCB is relevant, but it answers a different version of the pairwise problem.
+
+Bradley-Terry assumes every item has one hidden skill score. Pairwise probabilities come from score differences, so evidence transfers through the shared scale: if A beats B and B beats C, the model learns something about A versus C.
+
+RUCB does not assume that global score exists. It keeps confidence bounds for each pairwise win probability and tries to identify a **Condorcet winner**: an item that beats every other item with probability above 1/2.
+
+That matters when preferences can cycle. A may beat B, B may beat C, and C may beat A. Bradley-Terry cannot represent that cycle exactly, because one linear skill scale has to put the items in some order. RUCB-style methods work directly with the pairwise table instead.
+
+So RUCB is good context for the post, but not the main path. The main demos use Bradley-Terry/Elo because they show how pairwise feedback becomes a reusable ranking.
 
 ## What this adds up to
 
