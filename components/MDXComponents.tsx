@@ -9,7 +9,7 @@ import Caption from './Caption'
 import MapElitesDemo from './MapElitesDemo'
 import AlgorithmDemos from './AlgorithmDemos'
 import EvolvedDemos from './EvolvedDemos'
-import Demo from './Demo'
+import Demo, { RucbPanel, BanditHistoryPanel } from './Demo'
 
 export const components: MDXComponents = {
   Image,
@@ -20,6 +20,8 @@ export const components: MDXComponents = {
   BlogNewsletterForm,
   Caption,
   Demo,
+  RucbAppendix: RucbPanel,
+  BanditHistory: BanditHistoryPanel,
   MapElitesDemo,
   AlgorithmDemos,
   EvolvedDemos,

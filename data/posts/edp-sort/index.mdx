@@ -615,35 +615,13 @@ That last row is why the optimism term exists. It holds the **highest** score on
 
 A last caveat is about aim, not machinery. An earlier pass over the same data without the four-and-five-star filter surfaced only outrage — a wall of one-star delivery horror stories. The optimizer maximizes whatever the filter and the judge's instruction point it at; *noteworthy* and *funny* are choices you make, not properties it discovers.
 
-## Appendix: a short history of bandits
-
-The pieces of this post arrived over ninety years, mostly from statisticians asking how to experiment without wasting the experiment.
-
-- **1933 — Thompson.** Worried about giving trial patients the worse treatment, William R. Thompson proposes sampling each action in proportion to the probability it is best. *Thompson sampling*, rediscovered as state-of-the-art seventy years later.
-- **1952 — Robbins.** Herbert Robbins formalizes "the sequential design of experiments" and names the trade-off between pulling what looks best and paying to learn about the rest.
-- **1952 — Bradley & Terry.** One latent score per item, match probabilities from score differences (Zermelo had a chess version in 1929). The engine of Part II.
-- **1979 — Gittins.** John Gittins proves the Bayesian discounted bandit has an *optimal* index policy, computed per arm in isolation — elegant, and largely intractable in practice.
-- **1985 — Lai & Robbins.** Any good policy must suffer regret growing like $\log t$, and none can do better. The bar every later method is measured against.
-- **2002 — Auer, Cesa-Bianchi & Fischer.** UCB1 reaches that $\log t$ bound with a simple confidence bonus and finite-time guarantees. Optimism made practical.
-- **2009–2012 — dueling bandits.** Yue, Joachims and colleagues study bandits whose only feedback is "A beat B" — the pairwise world, and where RUCB lives.
-- **2010 — contextual bandits.** Li, Chu, Langford & Schapire run LinUCB on live news recommendation: the best arm now depends on context.
-- **2013 — combinatorial semi-bandits.** Chen, Wang & Yuan and others select a whole slate and observe a reward per chosen item — Part III's setting.
-
-The arc of the post is roughly the arc of the field: one arm, then a pair, then a context, then a slate.
-
 ## Appendix: where RUCB fits
 
-RUCB is relevant, but it answers a different version of the pairwise problem.
+Bradley-Terry assumes one global skill scale. When preferences cycle — A beats B, B beats C, C beats A — that assumption breaks, and you want a method that reads the pairwise table directly rather than collapsing it to a single ranking.
 
-Bradley-Terry assumes every item has one hidden skill score. Pairwise probabilities come from score differences, so evidence transfers through the shared scale: if A beats B and B beats C, the model learns something about A versus C.
+<RucbAppendix />
 
-RUCB does not assume that global score exists. It keeps confidence bounds for each pairwise win probability and tries to identify a **Condorcet winner**: an item that beats every other item with probability above 1/2.
-
-That matters when preferences can cycle. A may beat B, B may beat C, and C may beat A. Bradley-Terry cannot represent that cycle exactly, because one linear skill scale has to put the items in some order. RUCB-style methods work directly with the pairwise table instead.
-
-So RUCB is good context for the post, but not the main path. The main demos use Bradley-Terry/Elo because they show how pairwise feedback becomes a reusable ranking.
-
-<Demo src="/demos/posts/edp-sort/dueling-rucb.html?lang=en&v=3" title="RUCB: finding a Condorcet winner from pairwise duels" height={440} />
+<BanditHistory />
 
 ## What this adds up to
 

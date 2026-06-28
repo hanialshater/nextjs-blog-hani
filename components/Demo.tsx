@@ -49,7 +49,7 @@ function AutoHeightFrame({ src, title, height = 480 }: DemoProps) {
   )
 }
 
-function RucbPanel() {
+export function RucbPanel() {
   return (
     <section className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
       <h3 className="mt-0 text-lg font-semibold">A canonical dueling-bandit algorithm: RUCB</h3>
@@ -256,7 +256,7 @@ update only those 10 means and counts`}
   )
 }
 
-function BanditHistoryPanel() {
+export function BanditHistoryPanel() {
   return (
     <section className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
       <h2 className="mt-0 text-xl font-semibold">A short history of bandits</h2>
@@ -300,15 +300,14 @@ function BanditHistoryPanel() {
 
 export default function Demo({ src, title = 'Interactive demo', height = 480 }: DemoProps) {
   const pathname = src.split('?')[0]
-  const showRucb = pathname === '/demos/posts/edp-sort/pairing-race.html'
+  // The RUCB and bandit-history panels are placed explicitly in the appendix via the
+  // RucbAppendix / BanditHistory MDX components, not auto-attached to a demo by src.
   const showSemiBandit = pathname === '/demos/posts/edp-sort/bt-vs-combucb.html'
 
   return (
     <>
       <AutoHeightFrame src={src} title={title} height={height} />
-      {showRucb && <RucbPanel />}
       {showSemiBandit && <SemiBanditPanel />}
-      {showSemiBandit && <BanditHistoryPanel />}
     </>
   )
 }
