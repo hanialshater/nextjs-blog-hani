@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>Semi-bandit on Berlin52 — learning the map by driving it</h1>
-  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Road costs are hidden; you only learn the roads you actually drive. Five policies race to the cheapest tour.</p>
+  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Each road's cost is its length times the hidden <b>congestion</b> of where it runs (the red zones), revealed only on roads you actually drive. Five policies race to the cheapest tour.</p>
 
   <div class="controls">
     <button id="play" class="primary">Pause</button>
@@ -84,7 +84,7 @@
   </div>
 
   <p class="cap">
-    True road cost = Euclidean distance (TSPLIB <b>berlin52</b>); each drive returns that cost times multiplicative noise. The optimizer is nearest-neighbour + 2-opt run on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must measure most of the map to converge. <b>Contextual</b> instead regresses cost on the two stops' positions — a handful of drives generalise to every road, so it snaps to the oracle in a few days from far fewer measurements. That gap, tabular vs contextual, is the whole point: structure lets you skip exploration.
+    True road cost = straight-line distance (TSPLIB <b>berlin52</b>) times a hidden congestion field (the red zones); each drive returns that cost with multiplicative noise. The optimizer is nearest-neighbour + 2-opt on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must measure most of the map to converge. <b>Contextual</b> doesn't learn roads at all &mdash; it learns the <em>congestion field</em> on a coarse grid of positions, so a few drives through a region predict every road there. It converges far sooner and from far fewer measurements, but only as well as a coarse grid of a smooth field allows: structure buys speed, not omniscience.
   </p>
 
 <script>
@@ -110,29 +110,27 @@
   function gauss(){ var u=0,v=0; while(u===0)u=rng(); while(v===0)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
 
   // ---- true cost matrix (hidden means) ----
-  var D = []; for (var i=0;i<N;i++){ D.push(new Float64Array(N)); }
-  var priorSum=0;
-  for (var a=0;a<N;a++) for (var b=0;b<N;b++){ var dx=COORD[a][0]-COORD[b][0], dy=COORD[a][1]-COORD[b][1]; var d=Math.sqrt(dx*dx+dy*dy); D[a][b]=d; if(a<b) priorSum+=d; }
-  var PRIOR = priorSum / NP;          // mean edge length, used before a road is driven
-  var PRIOR_SD = PRIOR * 0.6;
+  // ---- true map: cost = straight-line distance x a hidden CONGESTION field ----
+  // Position now matters beyond length: roads through busy zones cost more per km. That is
+  // what makes "position as context" a real learning problem, not trivial regression.
+  var GB = (function(){ var xs=COORD.map(function(c){return c[0];}), ys=COORD.map(function(c){return c[1];});
+    return { xmin:Math.min.apply(null,xs), xmax:Math.max.apply(null,xs), ymin:Math.min.apply(null,ys), ymax:Math.max.apply(null,ys) }; })();
+  var CENTERS = [[560,600,2.6,330],[1300,360,2.2,360],[700,1010,1.9,320],[300,300,1.6,300],[1050,800,2.0,330]]; // x,y,amplitude,sigma
+  function cong(x,y){ var m=1; for(var k=0;k<CENTERS.length;k++){ var c=CENTERS[k], dx=x-c[0], dy=y-c[1]; m+=c[2]*Math.exp(-(dx*dx+dy*dy)/(2*c[3]*c[3])); } return m; }
 
-  // ---- features for the CONTEXTUAL policy: cost predicted from the two stops' positions ----
-  // phi(a,b) = [1, dx, dy, max(dx,dy), min(dx,dy)] on normalised coords. A linear model on
-  // these recovers the octagonal L2 approximation, so a few drives generalise to every road.
-  var FD = 5;
-  var FSCALE = (function(){ var xs=COORD.map(function(c){return c[0];}), ys=COORD.map(function(c){return c[1];});
-    return Math.max(Math.max.apply(null,xs)-Math.min.apply(null,xs), Math.max.apply(null,ys)-Math.min.apply(null,ys)); })();
-  function phi(a,b){ var dx=Math.abs(COORD[a][0]-COORD[b][0])/FSCALE, dy=Math.abs(COORD[a][1]-COORD[b][1])/FSCALE;
-    var mx=dx>dy?dx:dy, mn=dx>dy?dy:dx; return [1,dx,dy,mx,mn]; }
-  var PHI=[]; for(var pa=0;pa<N;pa++){ PHI.push([]); for(var pb=0;pb<N;pb++){ PHI[pa].push(pa===pb?null:phi(pa,pb)); } }
-  function solveLinear(A,b,d){            // Gaussian elimination with partial pivoting (d small)
-    var M=[]; for(var i=0;i<d;i++){ M.push(A[i].slice()); M[i].push(b[i]); }
-    for(var col=0;col<d;col++){ var piv=col; for(var r=col+1;r<d;r++){ if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r; }
-      var tmp=M[col]; M[col]=M[piv]; M[piv]=tmp; var pv=M[col][col]; if(Math.abs(pv)<1e-12) pv=pv<0?-1e-12:1e-12;
-      for(var c=col;c<=d;c++) M[col][c]/=pv;
-      for(var r2=0;r2<d;r2++){ if(r2===col)continue; var fac=M[r2][col]; for(var c2=col;c2<=d;c2++) M[r2][c2]-=fac*M[col][c2]; } }
-    var x=[]; for(var i2=0;i2<d;i2++) x.push(M[i2][d]); return x;
+  var G = 12;                         // the contextual learner bins the map into a G x G congestion grid
+  function cellOf(mx,my){ var gx=Math.floor((mx-GB.xmin)/(GB.xmax-GB.xmin)*G), gy=Math.floor((my-GB.ymin)/(GB.ymax-GB.ymin)*G);
+    if(gx<0)gx=0; if(gx>=G)gx=G-1; if(gy<0)gy=0; if(gy>=G)gy=G-1; return gy*G+gx; }
+
+  var DIST=[], D=[], CELL=new Int16Array(N*N), priorSum=0;
+  for (var i=0;i<N;i++){ DIST.push(new Float64Array(N)); D.push(new Float64Array(N)); }
+  for (var a=0;a<N;a++) for (var b=0;b<N;b++){
+    var dx=COORD[a][0]-COORD[b][0], dy=COORD[a][1]-COORD[b][1]; var dd=Math.sqrt(dx*dx+dy*dy);
+    var mxp=(COORD[a][0]+COORD[b][0])/2, myp=(COORD[a][1]+COORD[b][1])/2;
+    DIST[a][b]=dd; D[a][b]=dd*cong(mxp,myp); CELL[a*N+b]=cellOf(mxp,myp); if(a<b) priorSum+=D[a][b];
   }
+  var PRIOR = priorSum / NP;          // mean true road cost, used before a road is driven
+  var PRIOR_SD = PRIOR * 0.6;
 
   // ---- TSP helpers (operate on a cost function f(i,j)) ----
   function tourCostTrue(t){ var c=0; for(var k=0;k<t.length;k++){ c+=D[t[k]][t[(k+1)%t.length]]; } return c; }
@@ -175,7 +173,7 @@
   }
   function randomPerm(){ var p=[]; for(var i=0;i<N;i++)p.push(i); for(var i=N-1;i>0;i--){ var j=Math.floor(rng()*(i+1)); var tmp=p[i];p[i]=p[j];p[j]=tmp; } return p; }
 
-  // ---- oracle: strong full-knowledge reference on the TRUE map (optimum is 7542) ----
+  // ---- oracle: strong full-knowledge reference on the TRUE cost (distance x congestion) ----
   var Df=function(i,j){return D[i][j];};
   var oracleTour = solve(Df, [0,13,33,51,8,25,46,2,20,40,11,29], 40);
   for(var rr=0; rr<40; rr++){ var rt=localSearch(randomPerm(), Df, 40); if(lenF(rt,Df) < tourCostTrue(oracleTour)) oracleTour=rt; }
@@ -183,15 +181,14 @@
 
   // ---- policies ----
   function newState(ctx){ var s={ sum:new Float64Array(N*N), n:new Float64Array(N*N), tour:null, cost:0, best:Infinity, hist:[] };
-    if(ctx){ s.A=[]; for(var i=0;i<FD;i++){ var row=[]; for(var j=0;j<FD;j++) row.push(i===j?1:0); s.A.push(row); }
-             s.b=[]; for(var k=0;k<FD;k++) s.b.push(0); s.w=[]; for(var k2=0;k2<FD;k2++) s.w.push(0); s.pred=new Float64Array(N*N); }
+    if(ctx){ s.cellSum=new Float64Array(G*G); s.cellN=new Float64Array(G*G); s.pred=new Float64Array(N*N); }
     return s; }
   function mean(st,i,j){ var k=i*N+j; return st.n[k]>0 ? st.sum[k]/st.n[k] : PRIOR; }
   function observe(st, t){
     for(var k=0;k<t.length;k++){ var a=t[k], b=t[(k+1)%t.length];
       var x=D[a][b]*(1+ NOISE*gauss()); if(x<1) x=1;
       var p=a*N+b, q=b*N+a; st.sum[p]+=x; st.n[p]+=1; st.sum[q]+=x; st.n[q]+=1;
-      if(st.A){ var f=PHI[a][b]; for(var r=0;r<FD;r++){ st.b[r]+=f[r]*x; for(var c=0;c<FD;c++) st.A[r][c]+=f[r]*f[c]; } }
+      if(st.cellN){ var ms=x/DIST[a][b]; var cl=CELL[a*N+b]; st.cellSum[cl]+=ms; st.cellN[cl]+=1; }  // noisy congestion sample for this region
     }
   }
   var POLICIES = {
@@ -206,9 +203,11 @@
     thompson: { name:"Thompson",        color:getVar('--thompson'), on:true,
                 pick:function(st,t){ return solve(function(i,j){ var k=i*N+j; var se = st.n[k]>0 ? (NOISE*mean(st,i,j))/Math.sqrt(st.n[k]) : PRIOR_SD; var v=mean(st,i,j)+se*gauss(); return v<0.05*PRIOR?0.05*PRIOR:v; }, [0], 8); } },
     contextual:{ name:"Contextual (position)", color:getVar('--ctx'), on:true,
-                // no per-road table: fit cost = w . phi(positions), predict every road, then solve
-                pick:function(st,t){ st.w=solveLinear(st.A,st.b,FD);
-                  for(var a=0;a<N;a++) for(var b=0;b<N;b++){ if(a===b)continue; var f=PHI[a][b]; var mu=0; for(var r=0;r<FD;r++) mu+=st.w[r]*f[r]; if(mu<1)mu=1; st.pred[a*N+b]=mu; }
+                // no per-road table: estimate the congestion field on a G x G grid of map positions,
+                // predict cost = known distance x optimistic local congestion, then solve.
+                pick:function(st,t){ var lt=Math.log(t+1), om=new Float64Array(G*G);
+                  for(var c=0;c<G*G;c++){ var mh=st.cellN[c]>0?st.cellSum[c]/st.cellN[c]:1; var v=mh-BETA*Math.sqrt(lt/(st.cellN[c]+1)); om[c]=v<0.3?0.3:v; }
+                  for(var a=0;a<N;a++) for(var b=0;b<N;b++){ if(a===b)continue; st.pred[a*N+b]=DIST[a][b]*om[CELL[a*N+b]]; }
                   return solve(function(i,j){return st.pred[i*N+j];}, [0], 8); } }
   };
   var ORDER = ["random","greedy","ucb","thompson","contextual"];
@@ -237,8 +236,17 @@
   function P(c){ var pad=22, w=mc.width-2*pad, h=mc.height-2*pad;
     var x=pad+(c[0]-bounds.xmin)/(bounds.xmax-bounds.xmin)*w;
     var y=pad+(1-(c[1]-bounds.ymin)/(bounds.ymax-bounds.ymin))*h; return [x,y]; }
+  // faint heatmap of the true congestion field (red = slow zones)
+  var heat=document.createElement('canvas'); heat.width=mc.width; heat.height=mc.height;
+  (function(){ var h=heat.getContext('2d'), sx=(mc.width-44)/(GB.xmax-GB.xmin);
+    for(var k=0;k<CENTERS.length;k++){ var c=CENTERS[k], p=P([c[0],c[1]]), rad=c[3]*sx*2.2;
+      var g=h.createRadialGradient(p[0],p[1],0,p[0],p[1],rad), al=Math.min(0.24,c[2]*0.13);
+      g.addColorStop(0,'rgba(229,72,72,'+al+')'); g.addColorStop(1,'rgba(229,72,72,0)');
+      h.fillStyle=g; h.beginPath(); h.arc(p[0],p[1],rad,0,7); h.fill(); }
+  })();
   function draw(){
     mctx.clearRect(0,0,mc.width,mc.height);
+    mctx.drawImage(heat,0,0);
     var st=states[view], col=POLICIES[view].color;
     if(st && st.tour){
       for(var k=0;k<st.tour.length;k++){ var a=st.tour[k], b=st.tour[(k+1)%st.tour.length];
