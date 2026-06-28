@@ -131,16 +131,9 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
   height={560}
 />
 
-Run the **hard** setting, where the top two restaurants are close. The exact winner is not the lesson. The shape is.
+Run the **hard** setting, where the top two restaurants are close. Pure exploit can lock onto an early lucky arm. ε-greedy avoids that by sampling randomly, but it keeps spending some trials on arms whose uncertainty no longer matters. UCB1 and KL-UCB direct exploration toward arms with large confidence bounds. Thompson sampling does the same through posterior samples rather than an explicit bonus.
 
-- Pure exploit has no immune system. One lucky first impression can become a permanent habit.
-- ε-greedy has an immune system, but it is clumsy: it keeps sampling random places even when the uncertainty is somewhere specific.
-- UCB-style policies ask, “which estimate could still be wrong enough to matter?”
-- Thompson asks the same question by drawing from beliefs instead of adding an explicit bonus.
-
-That is the family resemblance. Good bandit algorithms are not magic restaurant pickers. They are accounting systems for uncertainty.
-
-KL-UCB is not a universal upgrade. It is a sharper tool when the reward really is close to Bernoulli. If the feedback is richer, misspecified, delayed, or strategic, the extra neatness can be fake precision.
+KL-UCB is useful when the reward is close to Bernoulli, such as clicks or purchases. If the feedback is richer, delayed, or misspecified, the sharper bound can become fake precision.
 
 <details>
 <summary><strong>Click to reveal: compact Bernoulli-bandit code</strong></summary>
