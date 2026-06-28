@@ -8,7 +8,7 @@
   :root {
     --bg: #ffffff; --fg: #1f2328; --muted: #6b7280; --line: #e5e7eb;
     --card: #f8fafc; --random: #9aa0a6; --greedy: #e8833a; --ucb: #2f6fed;
-    --thompson: #2b8a4e; --oracle: #111827;
+    --thompson: #2b8a4e; --ctx: #8b5cf6; --oracle: #111827;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #0b0f14; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2a313a;
@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>Semi-bandit on Berlin52 — learning the map by driving it</h1>
-  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Road costs are hidden; you only learn the roads you actually drive. Four policies race to the cheapest tour.</p>
+  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Road costs are hidden; you only learn the roads you actually drive. Five policies race to the cheapest tour.</p>
 
   <div class="controls">
     <button id="play" class="primary">Pause</button>
@@ -84,7 +84,7 @@
   </div>
 
   <p class="cap">
-    True road cost = Euclidean distance (TSPLIB <b>berlin52</b>); each drive returns that cost times multiplicative noise. The optimizer is nearest-neighbour + 2-opt run on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. Watch greedy lock onto an early false shortcut while the semi-bandits keep probing uncertainty and slide toward the oracle line.
+    True road cost = Euclidean distance (TSPLIB <b>berlin52</b>); each drive returns that cost times multiplicative noise. The optimizer is nearest-neighbour + 2-opt run on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must measure most of the map to converge. <b>Contextual</b> instead regresses cost on the two stops' positions — a handful of drives generalise to every road, so it snaps to the oracle in a few days from far fewer measurements. That gap, tabular vs contextual, is the whole point: structure lets you skip exploration.
   </p>
 
 <script>
@@ -115,6 +115,24 @@
   for (var a=0;a<N;a++) for (var b=0;b<N;b++){ var dx=COORD[a][0]-COORD[b][0], dy=COORD[a][1]-COORD[b][1]; var d=Math.sqrt(dx*dx+dy*dy); D[a][b]=d; if(a<b) priorSum+=d; }
   var PRIOR = priorSum / NP;          // mean edge length, used before a road is driven
   var PRIOR_SD = PRIOR * 0.6;
+
+  // ---- features for the CONTEXTUAL policy: cost predicted from the two stops' positions ----
+  // phi(a,b) = [1, dx, dy, max(dx,dy), min(dx,dy)] on normalised coords. A linear model on
+  // these recovers the octagonal L2 approximation, so a few drives generalise to every road.
+  var FD = 5;
+  var FSCALE = (function(){ var xs=COORD.map(function(c){return c[0];}), ys=COORD.map(function(c){return c[1];});
+    return Math.max(Math.max.apply(null,xs)-Math.min.apply(null,xs), Math.max.apply(null,ys)-Math.min.apply(null,ys)); })();
+  function phi(a,b){ var dx=Math.abs(COORD[a][0]-COORD[b][0])/FSCALE, dy=Math.abs(COORD[a][1]-COORD[b][1])/FSCALE;
+    var mx=dx>dy?dx:dy, mn=dx>dy?dy:dx; return [1,dx,dy,mx,mn]; }
+  var PHI=[]; for(var pa=0;pa<N;pa++){ PHI.push([]); for(var pb=0;pb<N;pb++){ PHI[pa].push(pa===pb?null:phi(pa,pb)); } }
+  function solveLinear(A,b,d){            // Gaussian elimination with partial pivoting (d small)
+    var M=[]; for(var i=0;i<d;i++){ M.push(A[i].slice()); M[i].push(b[i]); }
+    for(var col=0;col<d;col++){ var piv=col; for(var r=col+1;r<d;r++){ if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r; }
+      var tmp=M[col]; M[col]=M[piv]; M[piv]=tmp; var pv=M[col][col]; if(Math.abs(pv)<1e-12) pv=pv<0?-1e-12:1e-12;
+      for(var c=col;c<=d;c++) M[col][c]/=pv;
+      for(var r2=0;r2<d;r2++){ if(r2===col)continue; var fac=M[r2][col]; for(var c2=col;c2<=d;c2++) M[r2][c2]-=fac*M[col][c2]; } }
+    var x=[]; for(var i2=0;i2<d;i2++) x.push(M[i2][d]); return x;
+  }
 
   // ---- TSP helpers (operate on a cost function f(i,j)) ----
   function tourCostTrue(t){ var c=0; for(var k=0;k<t.length;k++){ c+=D[t[k]][t[(k+1)%t.length]]; } return c; }
@@ -164,12 +182,16 @@
   var ORACLE = tourCostTrue(oracleTour);
 
   // ---- policies ----
-  function newState(){ return { sum:new Float64Array(N*N), n:new Float64Array(N*N), tour:null, cost:0, best:Infinity, hist:[] }; }
+  function newState(ctx){ var s={ sum:new Float64Array(N*N), n:new Float64Array(N*N), tour:null, cost:0, best:Infinity, hist:[] };
+    if(ctx){ s.A=[]; for(var i=0;i<FD;i++){ var row=[]; for(var j=0;j<FD;j++) row.push(i===j?1:0); s.A.push(row); }
+             s.b=[]; for(var k=0;k<FD;k++) s.b.push(0); s.w=[]; for(var k2=0;k2<FD;k2++) s.w.push(0); s.pred=new Float64Array(N*N); }
+    return s; }
   function mean(st,i,j){ var k=i*N+j; return st.n[k]>0 ? st.sum[k]/st.n[k] : PRIOR; }
   function observe(st, t){
     for(var k=0;k<t.length;k++){ var a=t[k], b=t[(k+1)%t.length];
       var x=D[a][b]*(1+ NOISE*gauss()); if(x<1) x=1;
       var p=a*N+b, q=b*N+a; st.sum[p]+=x; st.n[p]+=1; st.sum[q]+=x; st.n[q]+=1;
+      if(st.A){ var f=PHI[a][b]; for(var r=0;r<FD;r++){ st.b[r]+=f[r]*x; for(var c=0;c<FD;c++) st.A[r][c]+=f[r]*f[c]; } }
     }
   }
   var POLICIES = {
@@ -177,21 +199,26 @@
                 pick:function(st,t){ var perm=[]; for(var i=0;i<N;i++)perm.push(i); for(var i=N-1;i>0;i--){var j=Math.floor(rng()*(i+1)); var tmp=perm[i];perm[i]=perm[j];perm[j]=tmp;} return perm; } },
     greedy:   { name:"Greedy mean",     color:getVar('--greedy'),   on:true,
                 pick:function(st,t){ return solve(function(i,j){return mean(st,i,j);}, [0], 8); } },
-    ucb:      { name:"UCB semi-bandit",  color:getVar('--ucb'),      on:true,
+    ucb:      { name:"UCB (tabular)",    color:getVar('--ucb'),      on:true,
                 // bonus is scaled to PRIOR so it is comparable to real edge costs; an
                 // unseen road (n=0) looks near-free, which is what forces exploration.
                 pick:function(st,t){ var lt=Math.log(t+1); return solve(function(i,j){ var k=i*N+j; var b=BETA*PRIOR*Math.sqrt(lt/(st.n[k]+1)); var v=mean(st,i,j)-b; return v<0.02*PRIOR?0.02*PRIOR:v; }, [0], 8); } },
     thompson: { name:"Thompson",        color:getVar('--thompson'), on:true,
-                pick:function(st,t){ return solve(function(i,j){ var k=i*N+j; var se = st.n[k]>0 ? (NOISE*mean(st,i,j))/Math.sqrt(st.n[k]) : PRIOR_SD; var v=mean(st,i,j)+se*gauss(); return v<0.05*PRIOR?0.05*PRIOR:v; }, [0], 8); } }
+                pick:function(st,t){ return solve(function(i,j){ var k=i*N+j; var se = st.n[k]>0 ? (NOISE*mean(st,i,j))/Math.sqrt(st.n[k]) : PRIOR_SD; var v=mean(st,i,j)+se*gauss(); return v<0.05*PRIOR?0.05*PRIOR:v; }, [0], 8); } },
+    contextual:{ name:"Contextual (position)", color:getVar('--ctx'), on:true,
+                // no per-road table: fit cost = w . phi(positions), predict every road, then solve
+                pick:function(st,t){ st.w=solveLinear(st.A,st.b,FD);
+                  for(var a=0;a<N;a++) for(var b=0;b<N;b++){ if(a===b)continue; var f=PHI[a][b]; var mu=0; for(var r=0;r<FD;r++) mu+=st.w[r]*f[r]; if(mu<1)mu=1; st.pred[a*N+b]=mu; }
+                  return solve(function(i,j){return st.pred[i*N+j];}, [0], 8); } }
   };
-  var ORDER = ["random","greedy","ucb","thompson"];
+  var ORDER = ["random","greedy","ucb","thompson","contextual"];
   function getVar(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888"; }
 
   // ---- simulation state ----
   var NOISE=0.15, BETA=0.45, day=0, states={}, view="ucb", playing=true, frame=0;
   function reset(){
     rng = mulberry32(20260621); day=0; frame=0;
-    states={}; ORDER.forEach(function(p){ states[p]=newState(); });
+    states={}; ORDER.forEach(function(p){ states[p]=newState(p==='contextual'); });
     draw(); chart(); stats();
   }
 
@@ -268,7 +295,8 @@
     document.getElementById('s-best').textContent= st&&isFinite(st.best)?Math.round(st.best):'—';
     document.getElementById('s-oracle').textContent=Math.round(ORACLE);
     var gap= st&&isFinite(st.best)?((st.best-ORACLE)/ORACLE*100):0;
-    document.getElementById('s-gap').textContent= st&&isFinite(st.best)? (gap>=0?'+':'')+gap.toFixed(1)+'%':'—';
+    var gv = +gap.toFixed(1); if(gv===0) gv=0;   // avoid "-0.0"
+    document.getElementById('s-gap').textContent= st&&isFinite(st.best)? (gv>=0?'+':'-')+Math.abs(gv).toFixed(1)+'%':'—';
     var meas=0; if(st){ for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){ if(st.n[i*N+j]>0)meas++; } }
     document.getElementById('s-meas').textContent= meas+' / '+NP;
   }
