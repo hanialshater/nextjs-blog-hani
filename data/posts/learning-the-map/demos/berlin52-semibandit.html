@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>Semi-bandit on Berlin52 — learning the map by driving it</h1>
-  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Each road's cost is its length times the hidden <b>congestion</b> of where it runs (the red zones), revealed only on roads you actually drive. Five policies race to the cheapest tour.</p>
+  <p class="sub">Every day you must drive a full valid tour of all 52 stops. Each road's cost is its length times the hidden <b>congestion</b> of where it runs (the red zones) times the road's own quirk, revealed only on roads you actually drive. Five policies race to the cheapest tour.</p>
 
   <div class="controls">
     <button id="play" class="primary">Pause</button>
@@ -84,7 +84,7 @@
   </div>
 
   <p class="cap">
-    True road cost = straight-line distance (TSPLIB <b>berlin52</b>) times a hidden congestion field (the red zones); each drive returns that cost with multiplicative noise. The optimizer is nearest-neighbour + 2-opt on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must measure most of the map to converge. <b>Contextual</b> doesn't learn roads at all &mdash; it learns the <em>congestion field</em> on a coarse grid of positions, so a few drives through a region predict every road there. It converges far sooner and from far fewer measurements, but only as well as a coarse grid of a smooth field allows: structure buys speed, not omniscience.
+    True road cost = straight-line distance (TSPLIB <b>berlin52</b>) times a hidden congestion field (the red zones); each drive returns that cost with multiplicative noise. The optimizer is nearest-neighbour + 2-opt on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. True cost = distance &times; regional congestion &times; a per-road factor unique to each edge. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must drive most of the map to converge. <b>Contextual + per-edge</b> is hierarchical: it learns the shared <em>congestion field</em> on a coarse grid (so a few drives in a region predict every road there) and then a per-road correction as each edge is driven. It reaches a good tour far sooner than the tabular policies from the shared structure, and keeps refining toward the optimum as it covers roads &mdash; structure to start fast, per-edge detail to finish exact.
   </p>
 
 <script>
@@ -122,12 +122,20 @@
   function cellOf(mx,my){ var gx=Math.floor((mx-GB.xmin)/(GB.xmax-GB.xmin)*G), gy=Math.floor((my-GB.ymin)/(GB.ymax-GB.ymin)*G);
     if(gx<0)gx=0; if(gx>=G)gx=G-1; if(gy<0)gy=0; if(gy>=G)gy=G-1; return gy*G+gx; }
 
+  // each road also has its own idiosyncratic factor (a per-edge "personality" the congestion
+  // field cannot explain, e.g. a bad junction); only driving that exact road reveals it.
+  var frng=mulberry32(987654321);
+  function fg(){ var u=0,v=0; while(u===0)u=frng(); while(v===0)v=frng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+  var EF=new Float64Array(N*N);
+  for (var a0=0;a0<N;a0++) for (var b0=a0+1;b0<N;b0++){ var ef=Math.exp(0.18*fg()); EF[a0*N+b0]=ef; EF[b0*N+a0]=ef; }
+
   var DIST=[], D=[], CELL=new Int16Array(N*N), priorSum=0;
   for (var i=0;i<N;i++){ DIST.push(new Float64Array(N)); D.push(new Float64Array(N)); }
   for (var a=0;a<N;a++) for (var b=0;b<N;b++){
+    if(a===b){ DIST[a][b]=0; D[a][b]=0; continue; }
     var dx=COORD[a][0]-COORD[b][0], dy=COORD[a][1]-COORD[b][1]; var dd=Math.sqrt(dx*dx+dy*dy);
     var mxp=(COORD[a][0]+COORD[b][0])/2, myp=(COORD[a][1]+COORD[b][1])/2;
-    DIST[a][b]=dd; D[a][b]=dd*cong(mxp,myp); CELL[a*N+b]=cellOf(mxp,myp); if(a<b) priorSum+=D[a][b];
+    DIST[a][b]=dd; D[a][b]=dd*cong(mxp,myp)*EF[a*N+b]; CELL[a*N+b]=cellOf(mxp,myp); if(a<b) priorSum+=D[a][b];
   }
   var PRIOR = priorSum / NP;          // mean true road cost, used before a road is driven
   var PRIOR_SD = PRIOR * 0.6;
@@ -181,14 +189,16 @@
 
   // ---- policies ----
   function newState(ctx){ var s={ sum:new Float64Array(N*N), n:new Float64Array(N*N), tour:null, cost:0, best:Infinity, hist:[] };
-    if(ctx){ s.cellSum=new Float64Array(G*G); s.cellN=new Float64Array(G*G); s.pred=new Float64Array(N*N); }
+    if(ctx){ s.cellSum=new Float64Array(G*G); s.cellN=new Float64Array(G*G); s.resSum=new Float64Array(N*N); s.resN=new Float64Array(N*N); s.pred=new Float64Array(N*N); }
     return s; }
   function mean(st,i,j){ var k=i*N+j; return st.n[k]>0 ? st.sum[k]/st.n[k] : PRIOR; }
   function observe(st, t){
     for(var k=0;k<t.length;k++){ var a=t[k], b=t[(k+1)%t.length];
       var x=D[a][b]*(1+ NOISE*gauss()); if(x<1) x=1;
       var p=a*N+b, q=b*N+a; st.sum[p]+=x; st.n[p]+=1; st.sum[q]+=x; st.n[q]+=1;
-      if(st.cellN){ var ms=x/DIST[a][b]; var cl=CELL[a*N+b]; st.cellSum[cl]+=ms; st.cellN[cl]+=1; }  // noisy congestion sample for this region
+      if(st.cellN){ var cl=CELL[a*N+b]; st.cellSum[cl]+=x/DIST[a][b]; st.cellN[cl]+=1;     // regional congestion sample
+        var ce=st.cellSum[cl]/st.cellN[cl], rs=x/(DIST[a][b]*ce);                           // leftover = this road's own factor
+        st.resSum[p]+=rs; st.resN[p]+=1; st.resSum[q]+=rs; st.resN[q]+=1; }
     }
   }
   var POLICIES = {
@@ -202,12 +212,15 @@
                 pick:function(st,t){ var lt=Math.log(t+1); return solve(function(i,j){ var k=i*N+j; var b=BETA*PRIOR*Math.sqrt(lt/(st.n[k]+1)); var v=mean(st,i,j)-b; return v<0.02*PRIOR?0.02*PRIOR:v; }, [0], 8); } },
     thompson: { name:"Thompson",        color:getVar('--thompson'), on:true,
                 pick:function(st,t){ return solve(function(i,j){ var k=i*N+j; var se = st.n[k]>0 ? (NOISE*mean(st,i,j))/Math.sqrt(st.n[k]) : PRIOR_SD; var v=mean(st,i,j)+se*gauss(); return v<0.05*PRIOR?0.05*PRIOR:v; }, [0], 8); } },
-    contextual:{ name:"Contextual (position)", color:getVar('--ctx'), on:true,
-                // no per-road table: estimate the congestion field on a G x G grid of map positions,
-                // predict cost = known distance x optimistic local congestion, then solve.
+    contextual:{ name:"Contextual + per-edge", color:getVar('--ctx'), on:true,
+                // hierarchical: estimate the congestion field on a G x G grid (shared, fast to learn)
+                // PLUS a per-road correction for each edge actually driven (personalised, slow).
+                // predict = distance x optimistic regional congestion x learned per-edge factor.
                 pick:function(st,t){ var lt=Math.log(t+1), om=new Float64Array(G*G);
                   for(var c=0;c<G*G;c++){ var mh=st.cellN[c]>0?st.cellSum[c]/st.cellN[c]:1; var v=mh-BETA*Math.sqrt(lt/(st.cellN[c]+1)); om[c]=v<0.3?0.3:v; }
-                  for(var a=0;a<N;a++) for(var b=0;b<N;b++){ if(a===b)continue; st.pred[a*N+b]=DIST[a][b]*om[CELL[a*N+b]]; }
+                  for(var a=0;a<N;a++) for(var b=0;b<N;b++){ if(a===b)continue; var k=a*N+b;
+                    var rf=(st.resN[k]>0?st.resSum[k]/st.resN[k]:1) - BETA*Math.sqrt(lt/(st.resN[k]+1)); if(rf<0.3)rf=0.3;  // optimism per road too
+                    st.pred[k]=DIST[a][b]*om[CELL[k]]*rf; }
                   return solve(function(i,j){return st.pred[i*N+j];}, [0], 8); } }
   };
   var ORDER = ["random","greedy","ucb","thompson","contextual"];
