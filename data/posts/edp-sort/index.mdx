@@ -90,19 +90,36 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
   and choose the largest score.
 
-  Read it as: **what I have seen** plus **credit for what I have not learned yet**.
+  Here:
 
-  The first term, $\hat{\mu}_i$, is the restaurant's current average in your notebook. The second term is the exploration bonus. It is large when $n_i$ is small, because a restaurant with one visit could still be much better than it looks. It shrinks when you visit that restaurant again, because $n_i$ sits in the denominator. Ten visits do not make the place unknowable; they make it harder to claim “maybe we just got unlucky.”
+  - $t$ is the total number of trials so far.
+  - $n_i$ is how many times arm $i$ has been tried.
+  - $\hat{\mu}_i$ is the observed average reward of arm $i$.
 
-  The $\ln t$ part grows slowly with time, so old arms are not forgotten completely as the experiment gets longer. But the main motion is simple: **evidence spends the bonus down**.
+  The second term,
+
+  $$\sqrt{2\ln t / n_i}$$
+
+  is the exploration bonus.
+
+  It is large when $n_i$ is small, because the arm is under-sampled. It shrinks as $n_i$ grows, because the estimate has more evidence behind it. The $\ln t$ term grows slowly, so under-tested arms can still get a chance later. UCB1 chooses the arm with the best **optimistic estimate**: observed mean plus uncertainty bonus.
 
 - **KL-UCB.** UCB1 uses a deliberately blunt safety margin. That is nice because it works for any bounded reward, but it can be too cautious for yes/no feedback: click or no click, purchase or no purchase, good dinner or rough dinner.
 
-  KL-UCB keeps the same optimistic spirit but asks a sharper question: _given the exact pattern of wins and losses, how high could this arm's true win rate still plausibly be?_ It chooses the largest $q$ such that
+  KL-UCB keeps the same optimism idea, but uses a confidence bound matched to Bernoulli rewards. Its score is the largest $q$ in $[\hat{\mu}_i,1]$ such that
 
   $$n_i\,\mathrm{KL}(\hat{\mu}_i\,\|\,q) \leq \ln t + c\ln\ln t$$
 
-  You do not need to love the notation. The point is that the uncertainty ruler now matches coin-flip evidence. A restaurant with 19 good dinners out of 20 and a restaurant with 11 out of 20 should not get the same kind of error bar.
+  Here $q$ is an optimistic candidate for the true mean. The KL term measures how statistically far $q$ is from the observed mean $\hat{\mu}_i$.
+
+  The constraint says: choose the highest optimistic value that is still plausible under the data.
+
+  So the difference is:
+
+  - UCB1: observed mean plus a simple uncertainty bonus.
+  - KL-UCB: highest statistically plausible mean under the right reward model.
+
+  This matters for clicks and purchases. Moving from a 2% click rate to 5% is not the same statistical move as 50% to 53%, even though both are a three-point gap. UCB1 uses distance in value space. KL-UCB uses distance in probability-distribution space.
 
 - **Thompson sampling** — _let your beliefs race._ Keep a whole distribution of possible qualities for each restaurant, not just one average. Each night, draw one plausible quality from every restaurant's belief and go to the highest draw.
 
