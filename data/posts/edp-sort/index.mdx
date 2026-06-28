@@ -318,7 +318,13 @@ comparisons. Big gaps settle quickly. Near ties need repeated matches.
 
 ### From pairwise feedback to skill ratings
 
-**Batch fit.** Given all matches so far, find the Bradley-Terry skill values that best explain them. Sort the fitted skills and you have a ranking. This is clean, but refitting from scratch after every match does not scale.
+**Batch fit.** Given all matches so far, find the Bradley-Terry skill values that make the observed winners most likely.
+
+If A beat B many times, the fit raises A above B until the predicted probability $P(A \succ B)$ roughly matches the match history. If B beat C many times, B rises above C. Because all players share one skill scale, those two facts also imply something about A versus C, even if A and C have not played.
+
+The code below uses a standard batch update. It starts every player with the same positive strength, then repeatedly asks: given the current strengths of everyone else, how strong must player $i$ be to explain their total wins? After each pass it normalizes the strengths, because Bradley-Terry only cares about relative skill. Multiplying every strength by the same constant would not change any match probability.
+
+Sort the final fitted skills and you have a ranking. This is clean, but refitting from scratch after every match does not scale.
 
 **Online fit: Elo.** Elo keeps a rating for each player and updates it after every match. A win adds points to the winner and removes points from the loser. The size of the move depends on how surprising the result was.
 
