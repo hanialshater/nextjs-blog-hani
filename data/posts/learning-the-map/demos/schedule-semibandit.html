@@ -35,6 +35,7 @@
     <button id="play" class="primary">Pause</button>
     <button id="step">Step</button>
     <button id="reset">Reset</button>
+    <button id="viewmode">Bipartite view</button>
     <label class="ctl">Speed <input id="speed" type="range" min="1" max="30" value="8" /></label>
     <label class="ctl">Noise <input id="noise" type="range" min="0" max="40" value="20" /><span id="noiseval" class="dim">20%</span></label>
     <label class="ctl">Explore β <input id="beta" type="range" min="0" max="150" value="55" /><span id="betaval" class="dim">0.55</span></label>
@@ -63,7 +64,7 @@
   <div class="chartcard"><canvas id="chart2" width="900" height="170"></canvas></div>
 
   <p class="cap">
-    Booking quality = a hidden <b>client-type × expert-specialty</b> compatibility plus a per-booking quirk, seen with noise only when the booking is made. Each week the optimizer solves the exact <b>max-weight assignment</b> of clients to open slots (the in-browser analogue of an LP in Pyomo/CVXPY) on each policy's current estimates. <b>Availability</b> removes most cells, so "just try every client in every slot" is expensive — which is exactly when structure pays: <b>Contextual + per-pair</b> learns the small type×specialty table (one good booking teaches it about every similar client) then a per-booking correction, and pulls ahead of the <b>tabular</b> policies that must probe almost every client·slot pair. Greedy locks onto an early guess; random never learns.
+    Booking quality is a hidden <b>matrix factorization</b>: every client has a latent "needs" vector and every expert a latent "strengths" vector, and quality is how well the two align (clients/experts are coloured by their latent direction, so matching colours should fit) plus a per-booking quirk, seen with noise only when the booking is made. Each week the optimizer solves the exact <b>max-weight assignment</b> of clients to open slots (the in-browser analogue of an LP in Pyomo/CVXPY) on each policy's current estimates. <b>Availability</b> removes most cells, so "just try every client in every slot" is expensive — which is exactly when structure pays: <b>Contextual + per-pair</b> learns a coarse client-group × expert-group compatibility table (a low-rank read of those latent factors — one good booking teaches it about every similar pairing) plus a per-booking correction, and pulls ahead of the <b>tabular</b> policies that must probe almost every client·slot pair. Toggle the <b>Bipartite view</b> to see clients linked to experts with their capacity. Greedy locks onto an early guess; random never learns.
   </p>
 
 <script>
@@ -80,20 +81,24 @@
   // ---- hidden truth ----
   var frng=mulberry32(24680);
   function fg(){ var u=0,v=0; while(u===0)u=frng(); while(v===0)v=frng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
-  var SPEC=[]; for(var e=0;e<NE;e++) SPEC.push(e%S);                 // each expert's specialty
-  for(var e=NE-1;e>0;e--){ var k=Math.floor(frng()*(e+1)); var t=SPEC[e];SPEC[e]=SPEC[k];SPEC[k]=t; }
-  var GR=DAYS*SLOTS;                                                  // grid rows
+  var GR=DAYS*SLOTS, LD=2;                                            // grid rows, latent dimension
+  function latent(){ var a=2*Math.PI*frng(), r=0.55+0.9*frng(); return [r*Math.cos(a), r*Math.sin(a)]; }
+  var VX=[]; for(var e=0;e<NE;e++) VX.push(latent());                 // expert latent "strengths" vector
   // availability per (expert,row): ~60% open
   var AVAIL=[]; for(var e=0;e<NE;e++){ AVAIL.push([]); for(var r=0;r<GR;r++) AVAIL[e].push(frng()<0.6); }
-  // build the list of open cells
+  var CAP=[]; for(var e=0;e<NE;e++){ var cc=0; for(var r=0;r<GR;r++) if(AVAIL[e][r])cc++; CAP.push(cc); }  // capacity = open slots
   var CELLS=[]; for(var e=0;e<NE;e++) for(var r=0;r<GR;r++) if(AVAIL[e][r]) CELLS.push({e:e,r:r,day:Math.floor(r/SLOTS),slot:r%SLOTS});
   var NCELL=CELLS.length, NC=NCELL;                                  // one client per open slot
-  var TYPE=[]; for(var i=0;i<NC;i++) TYPE.push(i%T);
-  for(var i=NC-1;i>0;i--){ var k=Math.floor(frng()*(i+1)); var t=TYPE[i];TYPE[i]=TYPE[k];TYPE[k]=t; }
-  var COMPAT=[]; for(var t=0;t<T;t++){ COMPAT.push([]); for(var s=0;s<S;s++) COMPAT[t].push(18+Math.round(60*frng())); } // 18..78
-  var MU=new Float64Array(NC*NCELL);                                  // true booking quality client x cell
-  for(var i=0;i<NC;i++) for(var c=0;c<NCELL;c++){ var m=COMPAT[TYPE[i]][SPEC[CELLS[c].e]]+8*fg(); if(m<4)m=4; if(m>90)m=90; MU[i*NCELL+c]=m; }
-  var SCALE=28, PRIORQ=48;
+  var UX=[]; for(var i=0;i<NC;i++) UX.push(latent());                // client latent "needs" vector
+  function bucket(v,n){ var a=Math.atan2(v[1],v[0]); if(a<0)a+=2*Math.PI; return Math.floor(a/(2*Math.PI)*n)%n; }
+  var TYPE=[]; for(var i=0;i<NC;i++) TYPE.push(bucket(UX[i],T));     // colour groups by latent direction
+  var SPEC=[]; for(var e=0;e<NE;e++) SPEC.push(bucket(VX[e],S));
+  // true quality = matrix factorization: how well the client's and expert's latents align (+ a per-booking quirk)
+  var MU0=50, GAIN=32;
+  var MU=new Float64Array(NC*NCELL);
+  for(var i=0;i<NC;i++) for(var c=0;c<NCELL;c++){ var e=CELLS[c].e; var dot=UX[i][0]*VX[e][0]+UX[i][1]*VX[e][1];
+    var m=MU0+GAIN*dot+6*fg(); if(m<4)m=4; if(m>92)m=92; MU[i*NCELL+c]=m; }
+  var SCALE=28, PRIORQ=50;
 
   // ---- exact max-weight assignment via Hungarian (min-cost on BIG-value) ----
   function hungarian(cost){ var n=cost.length, INF=1e18;
@@ -121,7 +126,7 @@
     for(var i=0;i<NC;i++){ V.push([]); for(var c=0;c<NCELL;c++){ var k=i*NCELL+c, val;
       if(kind==='greedy'){ val=mean(st,i,c); }
       else if(kind==='ucb'){ val=mean(st,i,c)+BETA*SCALE*Math.sqrt(lt/(st.n[k]+1)); }
-      else { var cc=TYPE[i]*S+SPEC[CELLS[c].e];
+      else { var cc=TYPE[i]*S+SPEC[CELLS[c].e];                    // coarse low-rank read of the latent factors (client-group x expert-group)
         var comp=(st.cellN[cc]>0?st.cellSum[cc]/st.cellN[cc]:PRIORQ)+BETA*SCALE*Math.sqrt(lt/(st.cellN[cc]+1));
         var res=(st.resN[k]>0?st.resSum[k]/st.resN[k]:0)+BETA*SCALE*Math.sqrt(lt/(st.resN[k]+1));
         val=comp+res; }
@@ -147,9 +152,24 @@
   // ---- calendar drawing ----
   var cal=document.getElementById('cal'), cx=cal.getContext('2d');
   var TCOL=[cv('--t0'),cv('--t1'),cv('--t2'),cv('--t3')];
-  var ML=66, MT=30, MR=8, MB=8;
+  var ML=66, MT=30, MR=8, MB=8, MODE='cal';
   function cellRect(e,r){ var w=(cal.width-ML-MR)/NE, h=(cal.height-MT-MB)/GR; return {x:ML+e*w, y:MT+r*h, w:w, h:h}; }
-  function draw(){ cx.clearRect(0,0,cal.width,cal.height); cx.textBaseline='middle';
+  function draw(){ if(MODE==='bip') drawBip(); else drawCal(); }
+  function drawBip(){ cx.clearRect(0,0,cal.width,cal.height); cx.textBaseline='middle';
+    var st=states[view], col=POLICIES[view].color; var LX=116, RX=cal.width-150, padT=42, padB=16;
+    function cyL(i){ return padT+(NC<=1?0:i/(NC-1)*(cal.height-padT-padB)); }
+    function cyR(e){ return padT+(NE<=1?(cal.height-padT-padB)/2:e/(NE-1)*(cal.height-padT-padB)); }
+    cx.font='11px ui-sans-serif,system-ui'; cx.textAlign='center'; cx.fillStyle=cv('--muted');
+    cx.fillText('clients ('+NC+')', LX, 22); cx.fillText('experts · capacity', RX-6, 22);
+    if(st && st.asg){ var V=(view==='random')?null:valMatrix(st,Math.max(week,1),view); var vmin=1e9,vmax=-1e9;
+      if(V){ for(var i=0;i<NC;i++){ var vv=V[i][st.asg[i]]; if(vv<vmin)vmin=vv; if(vv>vmax)vmax=vv; } }
+      for(var i=0;i<NC;i++){ var e=CELLS[st.asg[i]].e, y1=cyL(i), y2=cyR(e); var alpha=0.5;
+        if(V){ var vv=V[i][st.asg[i]]; alpha=0.18+0.72*((vv-vmin)/((vmax-vmin)||1)); }
+        cx.strokeStyle=col; cx.globalAlpha=alpha; cx.lineWidth=1.5; cx.beginPath(); cx.moveTo(LX+7,y1); cx.lineTo(RX-(6+CAP[e]*1.1),y2); cx.stroke(); cx.globalAlpha=1; } }
+    for(var i=0;i<NC;i++){ var y=cyL(i); cx.beginPath(); cx.arc(LX,y,3.8,0,7); cx.fillStyle=TCOL[TYPE[i]]; cx.fill(); }
+    for(var e=0;e<NE;e++){ var y=cyR(e), rad=6+CAP[e]*1.1; cx.beginPath(); cx.arc(RX,y,rad,0,7); cx.fillStyle=TCOL[SPEC[e]]; cx.fill();
+      cx.lineWidth=1.5; cx.strokeStyle='rgba(255,255,255,0.9)'; cx.stroke(); cx.fillStyle=cv('--fg'); cx.textAlign='left'; cx.fillText('E'+(e+1)+' ·'+CAP[e], RX+rad+5, y); } }
+  function drawCal(){ cx.clearRect(0,0,cal.width,cal.height); cx.textBaseline='middle';
     cx.font='10px ui-sans-serif,system-ui';
     for(var e=0;e<NE;e++){ var rc=cellRect(e,0); cx.textAlign='center'; cx.fillStyle=TCOL[SPEC[e]];
       cx.beginPath(); cx.arc(rc.x+rc.w/2-16, MT-14, 4,0,7); cx.fill();
@@ -217,6 +237,7 @@
   document.getElementById('play').onclick=function(){ playing=!playing; this.textContent=playing?'Pause':'Play'; };
   document.getElementById('step').onclick=function(){ playing=false; document.getElementById('play').textContent='Play'; stepWeek(); renderAll(); };
   document.getElementById('reset').onclick=function(){ reset(); };
+  document.getElementById('viewmode').onclick=function(){ MODE=(MODE==='cal')?'bip':'cal'; this.textContent=(MODE==='cal')?'Bipartite view':'Calendar view'; renderAll(); };
   document.getElementById('speed').oninput=function(){ SPEED=+this.value; };
   document.getElementById('noise').oninput=function(){ NOISE=+this.value/100; document.getElementById('noiseval').textContent=this.value+'%'; };
   document.getElementById('beta').oninput=function(){ BETA=+this.value/100; document.getElementById('betaval').textContent=(+this.value/100).toFixed(2); };
