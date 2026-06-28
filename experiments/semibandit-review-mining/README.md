@@ -9,6 +9,11 @@ many cooperating agents** (29 agents in this run), not a single prompt.
 > **The thesis, applied:** pairwise judgment is reliable but expensive → Bradley–Terry
 > makes it calibrated → the semi-bandit makes it scalable → constraints make the slate usable.
 
+> **Two runs live here.** This page documents the first run over **100 reviews**. A scaled
+> follow-up over **2,000 reviews with a cheap Haiku quality pre-filter** (66 agents) lives in
+> [`run-2k/`](./run-2k/README.md) — same machinery, plus a filter layer that throws away the
+> bottom before the expensive judging starts.
+
 ## Data
 
 - **Source:** a real customer-review dataset (Trustpilot-style store reviews, the
