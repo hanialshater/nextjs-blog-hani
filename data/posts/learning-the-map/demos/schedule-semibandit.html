@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Semi-bandit weekly scheduling</title>
+<style>
+  :root{ --bg:#fff; --fg:#1f2328; --muted:#6b7280; --line:#e5e7eb; --card:#f8fafc;
+    --random:#9aa0a6; --greedy:#e8833a; --ucb:#2f6fed; --ctx:#8b5cf6; --oracle:#111827;
+    --t0:#2563eb; --t1:#16a34a; --t2:#db2777; --t3:#0891b2; --grid:#eef1f4; --na:#e7e9ee; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#0b0f14; --fg:#e6e8eb; --muted:#9aa3ad; --line:#2a313a; --card:#111821; --oracle:#e6e8eb; --grid:#161d26; --na:#1a212b; } }
+  *{box-sizing:border-box;} body{ margin:0; padding:14px; background:var(--bg); color:var(--fg); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  h1{ font-size:16px; margin:0 0 2px; } .sub{ color:var(--muted); margin:0 0 12px; font-size:13px; }
+  .controls{ display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin-bottom:12px; }
+  button{ font:inherit; padding:6px 12px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--fg); cursor:pointer; }
+  button.primary{ background:var(--ucb); color:#fff; border-color:var(--ucb); } button:active{ transform:translateY(1px); }
+  label.ctl{ display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; } input[type=range]{ width:108px; }
+  .wrap{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+  canvas{ display:block; max-width:100%; }
+  .mapcard,.side{ border:1px solid var(--line); border-radius:10px; background:var(--card); padding:10px; }
+  .side{ min-width:240px; flex:1 1 240px; }
+  .stat{ display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed var(--line); } .stat:last-child{ border-bottom:0; } .stat b{ font-variant-numeric:tabular-nums; }
+  .legend{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 2px; font-size:13px; } .legend span{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; } .legend i{ width:16px; height:3px; border-radius:2px; display:inline-block; }
+  .pillrow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } .pill{ padding:3px 9px; border:1px solid var(--line); border-radius:999px; cursor:pointer; font-size:12px; color:var(--muted); } .pill.on{ background:var(--ucb); color:#fff; border-color:var(--ucb); }
+  .chartcard{ border:1px solid var(--line); border-radius:10px; background:var(--card); padding:10px; margin-top:14px; }
+  .cap{ color:var(--muted); font-size:12.5px; margin-top:10px; } .dim{ color:var(--muted); }
+  .key{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:6px; } .key span{ display:inline-flex; align-items:center; gap:5px; } .key i{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body>
+  <h1>Semi-bandit weekly scheduling — book clients into experts' calendars while learning who fits whom</h1>
+  <p class="sub">Every week you fill the experts' open slots with clients (one client per slot). You only learn how good a booking was once you actually make it. Four policies race to the best weekly schedule.</p>
+
+  <div class="controls">
+    <button id="play" class="primary">Pause</button>
+    <button id="step">Step</button>
+    <button id="reset">Reset</button>
+    <label class="ctl">Speed <input id="speed" type="range" min="1" max="30" value="8" /></label>
+    <label class="ctl">Noise <input id="noise" type="range" min="0" max="40" value="20" /><span id="noiseval" class="dim">20%</span></label>
+    <label class="ctl">Explore β <input id="beta" type="range" min="0" max="150" value="55" /><span id="betaval" class="dim">0.55</span></label>
+  </div>
+
+  <div class="wrap">
+    <div class="mapcard">
+      <canvas id="cal" width="560" height="430"></canvas>
+      <div class="pillrow" id="viewpills"></div>
+    </div>
+    <div class="side">
+      <div class="stat"><span>Week</span><b id="s-day">0</b></div>
+      <div class="stat"><span>Shown policy</span><b id="s-pol">UCB (tabular)</b></div>
+      <div class="stat"><span>Schedule quality now</span><b id="s-cost">—</b></div>
+      <div class="stat"><span>Best so far</span><b id="s-best">—</b></div>
+      <div class="stat"><span>Oracle (perfect info)</span><b id="s-oracle">—</b></div>
+      <div class="stat"><span>Gap to oracle</span><b id="s-gap">—</b></div>
+      <div class="stat"><span>Client·slot pairs tried</span><b id="s-meas">—</b></div>
+      <div class="legend" id="legend"></div>
+      <div class="key" id="typekey"></div>
+      <p class="cap" style="margin-bottom:0">Columns = experts (header colour = <b>specialty</b>), rows = Mon–Fri × AM/PM. Grey cells = expert unavailable. A filled dot = a booked client, coloured by client <b>type</b>; brighter = the policy rates that booking higher. Click a legend entry to show that policy's week.</p>
+    </div>
+  </div>
+
+  <div class="chartcard"><canvas id="chart" width="900" height="190"></canvas></div>
+  <div class="chartcard"><canvas id="chart2" width="900" height="170"></canvas></div>
+
+  <p class="cap">
+    Booking quality = a hidden <b>client-type × expert-specialty</b> compatibility plus a per-booking quirk, seen with noise only when the booking is made. Each week the optimizer solves the exact <b>max-weight assignment</b> of clients to open slots (the in-browser analogue of an LP in Pyomo/CVXPY) on each policy's current estimates. <b>Availability</b> removes most cells, so "just try every client in every slot" is expensive — which is exactly when structure pays: <b>Contextual + per-pair</b> learns the small type×specialty table (one good booking teaches it about every similar client) then a per-booking correction, and pulls ahead of the <b>tabular</b> policies that must probe almost every client·slot pair. Greedy locks onto an early guess; random never learns.
+  </p>
+
+<script>
+(function(){
+  "use strict";
+  var NE=6, DAYS=5, SLOTS=2;            // experts, weekdays, AM/PM
+  var T=4, S=4;                          // client types, expert specialties
+  var DAYNAME=['Mon','Tue','Wed','Thu','Fri'], SLOTNAME=['AM','PM'];
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+  var rng=mulberry32(76543);
+  function gauss(){ var u=0,v=0; while(u===0)u=rng(); while(v===0)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+  // ---- hidden truth ----
+  var frng=mulberry32(24680);
+  function fg(){ var u=0,v=0; while(u===0)u=frng(); while(v===0)v=frng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+  var SPEC=[]; for(var e=0;e<NE;e++) SPEC.push(e%S);                 // each expert's specialty
+  for(var e=NE-1;e>0;e--){ var k=Math.floor(frng()*(e+1)); var t=SPEC[e];SPEC[e]=SPEC[k];SPEC[k]=t; }
+  var GR=DAYS*SLOTS;                                                  // grid rows
+  // availability per (expert,row): ~60% open
+  var AVAIL=[]; for(var e=0;e<NE;e++){ AVAIL.push([]); for(var r=0;r<GR;r++) AVAIL[e].push(frng()<0.6); }
+  // build the list of open cells
+  var CELLS=[]; for(var e=0;e<NE;e++) for(var r=0;r<GR;r++) if(AVAIL[e][r]) CELLS.push({e:e,r:r,day:Math.floor(r/SLOTS),slot:r%SLOTS});
+  var NCELL=CELLS.length, NC=NCELL;                                  // one client per open slot
+  var TYPE=[]; for(var i=0;i<NC;i++) TYPE.push(i%T);
+  for(var i=NC-1;i>0;i--){ var k=Math.floor(frng()*(i+1)); var t=TYPE[i];TYPE[i]=TYPE[k];TYPE[k]=t; }
+  var COMPAT=[]; for(var t=0;t<T;t++){ COMPAT.push([]); for(var s=0;s<S;s++) COMPAT[t].push(18+Math.round(60*frng())); } // 18..78
+  var MU=new Float64Array(NC*NCELL);                                  // true booking quality client x cell
+  for(var i=0;i<NC;i++) for(var c=0;c<NCELL;c++){ var m=COMPAT[TYPE[i]][SPEC[CELLS[c].e]]+8*fg(); if(m<4)m=4; if(m>90)m=90; MU[i*NCELL+c]=m; }
+  var SCALE=28, PRIORQ=48;
+
+  // ---- exact max-weight assignment via Hungarian (min-cost on BIG-value) ----
+  function hungarian(cost){ var n=cost.length, INF=1e18;
+    var u=new Array(n+1).fill(0), v=new Array(n+1).fill(0), p=new Array(n+1).fill(0), way=new Array(n+1).fill(0);
+    for(var i=1;i<=n;i++){ p[0]=i; var j0=0; var minv=new Array(n+1).fill(INF), used=new Array(n+1).fill(false);
+      do{ used[j0]=true; var i0=p[j0], delta=INF, j1=-1;
+        for(var j=1;j<=n;j++) if(!used[j]){ var cur=cost[i0-1][j-1]-u[i0]-v[j];
+          if(cur<minv[j]){ minv[j]=cur; way[j]=j0; } if(minv[j]<delta){ delta=minv[j]; j1=j; } }
+        for(var j=0;j<=n;j++){ if(used[j]){ u[p[j]]+=delta; v[j]-=delta; } else minv[j]-=delta; }
+        j0=j1; } while(p[j0]!==0);
+      do{ var j1=way[j0]; p[j0]=p[j1]; j0=j1; } while(j0); }
+    var a=new Array(n); for(var j=1;j<=n;j++) a[p[j]-1]=j-1; return a; }
+  function assignMax(V){ var n=V.length, cost=[]; for(var i=0;i<n;i++){ cost.push([]); for(var j=0;j<n;j++) cost[i].push(1e6 - V[i][j]); } return hungarian(cost); }
+  function totalTrue(a){ var s=0; for(var i=0;i<NC;i++) s+=MU[i*NCELL+a[i]]; return s; }
+  function randPerm(){ var p=[]; for(var i=0;i<NC;i++)p.push(i); for(var i=NC-1;i>0;i--){ var k=Math.floor(rng()*(i+1)); var t=p[i];p[i]=p[k];p[k]=t; } return p; }
+
+  var ORACLE = totalTrue(assignMax((function(){ var V=[]; for(var i=0;i<NC;i++){ V.push([]); for(var c=0;c<NCELL;c++) V[i].push(MU[i*NCELL+c]); } return V; })()));
+
+  // ---- policies ----
+  function newState(ctx){ var s={ sum:new Float64Array(NC*NCELL), n:new Float64Array(NC*NCELL), asg:null, q:0, best:-Infinity, hist:[] };
+    if(ctx){ s.cellSum=new Float64Array(T*S); s.cellN=new Float64Array(T*S); s.resSum=new Float64Array(NC*NCELL); s.resN=new Float64Array(NC*NCELL); }
+    return s; }
+  function mean(st,i,c){ var k=i*NCELL+c; return st.n[k]>0?st.sum[k]/st.n[k]:PRIORQ; }
+  function valMatrix(st,t,kind){ var V=[], lt=Math.log(t+1);
+    for(var i=0;i<NC;i++){ V.push([]); for(var c=0;c<NCELL;c++){ var k=i*NCELL+c, val;
+      if(kind==='greedy'){ val=mean(st,i,c); }
+      else if(kind==='ucb'){ val=mean(st,i,c)+BETA*SCALE*Math.sqrt(lt/(st.n[k]+1)); }
+      else { var cc=TYPE[i]*S+SPEC[CELLS[c].e];
+        var comp=(st.cellN[cc]>0?st.cellSum[cc]/st.cellN[cc]:PRIORQ)+BETA*SCALE*Math.sqrt(lt/(st.cellN[cc]+1));
+        var res=(st.resN[k]>0?st.resSum[k]/st.resN[k]:0)+BETA*SCALE*Math.sqrt(lt/(st.resN[k]+1));
+        val=comp+res; }
+      V[i].push(val); } }
+    return V; }
+  function observe(st,a){ for(var i=0;i<NC;i++){ var c=a[i], k=i*NCELL+c;
+      var x=MU[k]*(1+NOISE*gauss()); if(x<1)x=1; st.sum[k]+=x; st.n[k]+=1;
+      if(st.cellN){ var cc=TYPE[i]*S+SPEC[CELLS[c].e]; st.cellSum[cc]+=x; st.cellN[cc]+=1; var ce=st.cellSum[cc]/st.cellN[cc]; st.resSum[k]+=(x-ce); st.resN[k]+=1; } } }
+
+  var POLICIES={
+    random:{ name:"Random", color:cv('--random'), on:true, pick:function(st,t){ return randPerm(); } },
+    greedy:{ name:"Greedy mean", color:cv('--greedy'), on:true, pick:function(st,t){ return assignMax(valMatrix(st,t,'greedy')); } },
+    ucb:{ name:"UCB (tabular)", color:cv('--ucb'), on:true, pick:function(st,t){ return assignMax(valMatrix(st,t,'ucb')); } },
+    contextual:{ name:"Contextual + per-pair", color:cv('--ctx'), on:true, pick:function(st,t){ return assignMax(valMatrix(st,t,'ctx')); } }
+  };
+  var ORDER=["random","greedy","ucb","contextual"];
+  function cv(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#888'; }
+
+  var NOISE=0.20, BETA=0.55, week=0, states={}, view="ucb", playing=true, frame=0;
+  function reset(){ rng=mulberry32(76543); week=0; frame=0; states={}; ORDER.forEach(function(p){ states[p]=newState(p==='contextual'); }); renderAll(); }
+  function stepWeek(){ week++; ORDER.forEach(function(p){ var st=states[p]; var a=POLICIES[p].pick(st,week); var q=totalTrue(a); st.asg=a; st.q=q; if(q>st.best)st.best=q; st.hist.push(q); observe(st,a); }); }
+
+  // ---- calendar drawing ----
+  var cal=document.getElementById('cal'), cx=cal.getContext('2d');
+  var TCOL=[cv('--t0'),cv('--t1'),cv('--t2'),cv('--t3')];
+  var ML=66, MT=30, MR=8, MB=8;
+  function cellRect(e,r){ var w=(cal.width-ML-MR)/NE, h=(cal.height-MT-MB)/GR; return {x:ML+e*w, y:MT+r*h, w:w, h:h}; }
+  function draw(){ cx.clearRect(0,0,cal.width,cal.height); cx.textBaseline='middle';
+    cx.font='10px ui-sans-serif,system-ui';
+    for(var e=0;e<NE;e++){ var rc=cellRect(e,0); cx.textAlign='center'; cx.fillStyle=TCOL[SPEC[e]];
+      cx.beginPath(); cx.arc(rc.x+rc.w/2-16, MT-14, 4,0,7); cx.fill();
+      cx.fillStyle=cv('--fg'); cx.fillText('E'+(e+1), rc.x+rc.w/2+2, MT-13); }
+    cx.textAlign='right';
+    for(var r=0;r<GR;r++){ var rc=cellRect(0,r); cx.fillStyle=cv('--muted'); cx.fillText(DAYNAME[Math.floor(r/SLOTS)]+' '+SLOTNAME[r%SLOTS], ML-6, rc.y+rc.h/2); }
+    for(var e=0;e<NE;e++) for(var r=0;r<GR;r++){ var rc=cellRect(e,r);
+      cx.fillStyle = AVAIL[e][r] ? cv('--grid') : cv('--na'); cx.fillRect(rc.x+1, rc.y+1, rc.w-2, rc.h-2);
+      cx.strokeStyle=cv('--line'); cx.lineWidth=1; cx.strokeRect(rc.x+0.5, rc.y+0.5, rc.w-1, rc.h-1); }
+    var st=states[view], col=POLICIES[view].color;
+    if(st && st.asg){ var V=(view==='random')?null:valMatrix(st, Math.max(week,1), view); var vmin=1e9,vmax=-1e9;
+      if(V){ for(var i=0;i<NC;i++){ var vv=V[i][st.asg[i]]; if(vv<vmin)vmin=vv; if(vv>vmax)vmax=vv; } }
+      for(var i=0;i<NC;i++){ var cell=CELLS[st.asg[i]], rc=cellRect(cell.e,cell.r);
+        var alpha=0.85; if(V){ var vv=V[i][st.asg[i]]; alpha=0.4+0.6*((vv-vmin)/((vmax-vmin)||1)); }
+        cx.globalAlpha=alpha; cx.fillStyle=TCOL[TYPE[i]]; cx.beginPath(); cx.arc(rc.x+rc.w/2, rc.y+rc.h/2, Math.min(rc.w,rc.h)/2-3, 0, 7); cx.fill(); cx.globalAlpha=1;
+        cx.strokeStyle=col; cx.lineWidth=1.5; cx.stroke(); } }
+  }
+
+  // ---- charts ----
+  var cc=document.getElementById('chart'), ctx1=cc.getContext('2d');
+  function chart(){ ctx1.clearRect(0,0,cc.width,cc.height); var pad=44,w=cc.width-pad-10,h=cc.height-pad-18;
+    var maxLen=2,minY=ORACLE,maxY=ORACLE;
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; maxLen=Math.max(maxLen,hh.length); for(var i=0;i<hh.length;i++){ if(hh[i]<minY)minY=hh[i]; if(hh[i]>maxY)maxY=hh[i]; } });
+    function X(d){ return pad+d/(maxLen-1)*w; } function Y(v){ return 8+(1-(v-minY)/((maxY-minY)||1))*h; }
+    ctx1.strokeStyle=cv('--line'); ctx1.beginPath(); ctx1.moveTo(pad,8); ctx1.lineTo(pad,8+h); ctx1.lineTo(pad+w,8+h); ctx1.stroke();
+    ctx1.fillStyle=cv('--muted'); ctx1.font='11px ui-sans-serif,system-ui'; ctx1.fillText(Math.round(maxY),4,12); ctx1.fillText(Math.round(minY),4,8+h);
+    ctx1.fillText('total schedule quality per week (higher is better)', pad+6, 8+h+14);
+    ctx1.strokeStyle=cv('--oracle'); ctx1.setLineDash([5,4]); ctx1.globalAlpha=0.7; ctx1.beginPath(); ctx1.moveTo(pad,Y(ORACLE)); ctx1.lineTo(pad+w,Y(ORACLE)); ctx1.stroke(); ctx1.setLineDash([]); ctx1.globalAlpha=1;
+    ctx1.fillStyle=cv('--oracle'); ctx1.fillText('oracle '+Math.round(ORACLE), pad+w-70, Y(ORACLE)-4);
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return; ctx1.strokeStyle=POLICIES[p].color; ctx1.lineWidth=p===view?2.4:1.4; ctx1.globalAlpha=p===view?1:0.8;
+      ctx1.beginPath(); for(var i=0;i<hh.length;i++){ var x=X(i),y=Y(hh[i]); if(i===0)ctx1.moveTo(x,y); else ctx1.lineTo(x,y);} ctx1.stroke(); ctx1.globalAlpha=1; }); }
+
+  var cc2=document.getElementById('chart2'), ctx2=cc2.getContext('2d');
+  function chart2(){ ctx2.clearRect(0,0,cc2.width,cc2.height); var pad=44,w=cc2.width-pad-10,h=cc2.height-pad-18,CAP=30;
+    var maxLen=2; ORDER.forEach(function(p){ if(POLICIES[p].on) maxLen=Math.max(maxLen,states[p].hist.length); });
+    function X(d){ return pad+d/(maxLen-1)*w; } function Y(g){ var gg=g<0?0:(g>CAP?CAP:g); return 8+(1-gg/CAP)*h; }
+    ctx2.font='11px ui-sans-serif,system-ui';
+    [0,5,15,30].forEach(function(g){ var y=Y(g); ctx2.globalAlpha=0.4; ctx2.strokeStyle=cv('--line'); ctx2.beginPath(); ctx2.moveTo(pad,y); ctx2.lineTo(pad+w,y); ctx2.stroke(); ctx2.globalAlpha=1; ctx2.fillStyle=cv('--muted'); ctx2.fillText((g===30?'≥30':g)+'%',6,y+3); });
+    ctx2.strokeStyle=cv('--line'); ctx2.beginPath(); ctx2.moveTo(pad,8); ctx2.lineTo(pad,8+h); ctx2.lineTo(pad+w,8+h); ctx2.stroke();
+    ctx2.fillStyle=cv('--muted'); ctx2.fillText('gap below oracle, best so far — how fast each policy converges', pad+6, 8+h+14);
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return; ctx2.strokeStyle=POLICIES[p].color; ctx2.lineWidth=p===view?2.4:1.4; ctx2.globalAlpha=p===view?1:0.85;
+      var run=-Infinity; ctx2.beginPath(); for(var i=0;i<hh.length;i++){ if(hh[i]>run)run=hh[i]; var gp=(ORACLE-run)/ORACLE*100, x=X(i), y=Y(gp); if(i===0)ctx2.moveTo(x,y); else ctx2.lineTo(x,y);} ctx2.stroke(); ctx2.globalAlpha=1; }); }
+
+  function stats(){ var st=states[view];
+    document.getElementById('s-day').textContent=week;
+    document.getElementById('s-pol').textContent=POLICIES[view].name;
+    document.getElementById('s-cost').textContent= st&&st.asg?Math.round(st.q):'—';
+    document.getElementById('s-best').textContent= st&&isFinite(st.best)?Math.round(st.best):'—';
+    document.getElementById('s-oracle').textContent=Math.round(ORACLE);
+    var gap= st&&isFinite(st.best)?((ORACLE-st.best)/ORACLE*100):0; var gv=+gap.toFixed(1); if(gv<0)gv=0;
+    document.getElementById('s-gap').textContent= st&&isFinite(st.best)? gv.toFixed(1)+'%':'—';
+    var meas=0; if(st){ for(var k=0;k<NC*NCELL;k++) if(st.n[k]>0)meas++; } document.getElementById('s-meas').textContent= meas+' / '+(NC*NCELL); }
+
+  function buildLegend(){ var L=document.getElementById('legend'); L.innerHTML='';
+    ORDER.forEach(function(p){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name; s.onclick=function(){ view=p; renderAll(); }; L.appendChild(s); });
+    var V=document.getElementById('viewpills'); V.innerHTML='<span class="dim" style="font-size:12px;margin-right:4px">show week:</span>';
+    ORDER.forEach(function(p){ var b=document.createElement('span'); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name; b.onclick=function(){ view=p; renderAll(); }; V.appendChild(b); });
+    var K=document.getElementById('typekey'); K.innerHTML=''; for(var t=0;t<T;t++){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+TCOL[t]+'"></i>client type '+(t+1); K.appendChild(s); }
+    var s2=document.createElement('span'); s2.innerHTML='<i style="background:'+cv('--na')+';border:1px solid '+cv('--line')+'"></i>unavailable'; K.appendChild(s2); }
+
+  function renderAll(){ buildLegend(); draw(); chart(); chart2(); stats(); reportHeight(); }
+  var acc=0, SPEED=8;
+  function tick(){ frame++; if(playing){ acc+=SPEED; while(acc>=10){ stepWeek(); acc-=10; } } draw(); if(frame%3===0){ chart(); chart2(); stats(); } requestAnimationFrame(tick); }
+
+  document.getElementById('play').onclick=function(){ playing=!playing; this.textContent=playing?'Pause':'Play'; };
+  document.getElementById('step').onclick=function(){ playing=false; document.getElementById('play').textContent='Play'; stepWeek(); renderAll(); };
+  document.getElementById('reset').onclick=function(){ reset(); };
+  document.getElementById('speed').oninput=function(){ SPEED=+this.value; };
+  document.getElementById('noise').oninput=function(){ NOISE=+this.value/100; document.getElementById('noiseval').textContent=this.value+'%'; };
+  document.getElementById('beta').oninput=function(){ BETA=+this.value/100; document.getElementById('betaval').textContent=(+this.value/100).toFixed(2); };
+  function reportHeight(){ try{ parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.scrollHeight)},'*'); }catch(e){} }
+  window.addEventListener('resize', function(){ chart(); chart2(); reportHeight(); });
+  window.addEventListener('load', reportHeight);
+  reset(); SPEED=8; tick();
+})();
+</script>
+</body>
+</html>
