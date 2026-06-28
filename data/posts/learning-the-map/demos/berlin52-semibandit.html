@@ -83,6 +83,10 @@
     <canvas id="chart" width="900" height="200"></canvas>
   </div>
 
+  <div class="chartcard">
+    <canvas id="chart2" width="900" height="170"></canvas>
+  </div>
+
   <p class="cap">
     True road cost = straight-line distance (TSPLIB <b>berlin52</b>) times a hidden congestion field (the red zones); each drive returns that cost with multiplicative noise. The optimizer is nearest-neighbour + 2-opt on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. True cost = distance &times; regional congestion &times; a per-road factor unique to each edge. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must drive most of the map to converge. <b>Contextual + per-edge</b> is hierarchical: it learns the shared <em>congestion field</em> on a coarse grid (so a few drives in a region predict every road there) and then a per-road correction as each edge is driven. It reaches a good tour far sooner than the tabular policies from the shared structure, and keeps refining toward the optimum as it covers roads &mdash; structure to start fast, per-edge detail to finish exact.
   </p>
@@ -231,7 +235,7 @@
   function reset(){
     rng = mulberry32(20260621); day=0; frame=0;
     states={}; ORDER.forEach(function(p){ states[p]=newState(p==='contextual'); });
-    draw(); chart(); stats();
+    draw(); chart(); chart2(); stats();
   }
 
   function stepDay(){
@@ -257,9 +261,29 @@
       g.addColorStop(0,'rgba(229,72,72,'+al+')'); g.addColorStop(1,'rgba(229,72,72,0)');
       h.fillStyle=g; h.beginPath(); h.arc(p[0],p[1],rad,0,7); h.fill(); }
   })();
+
+  // real OpenStreetMap backdrop (loads in the viewer's browser; falls back to the heatmap
+  // if tiles are blocked/offline). berlin52's coords are synthetic, so this is a decorative
+  // Berlin backdrop stretched over the same rect as the points, not streets-under-points.
+  var mapbg=document.createElement('canvas'); mapbg.width=mc.width; mapbg.height=mc.height; var mapReady=false;
+  (function(){ var pad=22, innerW=mc.width-2*pad, innerH=mc.height-2*pad, TS=256, z=10;
+    var latN=52.675, latS=52.338, lonW=13.088, lonE=13.761;
+    function wx(lon){ return (lon+180)/360*Math.pow(2,z)*TS; }
+    function wy(lat){ var r=lat*Math.PI/180; return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z)*TS; }
+    var px0=wx(lonW), px1=wx(lonE), py0=wy(latN), py1=wy(latS), sx=innerW/(px1-px0), sy=innerH/(py1-py0);
+    var bg=mapbg.getContext('2d'), nmax=Math.pow(2,z);
+    var tx0=Math.floor(px0/TS), tx1=Math.floor(px1/TS), ty0=Math.floor(py0/TS), ty1=Math.floor(py1/TS);
+    for(var tx=tx0;tx<=tx1;tx++) for(var ty=ty0;ty<=ty1;ty++){ (function(tx,ty){
+      var img=new Image();
+      img.onload=function(){ bg.drawImage(img, pad+(tx*TS-px0)*sx, pad+(ty*TS-py0)*sy, TS*sx, TS*sy); mapReady=true; };
+      img.src='https://tile.openstreetmap.org/'+z+'/'+((tx%nmax+nmax)%nmax)+'/'+ty+'.png';
+    })(tx,ty); }
+  })();
+
   function draw(){
     mctx.clearRect(0,0,mc.width,mc.height);
-    mctx.drawImage(heat,0,0);
+    if(mapReady) mctx.drawImage(mapbg,0,0);
+    mctx.globalAlpha = mapReady?0.5:1; mctx.drawImage(heat,0,0); mctx.globalAlpha=1;
     var st=states[view], col=POLICIES[view].color;
     if(st && st.tour){
       for(var k=0;k<st.tour.length;k++){ var a=st.tour[k], b=st.tour[(k+1)%st.tour.length];
@@ -275,8 +299,10 @@
       var vx=pa[0]+(pb[0]-pa[0])*fr, vy=pa[1]+(pb[1]-pa[1])*fr;
       mctx.beginPath(); mctx.arc(vx,vy,4,0,7); mctx.fillStyle=col; mctx.fill();
     }
-    for(var i=0;i<N;i++){ var p=P(COORD[i]); mctx.beginPath(); mctx.arc(p[0],p[1], i===0?5:2.6, 0, 7);
-      mctx.fillStyle = i===0 ? '#e11d48' : getVar('--fg'); mctx.globalAlpha = i===0?1:0.7; mctx.fill(); mctx.globalAlpha=1; }
+    for(var i=0;i<N;i++){ var p=P(COORD[i]); mctx.beginPath(); mctx.arc(p[0],p[1], i===0?5:2.8, 0, 7);
+      mctx.fillStyle = i===0 ? '#e11d48' : '#1f2328'; mctx.fill();
+      mctx.lineWidth=1.2; mctx.strokeStyle='rgba(255,255,255,0.92)'; mctx.stroke(); }
+    if(mapReady){ mctx.fillStyle='rgba(20,20,20,0.55)'; mctx.font='9px ui-sans-serif,system-ui'; mctx.fillText('© OpenStreetMap contributors', 7, mc.height-6); }
   }
 
   // ---- chart drawing ----
@@ -307,6 +333,27 @@
       cctx.beginPath(); for(var i=0;i<hh.length;i++){ var x=X(i),y=Y(hh[i]); if(i===0)cctx.moveTo(x,y); else cctx.lineTo(x,y); } cctx.stroke(); cctx.globalAlpha=1; });
   }
 
+  // ---- convergence chart: gap to oracle (best tour so far), capped, descending to 0% ----
+  var cc2=document.getElementById('chart2'), c2ctx=cc2.getContext('2d');
+  function chart2(){
+    c2ctx.clearRect(0,0,cc2.width,cc2.height);
+    var pad=40, w=cc2.width-pad-10, h=cc2.height-pad-18, CAP=50;
+    var maxLen=2; ORDER.forEach(function(p){ if(POLICIES[p].on) maxLen=Math.max(maxLen, states[p].hist.length); });
+    function X(d){ return pad + d/(maxLen-1)*w; }
+    function Y(g){ var gg=g<0?0:(g>CAP?CAP:g); return 8 + (1-gg/CAP)*h; }
+    c2ctx.fillStyle=getVar('--muted'); c2ctx.font='11px ui-sans-serif,system-ui';
+    [0,10,25,50].forEach(function(g){ var y=Y(g); c2ctx.globalAlpha=0.4; c2ctx.strokeStyle=getVar('--line');
+      c2ctx.beginPath(); c2ctx.moveTo(pad,y); c2ctx.lineTo(pad+w,y); c2ctx.stroke(); c2ctx.globalAlpha=1;
+      c2ctx.fillText((g===50?'≥50':g)+'%', 6, y+3); });
+    c2ctx.strokeStyle=getVar('--line'); c2ctx.beginPath(); c2ctx.moveTo(pad,8); c2ctx.lineTo(pad,8+h); c2ctx.lineTo(pad+w,8+h); c2ctx.stroke();
+    c2ctx.fillStyle=getVar('--muted'); c2ctx.fillText('gap to oracle, best tour so far — how fast each policy converges', pad+6, 8+h+14);
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return;
+      c2ctx.strokeStyle=POLICIES[p].color; c2ctx.lineWidth=p===view?2.4:1.4; c2ctx.globalAlpha=p===view?1:0.85;
+      var run=Infinity; c2ctx.beginPath();
+      for(var i=0;i<hh.length;i++){ if(hh[i]<run)run=hh[i]; var gp=(run-ORACLE)/ORACLE*100, x=X(i), y=Y(gp); if(i===0)c2ctx.moveTo(x,y); else c2ctx.lineTo(x,y); }
+      c2ctx.stroke(); c2ctx.globalAlpha=1; });
+  }
+
   // ---- stats ----
   function stats(){
     var st=states[view];
@@ -332,13 +379,13 @@
       b.onclick=function(){ view=p; render(); }; V.appendChild(b); });
   }
 
-  function render(){ buildLegend(); draw(); chart(); stats(); reportHeight(); }
+  function render(){ buildLegend(); draw(); chart(); chart2(); stats(); reportHeight(); }
 
   // ---- loop ----
   var acc=0, SPEED=10;
   function tick(){ frame++;
     if(playing){ acc+=SPEED; while(acc>=10){ stepDay(); acc-=10; } }
-    draw(); if(frame%3===0){ chart(); stats(); }
+    draw(); if(frame%3===0){ chart(); chart2(); stats(); }
     requestAnimationFrame(tick);
   }
 
