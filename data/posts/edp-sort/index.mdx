@@ -278,7 +278,11 @@ policy.update(arm, x_t, reward)
 
 </details>
 
-The basic bandit has one feedback channel: choose one item and observe one reward. Now change that. Suppose you can only compare two items and see which one wins.
+Sometimes you do not get a reward number.
+
+In sports, it is hard to say a player is exactly 173 points strong. It is easier to observe that player A beat player B. With LLM responses, it is often hard to assign one clean quality score to an answer. It is easier for a judge to say: response A was better than response B.
+
+So the feedback changes. You do not choose one item and observe one reward. You choose two items and observe a winner.
 
 ## Part II — Sorting: when the arm is a pair
 
@@ -286,7 +290,11 @@ Eight players. No stat sheet. No clean skill number to read.
 
 You can make any two play and watch who wins. A match is a coin whose bias depends on the skill gap: a strong player usually beats a weak one; evenly matched players are close to a toss-up.
 
-How many matches do you need before the league table is reliable? More importantly: **which match should happen next?**
+With $n$ players, there are $O(n^2)$ possible pairs. Comparing everything is expensive. The problem is not only to estimate the table; it is to choose which pair is still worth testing.
+
+If a new player beats the world champion, there is little value in matching them against weak players next. The useful comparisons are closer to the unresolved boundaries of the table.
+
+So the question becomes: **which match should happen next?**
 
 <Demo src="/demos/posts/edp-sort/pitch-match.html?lang=en&v=3" title="A league table built from noisy 1v1 matches" height={660} />
 
@@ -308,15 +316,19 @@ $$O\!\left(\frac{\log(1/\delta)}{\Delta^2}\right)$$
 
 comparisons. Big gaps settle quickly. Near ties need repeated matches.
 
-### How the table learns
+### From pairwise feedback to skill ratings
 
 **Batch fit.** Given all matches so far, find the Bradley-Terry skill values that best explain them. Sort the fitted skills and you have a ranking. This is clean, but refitting from scratch after every match does not scale.
 
-**Online fit: Elo.** Treat each match as one logistic-regression example and take a single SGD step. If $i$ beats $j$:
+**Online fit: Elo.** Elo keeps a rating for each player and updates it after every match. A win adds points to the winner and removes points from the loser. The size of the move depends on how surprising the result was.
+
+Beat Magnus Carlsen and you should gain a lot. Beat me and you should gain peanuts. Lose to a much weaker player and your rating should fall sharply.
+
+One way to write that update is as a logistic-regression step. If $i$ beats $j$:
 
 $$s_i \leftarrow s_i + \eta(1-p), \qquad s_j \leftarrow s_j - \eta(1-p), \qquad p = \sigma(s_i-s_j)$$
 
-The update is the surprise, $1-p$. If the favourite wins, the ratings barely move. If an underdog wins, they move sharply.
+Here $p$ is how likely $i$ was to beat $j$ before the match. The update is the surprise, $1-p$. If $i$ was already a heavy favourite, $p$ is close to 1 and the move is small. If $i$ was an underdog, $p$ is small and the move is large.
 
 <details>
 <summary><strong>Click to reveal: Bradley–Terry batch fitting and online Elo</strong></summary>
