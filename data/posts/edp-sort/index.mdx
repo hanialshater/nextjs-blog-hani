@@ -292,23 +292,21 @@ How many matches do you need before the league table is reliable? More important
 
 This is sorting, except the comparison oracle is unreliable. In a textbook, you sort by reading numbers. Here, the better player only *probably* wins.
 
-The interaction is a **dueling bandit**: choose two options, observe only a relative preference, then decide which pair to ask about next. A dueling bandit is the learning problem, not a particular statistical model.
+The action is now a **pair**. The feedback is not a score for each player; it is only the winner of that pair.
 
-**Bradley-Terry is one useful model inside that broader family.** It assumes every player has one latent scalar skill and that pairwise probabilities come from their difference:
+One common model for this is **Bradley-Terry**. It assumes every player has one hidden skill number, and match probabilities come from skill differences:
 
 $$P(i \succ j) = \sigma(s_i-s_j)$$
 
-Each player has a hidden skill $s_i$. The logistic curve turns the difference $s_i-s_j$ into a win probability. Equal skills give a 50/50 match; a large gap gives an almost certain result. The absolute score scale is conventional; writing a separate inverse-temperature $\beta$ is equivalent to rescaling all of the skills.
+Equal skills give a 50/50 match. A large skill gap gives a near-certain result. The scale of the skill numbers is arbitrary; their differences are what matter.
 
-This shared latent structure is why evidence transfers. Match outcomes can be conditionally independent given the skill vector, yet the pairwise probabilities are coupled: if A beats B repeatedly and B beats C repeatedly, you learn something about A versus C without scheduling that match.
-
-Bradley-Terry is not required for a dueling bandit. Other dueling-bandit algorithms may assume only that a Condorcet or Copeland winner exists, or work with a more general pairwise-preference matrix. And some worlds violate every global scalar ranking: rock-paper-scissors cycles, context-specific preferences, and item interactions cannot be faithfully represented by one score per item.
+This shared skill structure is useful because evidence transfers. If A repeatedly beats B, and B repeatedly beats C, you learn something about A versus C even before scheduling that match.
 
 Up to constants, distinguishing a small skill gap $\Delta$ with confidence $1-\delta$ takes roughly
 
 $$O\!\left(\frac{\log(1/\delta)}{\Delta^2}\right)$$
 
-comparisons. Big gaps settle quickly. Near ties consume the budget.
+comparisons. Big gaps settle quickly. Near ties need repeated matches.
 
 ### How the table learns
 
@@ -373,19 +371,17 @@ def elo_update(rating, i, j, winner, learning_rate=0.25):
 
 </details>
 
-This bare batch fit assumes the comparison graph is connected. In production, add regularization or a prior: disconnected groups, undefeated items, and winless items can otherwise make unconstrained Bradley-Terry estimates unstable or diverge.
-
 The recipe has three parts:
 
 > **estimate** skills from matches → **read off** the ranking by sorting → **schedule** the next match.
 
 ### Where to spend the matches
 
-With a calibrated model, the expected **signed** Elo update is zero for every pairing. The question is not whether a pairing has a nonzero expected update; it is where an observation is most informative.
+The next match should go where the result can still change the ranking.
 
-A lopsided match is usually low-information: the expected favourite winning produces a small update, while an upset produces a large update but happens rarely. Pairwise outcome variance, and therefore local information about the order, is largest near $p=0.5$.
+A lopsided match usually confirms what you already know. If #1 beats #8, the table barely moves. A close match is different: either result is plausible, and either result gives real information about the local order.
 
-Sample near the boundaries where the answer can still change.
+So a good scheduler spends matches on pairs that are both close and under-sampled.
 
 - **Random** chooses any pair.
 - **Round-robin** chooses the least-played pair, $\arg\min_{(i,j)}n_{ij}$.
@@ -469,7 +465,7 @@ def choose_active_pair(scores, score_se, pair_games, candidates):
 
 </details>
 
-The implementation above shows the principle. A cheap production approximation may use a fixed rank radius around K; a better one uses posterior, bootstrap, or Hessian-based uncertainty to decide whose intervals overlap the cutline. For a fitted Bradley-Terry model, the relevant uncertainty is the uncertainty of $s_i-s_j$, including covariance between the two estimated skills.
+The implementation above is only the principle. Keep a band around the cutline; use whatever uncertainty estimate your model can support to decide who still belongs in it.
 
 With **10,000** players there are about 50 million possible pairs. Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
