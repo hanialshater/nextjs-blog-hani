@@ -1,303 +1,128 @@
 ---
-title: 'Learning the Map: Semi-Bandits on Berlin52'
+title: 'Practical Decision-Making, Part 2: A Solver Wrapped Around Uncertainty'
 date: '2026-06-21'
 draft: true
 section: 'free-writing'
-summary: 'Part II begins when sorting is no longer enough: choose a whole valid route while the costs of its roads are still unknown. A pedagogical semi-bandit TSP on Berlin52.'
+summary: 'When the decision is no longer one number but a whole structured object — a route, a matching, a weekly schedule — you must optimize while the value of the pieces is still being learned. Three interactive semi-bandit demos: routing on Berlin52, matching clients to experts, and filling a calendar.'
 authors: ['default']
 layout: 'PostLayout'
-tags: ['algorithms', 'bandits', 'semi-bandits', 'tsp', 'optimization', 'interactive', 'edp']
+tags: ['algorithms', 'bandits', 'semi-bandits', 'tsp', 'matching', 'scheduling', 'optimization', 'interactive', 'edp']
 ---
 
-# Part II — Learning the Map
-
-Part I was about **sorting unknown numbers**.
+Part 1 was about **sorting unknown numbers**.
 
 A restaurant has an unknown average quality. A football player has an unknown skill. A candidate model has an unknown benchmark score. The decision may be difficult, but at least its shape is simple: choose one thing, compare two things, or take the best few things.
 
-Part II begins when sorting is no longer enough.
+Part 2 begins when sorting is no longer enough — when the action is a **whole structured object** and you must commit to all of it at once.
 
-Imagine a city with 52 stops. Every morning, a driver must leave the depot, visit every stop exactly once, and return home. There is no option to choose only the roads that look cheap. A route is a whole object. One bad edge can ruin an otherwise elegant plan; one beautiful cheap shortcut is useless if it leaves you with an impossible route.
+Imagine a city with 52 stops. Every morning a driver must leave the depot, visit every stop exactly once, and return home. There is no option to keep only the roads that look cheap. A route is one object: one bad edge can ruin an elegant plan, and one beautiful shortcut is useless if it leaves the rest of the tour impossible.
 
-Now make the map uncertain.
-
-Every road has a real average travel time, but the value is hidden. Traffic, weather, loading time, random delays, and the small cruelty of urban life mean that one trip gives only a noisy observation. The driver learns the roads they actually drive. The roads they skip remain counterfactual.
+Now make the map uncertain. Every road has a real average travel time, but the value is hidden. Traffic, weather, loading time, random delays — one trip is only a noisy observation, and you learn the roads you actually drive. The roads you skip stay counterfactual.
 
 > **You do not learn the city at once. You learn the roads you drive.**
 
-That is the seed of a semi-bandit.
+That is the seed of a semi-bandit, and it is the shape of a whole family of problems. This part is a toolbox: three of them — a route, a matching, a schedule — each with a live demo, all built on the same move.
 
-## The thing we are choosing is a tour
+## The recurring shape
 
-Let the city be a graph:
+Across all three, the action decomposes into pieces, and the feedback is **semi-bandit**: you pick a structured action, and reality returns a noisy outcome for each *selected* piece — not the whole answer, not a single aggregate number, but a labelled value per component you used.
 
-$$G = (V, E)$$
+That sits between the two familiar extremes:
 
-The vertices are the 52 stops. Each edge $e \in E$ has an unknown mean travel cost:
-
-$$\mu_e = \mathbb{E}[X_e]$$
-
-A legal TSP action is not one edge. It is a Hamiltonian cycle: a closed tour that visits every vertex exactly once.
-
-$$T_t \in \mathcal{T}$$
-
-where $\mathcal{T}$ is the set of valid tours.
-
-On day $t$, the driver chooses a complete tour $T_t$. Then the world returns a noisy cost for every road in that tour:
-
-$$\{X_{t,e} : e \in T_t\}$$
-
-The total route cost is just the sum:
-
-$$C_t = \sum_{e \in T_t} X_{t,e}$$
-
-The ideal tour is:
-
-$$T^* = \arg\min_{T \in \mathcal{T}} \sum_{e \in T} \mu_e$$
-
-The optimization target is familiar: find the cheapest valid tour.
-
-The twist is that the edge costs that determine the answer are not known when we must choose the route.
-
-## One route, 52 observations
-
-A complete Berlin52 tour uses 52 edges.
-
-There are 1,326 possible undirected edges in a complete 52-node graph. One day of driving reveals costs for 52 of them. It reveals nothing directly about the other 1,274.
-
-That is neither full information nor ordinary one-arm feedback.
-
-It is the useful middle ground:
-
-| What happens after one action? | What the learner sees |
+| After one action, what does the learner see? | |
 | --- | --- |
-| Full information | Every road cost in the city |
-| Ordinary bandit | One number for the entire route |
-| **Semi-bandit** | The realized cost of every road actually driven |
+| Full information | every piece's value, even the ones you didn't use |
+| Ordinary bandit | one number for the whole action |
+| **Semi-bandit** | the realized value of every piece you actually selected |
 
-Suppose the selected tour includes these edges:
-
-```text
-Depot → A       6.4 min
-A → M           3.1 min
-M → Q           8.7 min
-Q → Depot       5.0 min
-...
-```
-
-The learner can update each of those road estimates separately.
-
-It does **not** need to guess whether the expensive day came from Depot → A, M → Q, or some other part of the tour. Credit assignment is local. The city is still mostly unknown, but the information inside the chosen action decomposes into labelled pieces.
-
-That is exactly what “semi-bandit feedback” means here.
-
-## Why this is harder than top-K
-
-In the benchmark example from Part I, the learner could choose ten candidates by sorting ten optimistic scores.
-
-A route is not like that.
-
-Suppose we estimate that these edges are individually cheap:
+Because credit is local — you know exactly which road was slow, which booking went well — the learner can update each used piece on its own. But a pile of good pieces is not yet a legal action. Cheap edges can form little loops instead of a tour; high-value bookings can send three clients to one expert. So every round splits into two jobs:
 
 ```text
-A → B
-B → C
-C → A
-D → E
-E → F
+Learning:      estimate the uncertain value of each piece
+Optimization:  assemble those values into one valid action
 ```
 
-Taking the cheapest edges independently can create tiny loops, disconnected islands, or a node with three incoming roads and none leaving.
-
-A legal tour must satisfy global constraints:
-
-- every stop has degree two;
-- all stops belong to one connected cycle;
-- the driver returns to the depot.
-
-So the semi-bandit has two separate jobs:
-
-```text
-Learning:
-estimate uncertain edge costs
-
-Optimization:
-turn those edge costs into one valid tour
-```
-
-This is the real pattern beneath combinatorial semi-bandits:
+That second job is a real solver, and which solver it is depends on the geometry of the action:
 
 > **A semi-bandit is an optimizer wrapped around uncertainty.**
 
-The learner provides uncertain component values. The solver respects the structure of the decision.
+For a top-K list, the solver is sorting. For a route, it is a TSP optimizer. For a client-to-expert allocation, it is a matching/assignment solver. For a weekly calendar, it is a constrained assignment. The learner supplies uncertain component values; the solver enforces the shape of the decision. The feedback pattern stays the same while the geometry changes completely.
 
-For top-K, the solver is sorting.
+The rest of this part walks the same loop three times.
 
-For a route, the solver is a TSP optimizer.
+## Example 1 · Routing — learning a city by driving it
 
-For a customer-to-expert allocation, it is a matching solver.
+Let the city be a graph $G=(V,E)$ where each edge has an unknown mean cost $\mu_e$. A legal action is not one edge but a **Hamiltonian cycle** $T_t$. On day $t$ the driver commits to a full tour, and the world returns a noisy cost $X_{t,e}$ for each of its 52 edges; the day's bill is their sum. The target is the familiar one,
 
-For a budgeted package, it is a knapsack solver.
+$$T^* = \arg\min_{T}\ \sum_{e \in T}\mu_e,$$
 
-The feedback pattern can remain the same while the geometry of the action changes completely.
+except the costs that decide the answer are unknown when the route must be chosen. A 52-stop tour uses 52 edges out of 1,326 possible ones, so one day teaches you about 52 roads and nothing *directly* about the other 1,274.
 
-## Optimism for a minimization problem
+**Optimism, with the sign flipped.** For a maximization problem UCB inflates uncertain options. Here we minimize, so optimism makes uncertain roads look temporarily *cheaper*:
 
-For every edge $e$, maintain:
+$$\tilde{\mu}_e = \hat{\mu}_e - \beta\sqrt{\tfrac{\log t}{n_e}},$$
 
-- an estimated average cost $\hat{\mu}_e$;
-- a count $n_e$ of how often we have driven it;
-- an uncertainty radius that shrinks as $n_e$ grows.
+and we solve the tour that minimizes those optimistic costs. The minus sign is the entire exploration mechanism: a reliably slow road stays out of good tours, a cheap road gets used, and a barely-known road gets a temporary discount in case it is the shortcut we haven't tried. (The Thompson variant tells the same story differently: sample one plausible cost for every edge, solve the best tour in that imagined city, drive it, update.)
 
-For a maximization problem, UCB gives uncertain items an optimistic *high* value.
+The demo runs four learners on the real **Berlin52** instance, racing toward the full-knowledge oracle tour. The map cost is distance × a hidden congestion field (the red zones) × a per-road quirk — so position carries real information.
 
-For travel cost, we are minimizing. Optimism therefore makes uncertain roads temporarily look cheaper than they are:
+<Demo src="/demos/posts/learning-the-map/berlin52-semibandit.html?v=1" title="Semi-bandit on Berlin52: learning the map by driving it" height={1180} />
 
-$$\tilde{\mu}_e = \hat{\mu}_e - \beta \sqrt{\frac{\log t}{n_e}}$$
+What the race shows is the heart of the toolbox. **Greedy** trusts its current means and gets stuck re-driving one mediocre tour. **Tabular UCB / Thompson** treat all 1,326 roads as independent unknowns and must drive most of the map before converging — hundreds of days. **Contextual** never learns roads one at a time: it estimates the congestion *field* on a coarse grid (so a few drives in a region predict every road there), then a per-road correction — and it reaches a good tour from a fraction of the measurements, refining toward the optimum as it covers ground. *Structure to start fast; per-piece detail to finish exact.* That contrast — learn-every-piece versus exploit-the-structure — is the one to keep in mind for the next two examples.
 
-where $\tilde{\mu}_e$ is an optimistic travel cost.
+## Example 2 · Matching — pairing clients with experts
 
-Then choose the route that minimizes those optimistic costs:
+Swap the route for a bipartite **assignment**. Each round you must match clients to experts — one each — and you only learn how good a pairing is once you actually make it. The optimizer is now the exact **Hungarian algorithm** (the in-browser stand-in for an assignment LP you might solve with Pyomo or CVXPY); the learner supplies a value for every client·expert pair.
 
-$$T_t = \arg\min_{T \in \mathcal{T}} \sum_{e \in T} \tilde{\mu}_e$$
+<Demo src="/demos/posts/learning-the-map/matching-semibandit.html?v=1" title="Semi-bandit matching: clients to experts" height={1180} />
 
-The strange-looking minus sign is the entire exploration mechanism.
+The same four policies appear, and **Contextual + per-pair** — which learns a small client-type × expert-specialty table before correcting per couple — leads in the early rounds while greedy stalls and random wanders.
 
-A road that looks reliably slow will rarely enter a good route.
+But matching also exposes an honest limit, and it answers a question the demos raise: *why doesn't structure always dominate?* Two reasons specific to assignment. First, **coverage is fast**: with $n$ clients you observe $n$ fresh pairs every round, so even the tabular learner sweeps the whole matrix in a handful of rounds — there is less for generalization to save. Second, **assignment explores itself**: unlike the TSP, where greedy re-drives the *same* tour, every round's matching naturally touches a spread of distinct pairs, so even the plain learner gets near-free exploration. Structure still wins early, just by less. The lever that widens the gap is the next example: make the action big and **constrained**, so "just try every pairing" stops being cheap.
 
-A road that looks cheap will be used because it may genuinely improve the route.
+## Example 3 · Scheduling — filling a weekly calendar
 
-A road we barely know gets a temporary discount because it might be the shortcut we have not discovered yet.
+Now give the experts a calendar. Each works only certain Mon–Fri × AM/PM slots (their **availability**, and so their **capacity**), and each week you must book clients into open slots — a larger, constrained assignment. Availability deletes most cells, so probing every client in every slot is genuinely expensive, which is exactly when structure earns its keep.
 
-Then the route is driven, its 52 selected edges reveal their actual noisy costs, and the estimates update.
+This demo also makes the hidden quality more honest. Instead of a tidy table, it is sampled from a **matrix factorization**: every client has a latent "needs" vector and every expert a latent "strengths" vector, and a booking is good when the two **align** (clients and experts are coloured by their latent direction, so matching colours should fit) — plus a per-booking quirk. Toggle the **Bipartite view** to see clients fanning into experts sized by capacity; toggle back to watch the week fill the calendar.
 
-Repeat.
+<Demo src="/demos/posts/learning-the-map/schedule-semibandit.html?v=1" title="Semi-bandit weekly scheduling on a calendar grid" height={1200} />
 
-## One plausible city instead of one optimistic city
+With the bigger, constrained board the contrast snaps back into focus: the contextual learner — a coarse, low-rank read of the latent factors plus a per-booking correction — runs at roughly **half** the gap of tabular UCB through the whole learning phase, while greedy locks onto an early guess and random never improves. Constraints made coverage hard, and structure paid for it.
 
-There is another way to tell the same story.
+(A note for the curious: the *truth* is a matrix factorization, but the *learner* here approximates it with a bucketed type×specialty table rather than fitting the latent vectors directly. On a problem where coverage is this fast, the bucketed read learns quicker than online matrix-factorization SGD — a small reminder that the best learner depends on the budget, not just the model.)
 
-Instead of subtracting a confidence bonus, sample one plausible travel-time map from the current beliefs:
+## The pattern behind the toolbox
 
-```text
-Edge A → B might be 6.1 minutes today.
-Edge M → Q might be 7.4 minutes.
-Edge R → S might be 3.2 minutes.
-```
-
-Then solve the TSP in that sampled world.
-
-This is Thompson sampling on edges:
-
-1. sample a plausible cost for every edge;
-2. solve the best tour under those sampled costs;
-3. drive that tour;
-4. update the edges that were actually traversed.
-
-The benefit is conceptual. The policy is not saying, “Let us explore randomly.” It is saying:
-
-> “Here is one city that could plausibly be real. What route would be best there?”
-
-Over many rounds, uncertainty makes unfamiliar roads occasionally appear in the sampled best route. As evidence accumulates, implausible shortcuts stop winning those imagined worlds.
-
-## The Berlin52 demo
-
-The demo should be map-first.
-
-The coordinates are rendered as a stylized city map. The goal is not to imitate live Berlin street geometry; it is to make the structure of a tour and the location of uncertainty visible.
-
-### What the reader sees
-
-On the map:
-
-- 52 stops;
-- the current tour as a bright loop;
-- the vehicle moving through the selected edges;
-- every traversed edge revealing a noisy realized travel time;
-- uncertain edges shown faintly or with a wider glow;
-- well-measured edges shown more confidently.
-
-Beside the map:
-
-- current route cost;
-- best estimated route cost;
-- number of observed edges;
-- fraction of the map still weakly measured;
-- regret or gap to the hidden oracle route.
-
-At the bottom:
-
-- route cost over days;
-- best route found over days;
-- perhaps an edge-uncertainty histogram.
-
-### Three policies to compare
-
-1. **Random tours**
-   - valid tours sampled without using the learned map;
-   - a baseline for wasting route budget.
-
-2. **Greedy mean route**
-   - solve on the current estimated mean edge costs;
-   - demonstrates premature exploitation and early false shortcuts.
-
-3. **Optimistic or Thompson semi-bandit route**
-   - solve on uncertain optimistic costs, or sampled plausible costs;
-   - learns roads that could actually improve the final tour.
-
-The visual lesson should be immediate:
-
-> Random explores the city without purpose. Greedy commits to its first sketch of the city. The semi-bandit revisits uncertainty where it could still change the route.
-
-## What this model deliberately ignores
-
-The clean model assumes that each edge has its own stable noisy mean cost and that the route cost is the sum of the selected edges.
-
-Real routing breaks both assumptions.
-
-Traffic is correlated. If one road is slow because of rain or an accident, nearby roads may also be slow. Travel time depends on time of day, direction, vehicle load, and the route itself. Edges may not even exist in a complete graph. A practical system needs context, time-dependent state, road-network constraints, and often forecasts rather than stationary means.
-
-But the simplification earns its place.
-
-It lets us see the architecture without hiding it behind a traffic stack:
+Three actions — a tour, a matching, a schedule — three different solvers — 2-opt, Hungarian, constrained assignment — and one loop:
 
 ```text
-uncertain component costs
-        ↓
-optimistic or sampled edge map
-        ↓
-TSP solver
-        ↓
-selected route
-        ↓
-edge-level observations
-        ↓
-updated map
+1. choose a structured action (the solver enforces its shape)
+2. observe a value for each piece you used   (semi-bandit feedback)
+3. update the uncertain piece-values
+4. call the solver again
 ```
 
-That architecture survives the realism.
+The interesting part is step 3, and across the demos there are really three ways to do it:
 
-The model changes. The solver changes. The feedback becomes contextual or correlated.
+- **Tabular** — learn every piece on its own. Exact in the limit, but you must touch (almost) every piece. Slowest, and the baseline the others beat.
+- **Structural / contextual** — learn a small shared model (a congestion field, a type×specialty table, latent factors) and let it predict pieces you haven't tried. Fast, but only as good as the model is faithful.
+- **Hierarchical** — the structural model *plus* a per-piece correction. Fast to a good answer, then exact as coverage fills in. This is what wins in all three demos.
 
-But the central problem remains:
+And the demos answer *when* structure pays, not just *that* it does. It pays most when learning every piece is expensive relative to the budget — many pieces, few observations per round (Berlin52's 1,326 roads), or constraints that make coverage hard (the calendar). It pays least when the action self-explores and coverage is cheap (small unconstrained matching). The same machinery, dialled by the shape of the problem.
 
-> **How do you make a valid plan when the values of the pieces are learned only by using them?**
+## What these toy models leave out
 
-## The promise of Part II
+Each demo keeps one clean assumption: a piece has its own stable noisy value, and the action's value is the sum of its pieces. Reality frays both. Travel times are correlated and depend on time of day and direction; a booking's value depends on price, history, and the rest of the schedule; "value" is often a click conditioned on exposure rather than a clean sample. A production system needs context, correlation, non-stationarity, and counterfactual care.
 
-Part I asked where the next observation should go when the answer was a restaurant, a match, or a top-K list.
+But the simplification earns its place. It lets the architecture show through without a forecasting stack on top of it:
 
-Part II asks the harder question:
+```text
+uncertain piece values  →  optimistic / sampled estimates  →  solver  →  valid action  →  per-piece observations  →  updated model
+```
 
-> What happens when the next decision is a route, a matching, a budgeted package, or an entire plan?
+The model changes, the solver changes, the feedback gets messier. The central question does not:
 
-The answer will not be one universal bandit algorithm.
+> **How do you commit to a valid plan when the value of its pieces is learned only by using them?**
 
-It will be a recurring construction:
-
-1. choose a structured action;
-2. observe some of its components;
-3. update uncertain local values;
-4. call an optimizer again.
-
-The city is our first map.
+Part 1 answered it for a restaurant, a duel, a top-K list. Here it is a route, a matching, a calendar. The action keeps getting bigger; the move stays the same — a solver, wrapped around uncertainty.
