@@ -232,9 +232,7 @@ The first term is predicted reward in the current context. The second term is th
 
 So the unknown thing is no longer “how good is this restaurant?” It is “what kinds of situations is this restaurant good for?”
 
-There is one hard rule: context must be known before the choice. “Clicked later,” “bought later,” or “returned later” is outcome information, not context. Sneak it into the feature vector and the model starts cheating.
-
-There are also engineering limits. Features need scaling and regularization. A disjoint LinUCB model transfers evidence within an arm, not across all arms. With many sparse items, you usually want shared user/item features plus item-specific residuals. But the mental model stays the same: predict the reward for this situation, then add a bonus where the model has not yet earned confidence.
+Context means information available before choosing. If you only learn it after the dinner, it belongs in the feedback, not in the context.
 
 <Demo
   src="/demos/posts/edp-sort/bandit-contextual.html?lang=en&v=2"
