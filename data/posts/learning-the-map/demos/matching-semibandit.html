@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Semi-bandit matching: customers to experts</title>
+<style>
+  :root {
+    --bg:#fff; --fg:#1f2328; --muted:#6b7280; --line:#e5e7eb; --card:#f8fafc;
+    --random:#9aa0a6; --greedy:#e8833a; --ucb:#2f6fed; --ctx:#8b5cf6; --oracle:#111827;
+    --t0:#2563eb; --t1:#16a34a; --t2:#db2777; --t3:#0891b2;
+  }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#0b0f14; --fg:#e6e8eb; --muted:#9aa3ad; --line:#2a313a; --card:#111821; --oracle:#e6e8eb; } }
+  *{box-sizing:border-box;}
+  body{ margin:0; padding:14px; background:var(--bg); color:var(--fg); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  h1{ font-size:16px; margin:0 0 2px; } .sub{ color:var(--muted); margin:0 0 12px; font-size:13px; }
+  .controls{ display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin-bottom:12px; }
+  button{ font:inherit; padding:6px 12px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--fg); cursor:pointer; }
+  button.primary{ background:var(--ucb); color:#fff; border-color:var(--ucb); } button:active{ transform:translateY(1px); }
+  label.ctl{ display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; } input[type=range]{ width:110px; }
+  .wrap{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+  canvas{ display:block; max-width:100%; }
+  .mapcard,.side{ border:1px solid var(--line); border-radius:10px; background:var(--card); padding:10px; }
+  .side{ min-width:240px; flex:1 1 240px; }
+  .stat{ display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed var(--line); } .stat:last-child{ border-bottom:0; } .stat b{ font-variant-numeric:tabular-nums; }
+  .legend{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 2px; font-size:13px; } .legend span{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; } .legend i{ width:16px; height:3px; border-radius:2px; display:inline-block; }
+  .pillrow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } .pill{ padding:3px 9px; border:1px solid var(--line); border-radius:999px; cursor:pointer; font-size:12px; color:var(--muted); } .pill.on{ background:var(--ucb); color:#fff; border-color:var(--ucb); }
+  .chartcard{ border:1px solid var(--line); border-radius:10px; background:var(--card); padding:10px; margin-top:14px; }
+  .cap{ color:var(--muted); font-size:12.5px; margin-top:10px; } .dim{ color:var(--muted); }
+  .key{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:6px; } .key span{ display:inline-flex; align-items:center; gap:5px; } .key i{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body>
+  <h1>Semi-bandit matching — assign customers to experts while learning who fits whom</h1>
+  <p class="sub">Each round you must assign all customers to experts (one each). You only learn the quality of the pairings you actually make. Four policies race to the best total match.</p>
+
+  <div class="controls">
+    <button id="play" class="primary">Pause</button>
+    <button id="step">Step</button>
+    <button id="reset">Reset</button>
+    <label class="ctl">Speed <input id="speed" type="range" min="1" max="30" value="8" /></label>
+    <label class="ctl">Noise <input id="noise" type="range" min="0" max="40" value="18" /><span id="noiseval" class="dim">18%</span></label>
+    <label class="ctl">Explore β <input id="beta" type="range" min="0" max="150" value="55" /><span id="betaval" class="dim">0.55</span></label>
+  </div>
+
+  <div class="wrap">
+    <div class="mapcard">
+      <canvas id="bip" width="540" height="440"></canvas>
+      <div class="pillrow" id="viewpills"></div>
+    </div>
+    <div class="side">
+      <div class="stat"><span>Round</span><b id="s-day">0</b></div>
+      <div class="stat"><span>Shown policy</span><b id="s-pol">UCB (tabular)</b></div>
+      <div class="stat"><span>Total quality now</span><b id="s-cost">—</b></div>
+      <div class="stat"><span>Best so far</span><b id="s-best">—</b></div>
+      <div class="stat"><span>Oracle (perfect info)</span><b id="s-oracle">—</b></div>
+      <div class="stat"><span>Gap to oracle</span><b id="s-gap">—</b></div>
+      <div class="stat"><span>Pairs tried</span><b id="s-meas">—</b></div>
+      <div class="legend" id="legend"></div>
+      <div class="key" id="typekey"></div>
+      <p class="cap" style="margin-bottom:0">Left = customers (colour = <b>type</b>), right = experts (colour = <b>specialty</b>). Lines show the current assignment; brighter = the policy rates that pairing higher. Click a legend entry to show that policy.</p>
+    </div>
+  </div>
+
+  <div class="chartcard"><canvas id="chart" width="900" height="190"></canvas></div>
+  <div class="chartcard"><canvas id="chart2" width="900" height="170"></canvas></div>
+
+  <p class="cap">
+    True pairing quality = a hidden <b>type × specialty</b> compatibility (some kinds of customer just fit some kinds of expert) plus a per-pair quirk unique to each customer–expert couple, observed with noise only when the pairing is actually made. The optimizer is the exact <b>Hungarian assignment</b> (the in-browser analogue of an LP solved with Pyomo/CVXPY) run on each policy's current value estimates: <b>random</b> ignores history, <b>greedy</b> trusts its current per-pair means, <b>UCB</b> adds an optimism bonus per pair, and <b>Contextual + per-pair</b> learns the small type×specialty table first (so one good match teaches it about every similar customer) then a per-couple correction. Contextual converges far sooner from far fewer pairings; the tabular policies must try almost every couple. Same pattern as the routing demo: a solver wrapped around uncertainty.
+  </p>
+
+<script>
+(function(){
+  "use strict";
+  var NC=18, NE=18;               // customers, experts (square -> perfect matching)
+  var T=4, S=4;                   // customer types, expert specialties
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+  var rng=mulberry32(424242);
+  function gauss(){ var u=0,v=0; while(u===0)u=rng(); while(v===0)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+  // ---- hidden truth ----
+  var frng=mulberry32(13579);
+  function fg(){ var u=0,v=0; while(u===0)u=frng(); while(v===0)v=frng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+  var TYPE=[], SPEC=[];
+  for(var i=0;i<NC;i++) TYPE.push(i%T);            // spread types/specialties so each appears
+  for(var j=0;j<NE;j++) SPEC.push(j%S);
+  // shuffle a little (deterministic)
+  for(var i=NC-1;i>0;i--){ var k=Math.floor(frng()*(i+1)); var t=TYPE[i];TYPE[i]=TYPE[k];TYPE[k]=t; }
+  for(var j=NE-1;j>0;j--){ var k=Math.floor(frng()*(j+1)); var s=SPEC[j];SPEC[j]=SPEC[k];SPEC[k]=s; }
+  var COMPAT=[]; for(var t=0;t<T;t++){ COMPAT.push([]); for(var s=0;s<S;s++) COMPAT[t].push(20+Math.round(70*frng())); } // 20..90
+  var PAIR=new Float64Array(NC*NE), MU=new Float64Array(NC*NE);     // per-pair quirk + true quality
+  for(var i=0;i<NC;i++) for(var j=0;j<NE;j++){ var q=9*fg(); PAIR[i*NE+j]=q;
+    var m=COMPAT[TYPE[i]][SPEC[j]]+q; if(m<5)m=5; if(m>98)m=98; MU[i*NE+j]=m; }
+  var SCALE=30, PRIORQ=55;
+
+  // ---- exact assignment: maximise total value via Hungarian (min-cost on BIG-value) ----
+  function hungarian(cost){ var n=cost.length, INF=1e18;
+    var u=new Array(n+1).fill(0), v=new Array(n+1).fill(0), p=new Array(n+1).fill(0), way=new Array(n+1).fill(0);
+    for(var i=1;i<=n;i++){ p[0]=i; var j0=0; var minv=new Array(n+1).fill(INF), used=new Array(n+1).fill(false);
+      do{ used[j0]=true; var i0=p[j0], delta=INF, j1=-1;
+        for(var j=1;j<=n;j++) if(!used[j]){ var cur=cost[i0-1][j-1]-u[i0]-v[j];
+          if(cur<minv[j]){ minv[j]=cur; way[j]=j0; } if(minv[j]<delta){ delta=minv[j]; j1=j; } }
+        for(var j=0;j<=n;j++){ if(used[j]){ u[p[j]]+=delta; v[j]-=delta; } else minv[j]-=delta; }
+        j0=j1; } while(p[j0]!==0);
+      do{ var j1=way[j0]; p[j0]=p[j1]; j0=j1; } while(j0); }
+    var a=new Array(n); for(var j=1;j<=n;j++) a[p[j]-1]=j-1; return a;
+  }
+  function assignMax(V){ var n=V.length, cost=[]; for(var i=0;i<n;i++){ cost.push([]); for(var j=0;j<n;j++) cost[i].push(1e6 - V[i][j]); } return hungarian(cost); }
+  function totalTrue(a){ var s=0; for(var i=0;i<NC;i++) s+=MU[i*NE+a[i]]; return s; }
+  function randPerm(){ var p=[]; for(var i=0;i<NC;i++)p.push(i); for(var i=NC-1;i>0;i--){ var k=Math.floor(rng()*(i+1)); var t=p[i];p[i]=p[k];p[k]=t; } return p; }
+
+  // oracle
+  var ORACLE = totalTrue(assignMax((function(){ var V=[]; for(var i=0;i<NC;i++){ V.push([]); for(var j=0;j<NE;j++) V[i].push(MU[i*NE+j]); } return V; })()));
+
+  // ---- policies ----
+  function newState(ctx){ var s={ sum:new Float64Array(NC*NE), n:new Float64Array(NC*NE), asg:null, q:0, best:-Infinity, hist:[] };
+    if(ctx){ s.cellSum=new Float64Array(T*S); s.cellN=new Float64Array(T*S); s.resSum=new Float64Array(NC*NE); s.resN=new Float64Array(NC*NE); }
+    return s; }
+  function mean(st,i,j){ var k=i*NE+j; return st.n[k]>0?st.sum[k]/st.n[k]:PRIORQ; }
+  function valMatrix(st,t,kind){ var V=[]; var lt=Math.log(t+1);
+    for(var i=0;i<NC;i++){ V.push([]); for(var j=0;j<NE;j++){ var k=i*NE+j; var val;
+      if(kind==='greedy'){ val=mean(st,i,j); }
+      else if(kind==='ucb'){ val=mean(st,i,j)+BETA*SCALE*Math.sqrt(lt/(st.n[k]+1)); }
+      else { var c=TYPE[i]*S+SPEC[j];
+        var comp=(st.cellN[c]>0?st.cellSum[c]/st.cellN[c]:PRIORQ)+BETA*SCALE*Math.sqrt(lt/(st.cellN[c]+1));
+        var res=(st.resN[k]>0?st.resSum[k]/st.resN[k]:0)+BETA*SCALE*Math.sqrt(lt/(st.resN[k]+1));
+        val=comp+res; }
+      V[i].push(val); } }
+    return V; }
+  function observe(st,a){ for(var i=0;i<NC;i++){ var j=a[i], k=i*NE+j;
+      var x=MU[k]*(1+NOISE*gauss()); if(x<1)x=1;
+      st.sum[k]+=x; st.n[k]+=1;
+      if(st.cellN){ var c=TYPE[i]*S+SPEC[j]; st.cellSum[c]+=x; st.cellN[c]+=1; var ce=st.cellSum[c]/st.cellN[c]; st.resSum[k]+=(x-ce); st.resN[k]+=1; } } }
+
+  var POLICIES={
+    random:{ name:"Random", color:cv('--random'), on:true, pick:function(st,t){ return randPerm(); } },
+    greedy:{ name:"Greedy mean", color:cv('--greedy'), on:true, pick:function(st,t){ return assignMax(valMatrix(st,t,'greedy')); } },
+    ucb:{ name:"UCB (tabular)", color:cv('--ucb'), on:true, pick:function(st,t){ return assignMax(valMatrix(st,t,'ucb')); } },
+    contextual:{ name:"Contextual + per-pair", color:cv('--ctx'), on:true, pick:function(st,t){ return assignMax(valMatrix(st,t,'ctx')); } }
+  };
+  var ORDER=["random","greedy","ucb","contextual"];
+  function cv(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#888'; }
+
+  var NOISE=0.18, BETA=0.55, round=0, states={}, view="ucb", playing=true, frame=0;
+  function reset(){ rng=mulberry32(424242); round=0; frame=0; states={}; ORDER.forEach(function(p){ states[p]=newState(p==='contextual'); }); renderAll(); }
+  function stepRound(){ round++; ORDER.forEach(function(p){ var st=states[p]; var a=POLICIES[p].pick(st,round); var q=totalTrue(a);
+    st.asg=a; st.q=q; if(q>st.best)st.best=q; st.hist.push(q); observe(st,a); }); }
+
+  // ---- bipartite drawing ----
+  var bc=document.getElementById('bip'), bx=bc.getContext('2d');
+  var TCOL=[cv('--t0'),cv('--t1'),cv('--t2'),cv('--t3')];
+  function cy(i,n){ var pad=28, h=bc.height-2*pad; return pad + (n<=1?h/2: i/(n-1)*h); }
+  var LX=140, RX=bc.width-140;
+  function draw(){ bx.clearRect(0,0,bc.width,bc.height);
+    var st=states[view], col=POLICIES[view].color;
+    bx.font='11px ui-sans-serif,system-ui'; bx.textAlign='left';
+    bx.fillStyle=cv('--muted'); bx.fillText('customers', LX-34, 24); bx.fillText('experts', RX-14, 24);
+    // assignment lines (brightness by this policy's current estimate)
+    if(st && st.asg){ var V=(view==='random')?null:valMatrix(st, Math.max(round,1), view==='greedy'?'greedy':(view==='ucb'?'ucb':'ctx'));
+      var vmin=1e9,vmax=-1e9; if(V){ for(var i=0;i<NC;i++){ var vv=V[i][st.asg[i]]; if(vv<vmin)vmin=vv; if(vv>vmax)vmax=vv; } }
+      for(var i=0;i<NC;i++){ var j=st.asg[i]; var a1=cy(i,NC), b1=cy(j,NE);
+        var alpha=0.5; if(V){ var vv=V[i][st.asg[i]]; alpha=0.25+0.7*((vv-vmin)/((vmax-vmin)||1)); }
+        bx.strokeStyle=col; bx.globalAlpha=alpha; bx.lineWidth=2.2; bx.beginPath(); bx.moveTo(LX+10,a1); bx.lineTo(RX-10,b1); bx.stroke(); bx.globalAlpha=1; } }
+    // nodes
+    for(var i=0;i<NC;i++){ var y=cy(i,NC); node(LX,y,TCOL[TYPE[i]],'C'+(i+1)); }
+    for(var j=0;j<NE;j++){ var y=cy(j,NE); node(RX,y,TCOL[SPEC[j]],'E'+(j+1)); }
+  }
+  function node(x,y,color,label){ bx.beginPath(); bx.arc(x,y,6.5,0,7); bx.fillStyle=color; bx.fill();
+    bx.lineWidth=1.5; bx.strokeStyle='rgba(255,255,255,0.9)'; bx.stroke();
+    bx.fillStyle=cv('--fg'); bx.textAlign=(x<bc.width/2)?'right':'left'; bx.fillText(label, x<bc.width/2?x-14:x+14, y+4); }
+
+  // ---- charts ----
+  var cc=document.getElementById('chart'), ctx1=cc.getContext('2d');
+  function chart(){ ctx1.clearRect(0,0,cc.width,cc.height); var pad=40,w=cc.width-pad-10,h=cc.height-pad-18;
+    var maxLen=2,minY=ORACLE*0.999,maxY=ORACLE*1.001;
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; maxLen=Math.max(maxLen,hh.length); for(var i=0;i<hh.length;i++){ if(hh[i]<minY)minY=hh[i]; if(hh[i]>maxY)maxY=hh[i]; } });
+    function X(d){ return pad+d/(maxLen-1)*w; } function Y(v){ return 8+(1-(v-minY)/((maxY-minY)||1))*h; }
+    ctx1.strokeStyle=cv('--line'); ctx1.beginPath(); ctx1.moveTo(pad,8); ctx1.lineTo(pad,8+h); ctx1.lineTo(pad+w,8+h); ctx1.stroke();
+    ctx1.fillStyle=cv('--muted'); ctx1.font='11px ui-sans-serif,system-ui'; ctx1.fillText(Math.round(maxY),4,12); ctx1.fillText(Math.round(minY),4,8+h);
+    ctx1.fillText('total match quality per round (higher is better)', pad+6, 8+h+14);
+    ctx1.strokeStyle=cv('--oracle'); ctx1.setLineDash([5,4]); ctx1.globalAlpha=0.7; ctx1.beginPath(); ctx1.moveTo(pad,Y(ORACLE)); ctx1.lineTo(pad+w,Y(ORACLE)); ctx1.stroke(); ctx1.setLineDash([]); ctx1.globalAlpha=1;
+    ctx1.fillStyle=cv('--oracle'); ctx1.fillText('oracle '+Math.round(ORACLE), pad+w-70, Y(ORACLE)-4);
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return; ctx1.strokeStyle=POLICIES[p].color; ctx1.lineWidth=p===view?2.4:1.4; ctx1.globalAlpha=p===view?1:0.8;
+      ctx1.beginPath(); for(var i=0;i<hh.length;i++){ var x=X(i),y=Y(hh[i]); if(i===0)ctx1.moveTo(x,y); else ctx1.lineTo(x,y);} ctx1.stroke(); ctx1.globalAlpha=1; }); }
+
+  var cc2=document.getElementById('chart2'), ctx2=cc2.getContext('2d');
+  function chart2(){ ctx2.clearRect(0,0,cc2.width,cc2.height); var pad=40,w=cc2.width-pad-10,h=cc2.height-pad-18,CAP=40;
+    var maxLen=2; ORDER.forEach(function(p){ if(POLICIES[p].on) maxLen=Math.max(maxLen,states[p].hist.length); });
+    function X(d){ return pad+d/(maxLen-1)*w; } function Y(g){ var gg=g<0?0:(g>CAP?CAP:g); return 8+(1-gg/CAP)*h; }
+    ctx2.font='11px ui-sans-serif,system-ui';
+    [0,10,20,40].forEach(function(g){ var y=Y(g); ctx2.globalAlpha=0.4; ctx2.strokeStyle=cv('--line'); ctx2.beginPath(); ctx2.moveTo(pad,y); ctx2.lineTo(pad+w,y); ctx2.stroke(); ctx2.globalAlpha=1; ctx2.fillStyle=cv('--muted'); ctx2.fillText((g===40?'≥40':g)+'%',6,y+3); });
+    ctx2.strokeStyle=cv('--line'); ctx2.beginPath(); ctx2.moveTo(pad,8); ctx2.lineTo(pad,8+h); ctx2.lineTo(pad+w,8+h); ctx2.stroke();
+    ctx2.fillStyle=cv('--muted'); ctx2.fillText('gap below oracle, best so far — how fast each policy converges', pad+6, 8+h+14);
+    ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return; ctx2.strokeStyle=POLICIES[p].color; ctx2.lineWidth=p===view?2.4:1.4; ctx2.globalAlpha=p===view?1:0.85;
+      var run=-Infinity; ctx2.beginPath(); for(var i=0;i<hh.length;i++){ if(hh[i]>run)run=hh[i]; var gp=(ORACLE-run)/ORACLE*100, x=X(i), y=Y(gp); if(i===0)ctx2.moveTo(x,y); else ctx2.lineTo(x,y);} ctx2.stroke(); ctx2.globalAlpha=1; }); }
+
+  function stats(){ var st=states[view];
+    document.getElementById('s-day').textContent=round;
+    document.getElementById('s-pol').textContent=POLICIES[view].name;
+    document.getElementById('s-cost').textContent= st&&st.asg?Math.round(st.q):'—';
+    document.getElementById('s-best').textContent= st&&isFinite(st.best)?Math.round(st.best):'—';
+    document.getElementById('s-oracle').textContent=Math.round(ORACLE);
+    var gap= st&&isFinite(st.best)?((ORACLE-st.best)/ORACLE*100):0; var gv=+gap.toFixed(1); if(gv<0)gv=0;
+    document.getElementById('s-gap').textContent= st&&isFinite(st.best)? gv.toFixed(1)+'%':'—';
+    var meas=0; if(st){ for(var k=0;k<NC*NE;k++) if(st.n[k]>0)meas++; } document.getElementById('s-meas').textContent= meas+' / '+(NC*NE); }
+
+  function buildLegend(){ var L=document.getElementById('legend'); L.innerHTML='';
+    ORDER.forEach(function(p){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name; s.onclick=function(){ view=p; renderAll(); }; L.appendChild(s); });
+    var V=document.getElementById('viewpills'); V.innerHTML='<span class="dim" style="font-size:12px;margin-right:4px">show on graph:</span>';
+    ORDER.forEach(function(p){ var b=document.createElement('span'); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name; b.onclick=function(){ view=p; renderAll(); }; V.appendChild(b); });
+    var K=document.getElementById('typekey'); K.innerHTML=''; for(var t=0;t<T;t++){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+TCOL[t]+'"></i>type/specialty '+(t+1); K.appendChild(s); } }
+
+  function renderAll(){ buildLegend(); draw(); chart(); chart2(); stats(); reportHeight(); }
+
+  var acc=0, SPEED=8;
+  function tick(){ frame++; if(playing){ acc+=SPEED; while(acc>=10){ stepRound(); acc-=10; } } draw(); if(frame%3===0){ chart(); chart2(); stats(); } requestAnimationFrame(tick); }
+
+  document.getElementById('play').onclick=function(){ playing=!playing; this.textContent=playing?'Pause':'Play'; };
+  document.getElementById('step').onclick=function(){ playing=false; document.getElementById('play').textContent='Play'; stepRound(); renderAll(); };
+  document.getElementById('reset').onclick=function(){ reset(); };
+  document.getElementById('speed').oninput=function(){ SPEED=+this.value; };
+  document.getElementById('noise').oninput=function(){ NOISE=+this.value/100; document.getElementById('noiseval').textContent=this.value+'%'; };
+  document.getElementById('beta').oninput=function(){ BETA=+this.value/100; document.getElementById('betaval').textContent=(+this.value/100).toFixed(2); };
+
+  function reportHeight(){ try{ parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.scrollHeight)},'*'); }catch(e){} }
+  window.addEventListener('resize', function(){ chart(); chart2(); reportHeight(); });
+  window.addEventListener('load', reportHeight);
+
+  reset(); SPEED=8; tick();
+})();
+</script>
+</body>
+</html>
