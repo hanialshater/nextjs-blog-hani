@@ -495,6 +495,10 @@ In the synthetic setting used by this demo, random pairing wastes matches far fr
 
 ## Part III — Combinatorial bandits: choosing a whole top-K
 
+Trace the arc. Part I spent pulls to defend a single winner — the best arm. Part II changed the currency: when you cannot measure, only compare, Bradley-Terry turns "who won?" into a latent score, and a latent score buys the whole order, not just the maximum — second place, the K-th place, the cutline.
+
+The bill for that order is **O(n²)**. A hundred items is already about five thousand pairs; a million is unthinkable. Part II's active matching paid only part of it, by spending comparisons near the cutline instead of everywhere. Part III is the next lever: when each *selected* item returns its own outcome, you can grow a top-K without ever comparing everything.
+
 Everything so far used **comparison feedback**. You stage A against B and receive one bit: who won.
 
 There is another setting where every selected item returns its own outcome: a click, watch time, purchase, or benchmark score. The goal may still be top-K, but the observation model is different.
@@ -560,6 +564,40 @@ The next demo is not a fair race between two solutions to the same feedback prob
 Comb-UCB receives several direct rewards each round; Bradley-Terry receives one comparison bit. Bradley-Terry gives a global latent ranking, reusable for any K. Comb-UCB gives per-item reward estimates for the items it has selected, but says little about items it never observed.
 
 Same goal. Different feedback. Different machinery.
+
+### A worked example: the funniest line in 1,500 reviews
+
+The two machines are cleanest in theory. In practice you often have neither channel in pure form. Mining real customer reviews for their most noteworthy line is a case in point: there is no per-item reward — no click, no dwell time, nothing the world hands back for a single snippet. All you can get is a judge's verdict that *this* snippet beats *that* one.
+
+So you manufacture the reward. Bradley-Terry converts the pairwise verdicts into a latent score, and that score becomes the pseudo-reward the semi-bandit allocates against. The bandit no longer spends *exposure*; it spends **judgment** — it decides which snippets the expensive judge reads next. This is the hybrid the two halves of the post were built for: Part II's scoring engine feeding Part III's allocation engine.
+
+I ran it on 1,500 real four- and five-star reviews, pulling one candidate line from each, then looping: pick a slate by UCB on the current Bradley-Terry scores, have an LLM judge rank the slate, fold that ranking back into Bradley-Terry, repeat. After a filter stage there were 114 candidates. The interesting number is the bill it did **not** pay.
+
+| | compare everything | the semi-bandit run |
+|---|---|---|
+| candidates | 114 | 114 |
+| one exhaustive pass | 6,441 pairs | not taken |
+| expensive judge passes | thousands (many passes) | **22** |
+| pairwise constraints gathered | — | **2,582** |
+| effort on the dull tail | compared anyway | judged 0–1× |
+| effort on the funniest | — | judged 8–11× |
+
+Two levers keep it off the n² curve. UCB **selectivity**: the funniest lines were compared eight to eleven times while the dull tail was seen once or not at all — budget flowed to where the order was still in doubt. And **listwise judging**: one judge ranking a slate of fourteen emits ninety-one pairwise constraints, so twenty-two judge passes produced over two thousand — a quadratic constraint yield from a linear number of calls.
+
+What surfaced, ranked by Bradley-Terry score (every line is a verbatim real review):
+
+| Bradley-Terry | judged | the line |
+|--:|--:|---|
+| **+4.05** | 11× | "3.6 Roentgen. Not great, not terrible." |
+| +3.16 | 9× | "There is a reason more people have Amazon Prime than own guns in the United States." |
+| +3.09 | 8× | "Thanks Amazon — if it was up to you, I would never have to leave my house. Unfortunately there are some inconveniences in my life, such as work." |
+| +2.86 | 11× | "I bought my uncle a penis enlargement book for 'Secret Santa'… Hoping this rating *grows* to five stars, depending on results." |
+| +2.28 | 9× | "Only problem is they don't come through my door and start performing." |
+| _+5.22_ | _1×_ | _"…the best thing that ever happened to me. Family comes second."_ |
+
+That last row is a lesson in why the optimism term exists. It carries the **highest** Bradley-Terry score on the board, and it rests on a **single** comparison — the least trustworthy number here. The bandit knows this: its UCB flags that exact line as the one most worth testing next, not the one to crown. The line you can actually *trust* is the one judged eleven times. The gap between *highest score* and *highest score you believe* is the whole reason to rank by optimism rather than by mean.
+
+One honest note on objective. An earlier pass over the same dataset, run without restricting to positive reviews, surfaced only outrage — a wall of one-star delivery horror stories. Funny lives mostly in the five-star reviews, where a delighted customer cracks a joke. The machinery does not know what "noteworthy" means; the filter and the judge's instruction do. Choose them carelessly and the optimizer will faithfully maximize the wrong thing.
 
 ## Appendix: where RUCB fits
 
