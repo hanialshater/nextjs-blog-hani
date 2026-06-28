@@ -41,14 +41,12 @@ So the problem must be solved while its parameters are being learned.
 
 Before choosing an algorithm, separate the **decision** from the **feedback channel**:
 
-| Decision | Feedback after acting | Natural machinery |
-| --- | --- | --- |
-| Choose one item | One noisy reward for that item | Multi-armed or contextual bandit |
-| Choose a pair | Only a relative winner | Dueling bandit / active ranking |
-| Choose a slate | One reward for every selected item | Combinatorial semi-bandit |
-| Choose a slate | Only one aggregate slate outcome | Full-bandit or slate-level learning |
+![Flow chart separating decisions, feedback after acting, and the natural learning machinery](/static/images/posts/edp-sort/decision-feedback-flow.png)
 
-The label “top-K” is not enough to choose the method. What matters is what reality tells you after you act.
+<Caption>
+  The label “top-K” is not enough to choose the method. What matters is what reality tells
+  you after you act.
+</Caption>
 
 ## Part I — The multi-armed bandit: choosing dinner
 
