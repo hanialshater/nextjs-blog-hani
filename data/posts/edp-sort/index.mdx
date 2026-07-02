@@ -521,28 +521,44 @@ In the synthetic setting used by this demo, random pairing wastes matches far fr
 
 It wins because it concentrates effort where set membership is still uncertain. The exact sample count depends on the gaps around rank 100, outcome noise, model fit, and the stopping rule.
 
-## Part III — Combinatorial bandits: choosing a whole top-K
+## Part III — Combinatorial semi-bandits: when the action is a slate
 
-Trace the arc. Part I spent pulls to defend a single winner — the best arm. Part II changed the currency: when you cannot measure, only compare, Bradley-Terry turns "who won?" into a latent score, and a latent score buys the whole order, not just the maximum — second place, the K-th place, the cutline.
+The action now gets wider.
 
-The bill for that order is **O(n²)**. A hundred items is already about five thousand pairs; a million is unthinkable. Part II's active matching paid only part of it, by spending comparisons near the cutline instead of everywhere. Part III is the next lever: when each *selected* item returns its own outcome, you can grow a top-K without ever comparing everything.
+Part I chose one arm. Part II chose one pair. Part III chooses a **slate**.
 
-Everything so far produced **one number per action**: a reward for an arm, a winner for a pair. Part III changes the action itself — now you pick a **slate** of K items at once, and each selected item returns its own outcome. That is a **combinatorial semi-bandit**.
+That matters because a product surface rarely asks for one item. It asks for a list: top 10 products, 12 snippets, 20 candidates, a page of recommendations.
 
-### Part III.1 — Scores from a tournament
+Pairwise ranking buys a global order, but the bill is **O(n²)**. A hundred items is already about five thousand pairs. A million is dead.
 
-The policy is optimism again, one rung up. Give each item an estimate with uncertainty, and select the top-K by an optimistic score:
+Part II reduced the bill by spending comparisons near the cutline. Part III uses a different lever: select a slate, observe feedback on the selected items, and update only those items.
+
+That is a **combinatorial semi-bandit**: the action is a set, and feedback decomposes over the pieces you actually chose.
+
+### Part III.1 — When the score has to be manufactured
+
+The policy is optimism again, one level up.
+
+Give each item an estimate and an uncertainty bonus, then select the top-K by optimistic score:
 
 $$u_i = \hat{r}_i + \sqrt{c\,\ln t / n_i}$$
 
-Here $\hat{r}_i$ is the current reward estimate and $n_i$ is how many times item $i$ has been judged. A high estimate earns a slate seat; high uncertainty earns one too. Each round: take the top-K by $u_i$, observe an outcome per selected item, update those items. (On a real surface the additive-reward assumption frays — position bias, cannibalization, and exposure all intrude — but the loop is this.)
+Here $\hat{r}_i$ is the current reward estimate and $n_i$ is how many times item $i$ has been judged.
 
-The real question is where $\hat{r}_i$ comes from.
+A high estimate earns a slate seat. High uncertainty can earn one too. Each round: take the top-K by $u_i$, observe one outcome per selected item, and update those items.
 
-- **Direct reward.** The world hands you a number per item — a click, watch time, a benchmark score. Use it; the code below is the whole policy.
-- **Only comparisons.** All you can get is “A beat B.” One comparison is not a per-item reward, so **Comb-UCB cannot run on “who won?”** by itself.
+On a real surface, the additive-reward assumption is fragile — position bias, cannibalization, exposure, and presentation all leak in. But the base loop is still useful.
 
-In the second case you **manufacture** the score with a tournament: rank small batches — one judge ordering 10–20 items at once — break each ranking into pairwise wins, and fit Bradley-Terry, exactly as in Part II. The tournament turns local “A beats B” verdicts into a latent $\hat{r}_i$ on a shared scale, and that score is what the semi-bandit spends against. Part II's scoring engine feeds Part III's allocation engine.
+The hard question is where $\hat{r}_i$ comes from.
+
+- **Direct reward.** The world gives a number per item — click, watch time, benchmark score. Then the policy below is enough.
+- **Only comparisons.** The world gives “A beat B.” That is not a per-item reward, so **Comb-UCB cannot run on raw pairwise wins** by itself.
+
+In the second case, you **manufacture** the reward.
+
+Run small tournaments: ask one judge to rank 10–20 items, break the ranking into pairwise wins, and fit Bradley-Terry as in Part II. The tournament turns local comparisons into a latent $\hat{r}_i$ on a shared scale.
+
+Part II creates the score. Part III decides where to spend the next slate.
 
 <details>
 <summary><strong>Click to reveal: combinatorial UCB with per-item rewards</strong></summary>
@@ -585,13 +601,19 @@ policy.update(slate, rewards)
 
 </details>
 
-The demo below is not a fair race. It shows the two channels reading the same hidden item quality: Comb-UCB gets several direct rewards per round and estimates only the items it selects; Bradley-Terry gets one comparison bit per duel and recovers a global ranking reusable for any K.
+The demo below is diagnostic, not a fair benchmark.
+
+Both methods read the same hidden item quality through different feedback channels. Comb-UCB gets several direct rewards per round but only for selected items. Bradley-Terry gets one comparison bit per duel, then recovers a global ranking reusable for any K.
 
 <Demo src="/demos/posts/edp-sort/bt-vs-combucb.html?lang=en&v=3" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
 
 ### Part III.2 — The core example: mining reviews for the best line
 
-Now point it at a real pile: thousands of customer reviews, and you want the handful of most noteworthy lines. There is no per-item reward — no click for a single snippet — only a judge that can compare. So this is the pure tournament case: the semi-bandit allocates **judgment**, Bradley-Terry manufactures the reward, and the loop *is* the method.
+Now point the loop at a real pile: thousands of customer reviews, and you want the handful of most noteworthy lines.
+
+There is no natural per-item reward. No click for a single snippet. No benchmark score. Only a judge that can compare.
+
+So this is the pure tournament case: the semi-bandit allocates **judgment**, Bradley-Terry manufactures the score, and the loop is the method.
 
 ```python
 candidates = extract_snippets(reviews)        # large pool, no scores yet
@@ -600,27 +622,33 @@ pulls = {c: 0   for c in candidates}
 pairs = []
 
 for t in range(1, rounds + 1):
-    # 1. SELECT an optimistic, diverse top-K slate (UCB on current scores)
+    # 1. SELECT an optimistic, diverse slate using current BT scores
     ucb   = {c: score[c] + C * sqrt(log(t + 1) / (pulls[c] + 1)) for c in candidates}
     slate = top_k_constrained(ucb, k=K, max_per_type=...)   # <= K, capped per type
 
     # 2. JUDGE: one listwise ranking of the slate -- a small tournament
     ranking = llm_rank(slate)               # "order these from best to worst"
 
-    # 3. CALIBRATE: ranking -> pairwise wins -> refit Bradley-Terry on all pairs
+    # 3. CALIBRATE: ranking -> pairwise wins -> refit Bradley-Terry
     pairs += ranking_to_pairs(ranking)      # i beats j for every i ranked above j
     score  = fit_bradley_terry(pairs)
 
-    # 4. only the judged items count as pulled
+    # 4. only judged items count as pulled
     for c in slate:
         pulls[c] += 1
 
 best = sorted(candidates, key=lambda c: score[c], reverse=True)[:K]
 ```
 
-Two things keep this off the $O(n^2)$ curve that exhaustive pairwise ranking would pay. **UCB selectivity** spends judgments where the order is still in doubt and leaves the settled tail alone. And **listwise judging** is a force multiplier: one ranking of K items yields $\binom{K}{2}$ pairwise constraints from a single call.
+Two things keep this away from the $O(n^2)$ bill.
 
-I ran exactly this on 1,500 real four- and five-star reviews — 114 candidate lines after a filter stage, $K = 14$, eleven rounds. The bill it did **not** pay:
+**UCB selectivity** spends judgment where the order is still in doubt and leaves the settled tail alone.
+
+**Listwise judging** multiplies one call into many constraints: one ranking of K items yields $\binom{K}{2}$ pairwise wins.
+
+I ran this on 1,500 real four- and five-star reviews: 114 candidate lines after filtering, $K = 14$, eleven rounds.
+
+The bill it did **not** pay:
 
 | | exhaustive pairwise | this run |
 |---|---|---|
@@ -641,13 +669,23 @@ The funniest lines it surfaced, by Bradley-Terry score (every line a verbatim re
 | +2.28 | 9× | "Only problem is they don't come through my door and start performing." |
 | _+5.22_ | _1×_ | _"…the best thing that ever happened to me. Family comes second."_ |
 
-That last row is why the optimism term exists. It holds the **highest** score on the board on a **single** comparison — the least trustworthy number here — so its UCB flags it to *test next*, not to crown. The line you can trust is the one judged eleven times. *Highest score* and *highest score you believe* are different questions, and ranking by $\hat{r}_i$ alone answers the wrong one.
+That last row is why the optimism term exists.
 
-A last caveat is about aim, not machinery. An earlier pass over the same data without the four-and-five-star filter surfaced only outrage — a wall of one-star delivery horror stories. The optimizer maximizes whatever the filter and the judge's instruction point it at; *noteworthy* and *funny* are choices you make, not properties it discovers.
+It has the **highest** fitted score after **one** judgment — the least trustworthy number in the table. UCB should flag it to *test next*, not crown it.
+
+The trustworthy line is the one judged eleven times. *Highest score* and *highest score you believe* are different questions. Ranking by $\hat{r}_i$ alone answers the wrong one.
+
+One production caveat: the optimizer optimizes the target you give it.
+
+An earlier pass without the four-and-five-star filter surfaced only outrage — a wall of one-star delivery horror stories. The method did not discover “funny.” It followed the filter and the judge instruction.
+
+*Noteworthy* and *funny* are choices you encode, not properties the optimizer finds on its own.
 
 ## Appendix: where RUCB fits
 
-Bradley-Terry assumes one global skill scale. When preferences cycle — A beats B, B beats C, C beats A — that assumption breaks, and you want a method that reads the pairwise table directly rather than collapsing it to a single ranking.
+Bradley-Terry gives you one global scale. That is powerful, and it is an assumption.
+
+When preferences cycle — A beats B, B beats C, C beats A — the single-scale story breaks. Then you want a method that reads the pairwise table directly instead of forcing everything into one ranking.
 
 <RucbAppendix />
 
@@ -655,12 +693,16 @@ Bradley-Terry assumes one global skill scale. When preferences cycle — A beats
 
 ## What this adds up to
 
-The restaurant, the league table, and the top-K slate are variations on the same move.
+Same problem, different feedback channel.
 
-The optimization structure is known. The parameters that determine the answer are not. Attempts reveal them only partially and noisily, so the solver must decide both what to do now and what to learn next.
+Known: the feasible actions.
 
-For independent arms, that is a multi-armed bandit. For pairwise comparisons, it is a dueling bandit; Bradley-Terry is one structural assumption that makes those comparisons transfer into a latent ranking. For a slate with per-item rewards, it is a combinatorial semi-bandit.
+Unknown: the parameters that make one action better than another.
 
-You are not just choosing a restaurant, a match, or a slate.
+Scarce: the observations that reveal those parameters.
+
+For independent arms, that becomes a multi-armed bandit. For pairwise feedback, it becomes a dueling/ranking problem; Bradley-Terry is one way to turn comparisons into a shared score. For a slate with per-item feedback, it becomes a combinatorial semi-bandit.
+
+The surface changes: restaurant, match, slate.
 
 > **You are choosing which ignorance is worth paying to remove.**
