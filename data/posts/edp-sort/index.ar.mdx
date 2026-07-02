@@ -6,255 +6,720 @@ section: 'free-writing'
 summary: 'معظم الخوارزميات بتفترض أرقام واضحة. الحياة بتعطيك إشارات ناقصة وفيها ضجيج. من اختيار مطعم، لترتيب لاعبين من مباريات غير مضمونة، لاختيار top-K كاملة: الفكرة وحدة — وين تصرف محاولتك الجاية؟'
 authors: ['default']
 layout: 'PostLayout'
-tags: ['algorithms', 'bandits', 'sorting', 'interactive', 'edp']
+tags: ['algorithms', 'bandits', 'dueling-bandits', 'sorting', 'interactive', 'edp']
 language: ar
 translationOf: edp-sort
 originalLanguage: en
 ---
 
-معظم مسائل الخوارزميات بتبدأ بكذبة صغيرة ومريحة: الأرقام موجودة، نظيفة، وبتحكي الحقيقة.
+خمس مطاعم قريبة من بيتك. واحد منهم غالباً هو الأفضل.
 
-عندك خمس مطاعم وتقييماتهم 4.8، 4.3، 4.1، 3.9، 3.7؟ رتّبهم، خذ الأول، وروّح. حتى لو بدك تعزم ضيف وتبيّض وجهك، ما في قصة.
+لو الجودة الحقيقية مكتوبة على الباب، المسألة مملّة:
 
-بس بالحياة غالباً ما عندك هالأرقام.
+$$\arg\max_i \mu_i$$
 
-تخيّل عندك خمس مطاعم قريبة، وبدك تعرف أي واحد فيهم فعلاً ممتاز. بتقدر تجرّب واحد الليلة وواحد بكرة. بس كل عشا إشارة مش حكم: يمكن رحت بيوم الخدمة فيه مضروبة، يمكن الشيف كان رايق، يمكن طلبت الطبق الغلط. الجودة الحقيقية مخفية، وكل تجربة فيها **noise**.
+اقرأ الأرقام. رتّب. خذ الأكبر.
 
-فهون السؤال ما عاد: «أي رقم أعلى؟». صار:
+بس الأرقام مش مكتوبة. لازم تكتشفها بالأكل. عشا واحد بيعطيك إشارة، مش الحقيقة كلها. يمكن الشيف كان تعبان. يمكن إنت طلبت الطبق الغلط. يمكن المطعم ممتاز وإنت وقعت على أسوأ طبق عنده.
 
-> **وين تصرف المحاولة الجاية؟**
+هون أول كسر لفكرة «الترتيب» البسيطة.
 
-هاي أول كسرة بفكرة «الترتيب» البسيطة. إحنا بنحكي كأننا عم نرتّب مطاعم، منتجات، موديلات، إعلانات، لاعبين. بس بالأنظمة الحقيقية الأرقام اللي بدنا نرتّب عليها غالباً مخفية. ما بنقرأها. بنشتري دليل عنها.
+إحنا بنحكي كأننا عم نرتّب مطاعم، منتجات، موديلات، إعلانات، لاعبين، أو creators. بس بالأنظمة الحقيقية القيمة اللي بدنا نرتّب عليها غالباً مخفية. ما بنقرأها. بنشتري دليل عنها.
 
-الدليل إله كلفة. كل محاولة بتعطيك نتيجة الآن، وبتغيّر اللي بتعرفه بعدين.
+كل محاولة إلها وجهين: بتعطيك نتيجة الآن، وبتغيّر اللي بتعرفه بعدين.
 
-عشان هيك قبل ما نسمّي الخوارزميات، افصل بين شغلتين:
+عشان هيك قبل ما نسمّي خوارزميات، افصل بين شغلتين:
 
 1. **شكل القرار** — شو مسموح تختار.
 2. **قناة الـ feedback** — شو العالم بيرجعلك بعد ما تختار.
 
-الخيط بضل نفسه:
+![Flow chart separating decisions, feedback after acting, and the natural learning machinery](/static/images/posts/edp-sort/decision-feedback-flow.png)
 
-> **explore ولا exploit — أي جهل بستاهل تدفع لتشيله؟**
+<Caption>
+  كلمة “top-K” لحالها مش كفاية لاختيار الطريقة. المهم: شو نوع الإشارة اللي بيرجعلك بعد القرار؟
+</Caption>
 
-## الجزء الأول — الـ bandit: نختار العشا
+## الجزء الأول — الـ multi-armed bandit: نختار العشا
 
-مشكلة العشا هاي هي الـ **multi-armed bandit**: اختار خيار واحد، شوف نتيجة وحدة فيها ضجيج، عدّل توقّعك، وكرّر.
+مشكلة المطاعم إلها اسم قديم: **multi-armed bandit**. استعارة الكازينو بشعة، بس الـ loop مفيد.
 
-المصطلحات هي قصة المطاعم لابسة معطف مختبر. كل مطعم هو **arm**. كل زيارة هي **pull**. والـ **reward** هو: هل كانت الليلة منيحة لدرجة إنك ترجع؟
+كل مطعم هو **arm**. كل زيارة هي **pull**. والعشا هو **reward**.
 
-الأهم هو اللي ما بتشوفه. إنت ما بتاكل بكل المطاعم بنفس الليلة. بتختار واحد، بتشوف عشا واحد، والباقي بضل احتمالات. ما بتعرف شو فاتك.
+الأهم هو اللي ما بتشوفه.
 
-### ثمن إنك ما بتعرف: الـ regret
+إنت ما بتاكل بكل المطاعم بنفس الليلة. ما بيجيك report card كامل. بتختار مطعم واحد، بتشوف نتيجة واحدة فيها ضجيج، والباقي بضل احتمالات.
 
-رسمياً: عندك $k$ arms، لكل واحدة reward مخفي فيه ضجيج. كل جولة بتعمل pull واحد. بدك تعظّم اللي جمعته، أو تقلّل **الـ regret**: الفرق بينك وبين oracle بعرف من البداية أي arm هي الأفضل.
+هاي المعلومة الناقصة هي اللعبة كلها.
+
+### الـ regret: ضريبة الجهل المخفية
+
+لو السوشي هو فعلاً أفضل مطعم، وإنت أكلت بمكان أضعف، دفعت ضريبة مخفية. ممكن الليلة تكون لطيفة، بس مقارنة بأفضل خيار متاح، تركت جودة على الطاولة.
+
+Bandit theory بتسمي هاي الضريبة **regret**:
 
 $$\text{Regret}(T) = \sum_{t=1}^{T}\big(\mu^* - \mu_{a_t}\big), \qquad \mu^* = \max_i \mu_i$$
 
-الـ regret هو الجودة اللي تركتها على الطاولة. لو كان مطعم السوشي فعلاً الأفضل وإنت أكلت بمطعم أضعف، الفرق بين معدّلاتهم الحقيقية هو الـ regret المتوقع لهالليلة.
+المعادلة بس bookkeeping. بكل ليلة، قارن المطعم اللي اخترته، $\mu_{a_t}$، مع أفضل معدل مخفي، $\mu^*$. اجمع الفرق.
 
-وما في حل بلا كلفة. لو التزمت بدري، الضجيج المبكّر ممكن يلبّسك الفائز الغلط. ولو ضلّيت تستكشف للأبد، بتضل تدفع على مطاعم سيئة بعد ما يصير الجواب شبه واضح.
+الـ regret بيجي من غلطتين عكس بعض.
 
-كل خوارزمية bandit هي طريقة لتقسيم محاولاتك بين إنك تكتشف وإنك تستفيد.
+لو التزمت بدري، ليلة رامن محظوظة ممكن تلبّسك الفائز الغلط. ولو ضلّيت تستكشف للأبد، بتضل تشتري عشا متوسط بعد ما الجواب صار شبه واضح.
 
-قبل ما نسمّي الخوارزميات، جرّب الإحساس بإيدك. قدّامك خمس مطاعم وجودتهم الحقيقية مخفية. إنت بتختار وين تاكل، وسياسة غامضة بتختار بالتوازي. شغلك مش تربح ليلة وحدة؛ شغلك تقلّل عدد الليالي المؤلمة وإنت لسا عم تتعلّم.
+فسياسة الـ bandit مش قاعدة لـ «اختيار الأفضل» وبس. هي قاعدة لصرف الجهل.
 
-<Demo src="/demos/posts/edp-sort/mysterious-policy.html" title="إنت ضد سياسة غامضة" height={640} />
+أي عدم يقين لسه بستاهل تدفع ثمنه؟
 
-بعد كم جولة، اكشف السياسة. لو حسّيت إنها عم تستكشف بشكل مش عشوائي بالكامل ومش ملتزم بالكامل، فأنت شفت الفكرة قبل الرياضيات.
+جرّب هذا قبل أسماء الخوارزميات.
 
-### ثلاث سياسات بتغطّي معظم الصورة
+<Demo
+  src="/demos/posts/edp-sort/mysterious-policy.html"
+  title="إنت ضد سياسة غامضة"
+  height={640}
+/>
 
-السياسات البسيطة بتشتغل أحسن مما شكلها يوحي. والخلاف بينها غالباً أصغر من الخلاف بين feedback loop صح وfeedback loop مضروب.
+قدامك خمس مطاعم بجودات مخفية. إنت بتختار وين تاكل، وسياسة ثانية بتختار بالتوازي. الهدف مش تربح ليلة وحدة. الهدف توقف تدفع على معلومات ما عاد إلها فائدة.
 
-- **ε-greedy.** العب الأفضل-لهسّا 90% من الوقت؛ والـ 10% الباقية العب arm عشوائية. العشوائية ضريبة بتحميك من تخمين أوّلي غلط، بس بتضل تدفعها حتى بعد ما يصير الفائز واضح.
-- **UCB1** — _التفاؤل وقت ما تكون مش متأكد._ قيّم كل arm بـ $\hat{\mu}_i + \sqrt{2\ln t / n_i}$ وخذ الأعلى: اللي بتعرفه، زائد قديش لسا ممكن تكون غلطان. الـ arms اللي جرّبتها قليل بتاخد bonus بيصغر كل ما جمعت عنها دليل، فبيصير الاستكشاف **موجّه** بدل ما يكون عشوائي.
-- **Thompson sampling** — _خلّي المعتقدات تتسابق._ احتفظ بتوزيع توقّع لكل arm، مثلاً Beta لمكافآت فوز/خسارة. بكل جولة اسحب قيمة محتملة من كل توزيع وخذ الأعلى. الـ arm اللي جرّبتها قليل posterior تبعها واسع، فبتطلع أحياناً ممتازة وبتاخذ فرصتها. الـ arm المعروف إنها سيئة posterior تبعها ضيّق ومنخفض وبالكاد بتفوز. الاستكشاف بيخفّ لحاله.
+### أربع طرق لصرف عدم اليقين
 
-الـ loop المشترك صغير: ابدأ بـ prior ضعيف، اختار، اعمل pull، عدّل **الـ arm اللي لعبتها بس**، وكرّر. الفرق بين الخوارزميات هو كيف بتحوّل «تقدير + عدم يقين» للمحاولة الجاية.
+**ε-greedy.** أغلب الوقت، روح على المطعم اللي معدله الحالي أفضل. كل فترة، تجاهل ملاحظاتك وجرب عشوائياً.
 
-<Demo src="/demos/posts/edp-sort/bandit-race.html" title="سابق بين سياسات الـ bandit" height={560} />
+هذا بحميك من غلطة مبكرة، بس عنده عادة غبية: حتى بعد ما يصير الفائز واضح، بضل يدفع ضريبة الاستكشاف.
 
-جرّب ε-greedy وUCB وThompson على سيناريو **hard**، لما أفضل arm-ين قريبين جداً. القصة بتبان بسرعة:
+**UCB1** — _التفاؤل وقت عدم اليقين._ قيّم كل arm بـ:
 
-- pure exploit ممكن يعلّق على صدفة مبكّرة.
-- ε-greedy بتحميك من الغلطة، بس بتضل تدفع الضريبة.
-- UCB وThompson أحسن لأن استكشافهم رايح لمكان محدّد.
-- UCB وThompson غالباً بيتبادلوا الصدارة بفارق صغير ومليان ضجيج.
+$$\hat{\mu}_i + \sqrt{2\ln t / n_i}$$
 
-الـ bandits نادراً هي المكان اللي بتلاقي فيه ميزتك الكبيرة. الميزّة الأكبر إنك تبني feedback loop صح.
+وخذ أعلى score.
 
-ملاحظة عن «UCB بطيء»: مش بطيء CPU-wise؛ هو index واحد لكل arm. البطء اللي بتحسّه هو بطء **تعلّم**. الـ bonus تبع UCB1، $\sqrt{2\ln t/n_i}$، حدود ثقة محافظة عمداً، صالحة لأي reward محدودة. عشان هيك بضلّه يعيد فحص arms كانت طريقة أكثر معرفة بالنموذج رح تشطبها بدري. بالإنتاج، الناس كثير بتستخدم KL-UCB أو UCB-Tuned، أو Thompson لما يكون عندك نموذج reward بايزي طبيعي.
+هون:
 
-<Demo src="/demos/posts/edp-sort/bandit-playground.html" title="جرّب الـ bandit بإيدك" height={520} />
+- $t$ هو عدد التجارب لحد الآن.
+- $n_i$ هو عدد مرات تجربة arm رقم $i$.
+- $\hat{\mu}_i$ هو متوسط الـ reward المرصود لـ arm رقم $i$.
 
-اختار مطعم، شوف خط الـ regret تبعك جنب Thompson bot عم ياكل بالتوازي معك. مية عشا بإيدك بتكفّي حتى تحس إن الاستكشاف الموجّه مش مجرد نظرية.
+الحد الثاني،
+
+$$\sqrt{2\ln t / n_i}$$
+
+هو bonus الاستكشاف.
+
+بيكون كبير لما $n_i$ صغير، وبيصغر كل ما يزيد الدليل. UCB مش عم يستكشف عشوائياً؛ هو عم يستكشف وين الغلط لسه ممكن يغيّر القرار.
+
+**KL-UCB.** UCB1 بيستخدم confidence radius عام. KL-UCB بيستخدم radius شكله Bernoulli.
+
+لـ click/no-click أو purchase/no-purchase، هو بيسجّل arm بأعلى success rate ممكن $q$ في $[\hat{\mu}_i,1]$ بحيث:
+
+$$n_i\,\mathrm{KL}(\hat{\mu}_i\,\|\,q) \leq \ln t + c\ln\ln t$$
+
+المعنى: خذ أعلى قيمة متفائلة لسه معقولة إحصائياً تحت بيانات Bernoulli اللي شفتها.
+
+الانتقال من 2% لـ 5% مش نفس الحركة الإحصائية مثل 50% لـ 53%، مع إن الاثنين ثلاث نقاط. KL-UCB بيحترم هاي الهندسة.
+
+**Thompson sampling** — _خلّي المعتقدات تتسابق._ احتفظ بتوزيع احتمالي لكل arm، مش متوسط واحد. بكل جولة، اسحب جودة محتملة من كل belief وروح على الأعلى.
+
+مطعم جرّبته قليل belief تبعه واسع، فمرات بطلع عالي وبياخذ فرصة. مطعم معروف إنه سيء belief تبعه ضيق ومنخفض، فبالكاد بفوز. ما في حدا بقلك «استكشف الآن». الاستكشاف بيطلع من عدم اليقين.
+
+<Demo
+  src="/demos/posts/edp-sort/bandit-race.html"
+  title="سابق بين سياسات الـ bandit"
+  height={560}
+/>
+
+جرّب الإعداد **hard**، لما أفضل مطعمين قريبين. Pure exploit ممكن يعلّق على صدفة مبكرة. ε-greedy بحميك، بس بضل يستكشف حتى لما الاستكشاف ما عاد مفيد. UCB وKL-UCB بيوجهوا الاستكشاف على arms إلها confidence bounds كبيرة. Thompson بعمل نفس الشيء عن طريق posterior samples.
+
+KL-UCB مفيد لما الـ reward قريب من Bernoulli، مثل clicks أو purchases. بس بالإنتاج في فخ: لو الـ clicks متأخرة، أو منحازة بالرتبة، أو مخلوطة بطريقة العرض، الـ bound الأدق ممكن يصير دقة وهمية.
+
+<details>
+<summary><strong>افتح الكود: Bernoulli bandit مختصر</strong></summary>
+
+```python
+import math
+import numpy as np
+
+
+def bernoulli_kl(p, q):
+    eps = 1e-12
+    p = min(1 - eps, max(eps, p))
+    q = min(1 - eps, max(eps, q))
+    return p * math.log(p / q) + (1 - p) * math.log((1 - p) / (1 - q))
+
+
+def kl_ucb(mean, pulls, t, c=3.0):
+    if mean >= 1.0:
+        return 1.0
+
+    budget = (math.log(max(t, 2)) + c * math.log(math.log(max(t, 3)))) / pulls
+    low, high = mean, 1.0 - 1e-12
+
+    for _ in range(32):
+        candidate = (low + high) / 2
+        if bernoulli_kl(mean, candidate) <= budget:
+            low = candidate
+        else:
+            high = candidate
+    return low
+
+
+def choose_arm(successes, pulls, t, policy, rng):
+    unseen = np.flatnonzero(pulls == 0)
+    if len(unseen):
+        return int(rng.choice(unseen))
+
+    means = successes / pulls
+
+    if policy == "epsilon_greedy":
+        return int(rng.integers(len(pulls))) if rng.random() < 0.10 else int(np.argmax(means))
+
+    if policy == "ucb1":
+        scores = means + np.sqrt(2.0 * np.log(t) / pulls)
+        return int(np.argmax(scores))
+
+    if policy == "kl_ucb":
+        scores = np.array([kl_ucb(means[a], pulls[a], t) for a in range(len(pulls))])
+        return int(np.argmax(scores))
+
+    if policy == "thompson":
+        samples = rng.beta(1 + successes, 1 + pulls - successes)
+        return int(np.argmax(samples))
+
+
+def update(successes, pulls, arm, reward):
+    pulls[arm] += 1
+    successes[arm] += reward
+```
+
+</details>
+
+الفعل المفيد مش دائماً اللي عنده أعلى متوسط حالي. أحياناً هو الفعل اللي نتيجته ممكن تغيّر رأيك.
 
 ### الـ context بيغيّر الجواب
 
-المعدل العام لكل مطعم نظيف. وكثير مرات كذّاب.
+معدل واحد لكل مطعم نظيف. وكثير مرات كذّاب.
 
 غدا سريع، عزومة عيلة، غدا شغل، ضيوف جايين من برا، وعشا لحالك بيوم مطر مش نفس القرار. مطعم ممكن يكون غلط لواحدة وممتاز لثانية.
 
-الـ bandit العادي بيتعلّم معدل عام واحد لكل مطعم. الـ **contextual bandit** بشوف ميزات الموقف *قبل* ما يختار. والـ **LinUCB** هو UCB مع هالطبقة الإضافية: بدل معدل واحد لكل arm، كل arm بتتعلّم أوزان $\theta_a$ على متجه context $x_t$، بتتوقع $x_t^\top\theta_a$، وبتضيف فوقها bonus التفاؤل.
+هاي فكرة **contextual bandit**: شوف الموقف أولاً، بعدين اختار.
 
-نفس المطعم ممكن يكون خيار سيء لغدا سريع وممتاز لعزومة عيلة. الفكرة إنك توقف تخلط سياقات ما لازم تنخلط.
+بالنسخة الخطية البسيطة، الموقف هو feature vector اسمه $x_t$. للعشا، الـ features ممكن تكون: سريع، هادي، رخيص، مناسب للأطفال، spicy، أو مناسب لمجموعة. كل arm إلها response vector اسمه $\theta_a$.
 
-<Demo src="/demos/posts/edp-sort/bandit-contextual.html" title="bandit العشا الـ contextual" height={420} />
+التوقع هو:
 
-الخلاصة هنا بسيطة: أحياناً السؤال مش «أي arm أفضل؟». السؤال: **أي arm أفضل لهذا السياق؟**
+$$\mathbb{E}[r_t \mid x_t, a] = x_t^\top\theta_a$$
 
-بس انتبه: الـ context لازم يكون معروف قبل القرار. اللي بتعرفه بعد click أو purchase أو delivery أو complaint هو feedback، مش context.
+الـ dot product بسأل سؤال أهم من «قديش المطعم جيد؟»
 
-## الجزء الثاني — الترتيب لما الـ arm تصير مباراة
+بسأل:
+
+> قديش هذا المطعم مناسب لهذا الموقف؟
+
+هون الـ context بيفيد. عشا عيلة ناجح مش دليل عن هاي الليلة فقط؛ هو بيعلّم الموديل عن مواقف عائلية ثانية. غدا شغل سريع بيعلّم عن سياقات quick-work ثانية. الموديل بيوقف يخلط مواقف ما لازم تنخلط.
+
+LinUCB هو UCB ومعه هالموديل الخطي. لكل arm، بيحتفظ بإحصاءات تقدّر $\theta_a$:
+
+$$A_a = \lambda I + \sum_{s:a_s=a} x_sx_s^\top, \qquad b_a = \sum_{s:a_s=a} r_sx_s$$
+
+ومنهم:
+
+$$\hat{\theta}_a = A_a^{-1}b_a$$
+
+وبعدين بختار arm بأكبر score متفائل:
+
+$$x_t^\top\hat{\theta}_a + \alpha\sqrt{x_t^\top A_a^{-1}x_t}$$
+
+الحد الأول هو reward متوقع بالسياق الحالي. الحد الثاني هو عدم اليقين في هاي المنطقة من feature space.
+
+فالمجهول تغيّر. مش:
+
+> قديش هذا المطعم جيد؟
+
+بل:
+
+> بأي مواقف هذا المطعم جيد؟
+
+تحذير إنتاجي مهم: الـ context لازم يكون معروف قبل القرار. إذا عرفته بعد العشا، click، purchase، delivery، أو complaint، فهو feedback — مش context.
+
+<Demo
+  src="/demos/posts/edp-sort/bandit-contextual.html"
+  title="bandit العشا الـ contextual"
+  height={420}
+/>
+
+المقارنة في الديمو هي النقطة: non-contextual Thompson sampling بتتعلّم متوسط واحد لكل مطعم. LinUCB بشوف الموقف أولاً. على عدد كافي من الجولات، السياسة السياقية لازم تخسر regret أقل لأنها بتوقف تتعامل مع كل عشا كأنه نفس السؤال.
+
+<details>
+<summary><strong>افتح الكود: disjoint LinUCB بـ NumPy</strong></summary>
+
+```python
+import numpy as np
+
+
+class DisjointLinUCB:
+    def __init__(self, n_arms, dim, alpha=0.8, l2=1.0):
+        self.alpha = alpha
+        self.A = [l2 * np.eye(dim) for _ in range(n_arms)]
+        self.b = [np.zeros(dim) for _ in range(n_arms)]
+
+    def choose_arm(self, x):
+        scores = []
+        for A_a, b_a in zip(self.A, self.b):
+            theta_a = np.linalg.solve(A_a, b_a)
+            predicted_reward = x @ theta_a
+            uncertainty = np.sqrt(x @ np.linalg.solve(A_a, x))
+            scores.append(predicted_reward + self.alpha * uncertainty)
+        return int(np.argmax(scores))
+
+    def update(self, arm, x, reward):
+        self.A[arm] += np.outer(x, x)
+        self.b[arm] += reward * x
+
+
+# x must contain only information known before the action.
+# Example: [1, is_lunch, is_family_dinner, is_raining, mobile_user].
+arm = policy.choose_arm(x_t)
+reward = observe_reward(arm)
+policy.update(arm, x_t, reward)
+```
+
+</details>
 
 أحياناً ما عندك reward رقمي أصلاً.
 
 بالرياضة، صعب تقول اللاعب قوته 173. أسهل تشوف إن اللاعب A غلب B. ومع ردود LLM، صعب تعطي جواب رقم جودة نظيف؛ أسهل تسأل judge: أي جواب أحسن؟
 
-هون الـ action ما عاد arm واحدة. صار **زوج**.
+فالـ feedback بتتغيّر مرة ثانية. الفعل ما عاد arm واحدة.
 
-تمن لاعبين. ما في stat sheet. ما بتقدر تقرا مهارة حدا.
+صار زوج.
 
-بتقدر تنزّل أي لاعبين يلعبوا وتشوف مين فاز. المباراة مقارنة فيها ضجيج. فرق المهارة بغيّر انحياز القرعة؛ ما بيلغي القرعة.
+بتختار عنصرين، وبتشوف مين فاز.
 
-مع $n$ لاعبين عندك $O(n^2)$ أزواج ممكنة. مقارنة الكل غالية حتى على scale صغير، ومستحيلة على product scale.
+## الجزء الثاني — Pairwise ranking: لما الـ arm تصير مباراة
 
-فالمشكلة مش بس تقدّر الجدول. المشكلة تقرّر أي مقارنة لسا إلها قيمة.
+تمن لاعبين. ما في stat sheet. ما في رقم مهارة نظيف.
 
-إذا لاعب جديد غلب بطل العالم، لعبه ضد الضعاف بعدين ما بعلمك كثير. المقارنات المفيدة بتكون حوالين الحدود اللي لسا مش محسومة.
+بتقدر تنزّل أي لاعبين يلعبوا وتشوف مين فاز.
+
+المباراة مقارنة فيها ضجيج. فرق المهارة بغيّر انحياز القرعة؛ ما بيلغي القرعة. اللاعب القوي غالباً يغلب الضعيف. اللاعبين القريبين أقرب لعملة.
+
+مع $n$ لاعبين عندك $O(n^2)$ أزواج ممكنة. مقارنة الكل غالية على scale صغير، ومستحيلة على product scale.
+
+فالمشكلة مش بس تقدّر الجدول. المشكلة تقرّر أي مقارنة لسه إلها قيمة.
+
+إذا لاعب جديد غلب بطل العالم، لعبه ضد الضعاف بعدين ما بعلمك كثير. المقارنات المفيدة بتكون حوالين الحدود اللي لسه مش محسومة.
 
 > **مين لازم يلعب المباراة الجاية؟**
 
 <Demo src="/demos/posts/edp-sort/pitch-match.html" title="جدول دوري مبني على مباريات 1 ضد 1 فيها ضجيج" height={660} />
 
-هذا ترتيب، بس الـ comparison oracle فيها ضجيج. بالكتاب، المقارنة بتحكي الحقيقة. هون الأفضل بس _غالباً_ بيفوز.
+هذا لسه ترتيب، بس الـ comparison oracle فيها ضجيج. بالكتاب، المقارنة بتحكي الحقيقة. هون الأفضل بس _غالباً_ بيفوز.
 
-النموذج الكلاسيكي لهالشي هو **Bradley-Terry**:
+الفعل هو **زوج**. والـ feedback bit واحد: مين فاز؟
 
-$$P(i \succ j) = \sigma\!\big(\beta\,(s_i - s_j)\big)$$
+ما في score للاعب A. ما في score للاعب B. ما في رقم جودة مطلق.
 
-كل لاعب إله رقم مهارة مخفي $s_i$. الـ $\sigma$ منحنى logistic بيحوّل فرق المهارة لاحتمال فوز، والـ $\beta$ بتحكي قديش اللعبة حاسمة.
+الافتراض البنيوي القياسي هو **Bradley-Terry**.
 
-الفكرة المهمة مش المعادلة لحالها. الفكرة إن المهارات على scale مشتركة. إذا A غلب B، وB غلب C، صار عندك دليل عن A مقابل C حتى لو ما لعبوا.
+كل عنصر إله skill score مخفي. واحتمالات الفوز بتيجي من فرق الـ scores:
 
-الجزء اللي بياكل الميزانية هو الحد الفاصل. زوج الفرق بينه $\Delta$ بحاجة تقريباً $\log(1/\delta)/\Delta^2$ مباريات حتى تحكم عليه بثقة $1-\delta$. الفروقات الكبيرة بتنحسم بسرعة. الأزواج المتقاربة هي اللي بتاكل الميزانية.
+$$P(i \succ j) = \sigma(s_i-s_j)$$
 
-### كيف الجدول بيتعلّم
+scores متساوية تعطي 50/50. gap كبير يعطي نتيجة شبه مؤكدة. الـ scale المطلق مش مهم؛ الفرق هو اللي يشتغل.
 
-عنا نتائج مباريات وبدنا نقدّر مهارات. في طريقتين مهمّات.
+قوة الموديل هي transfer. إذا A غلب B، وB غلب C، الـ scale المشترك صار يحكي شيء عن A مقابل C قبل ما يلعبوا.
 
-**Batch fit.** خذ كل المباريات ودوّر على المهارات اللي بتخلي النتائج اللي شفتها أكثر احتمالاً: maximum likelihood لنموذج Bradley-Terry. الـ widget بيعمل كم دورة من _minorize-maximize_. الصورة كافية: عدّل مهارة كل لاعب لحتى نسبة فوزه المتوقعة تقرّب من اللي شافه فعلاً.
+الجزء المؤلم هو الحدود. تقريباً، تمييز skill gap صغير $\Delta$ بثقة $1-\delta$ بده:
 
-رتّب المهارات المقدّرة، وبيطلع معك الجدول. نظيف، بس مش رخيص: إعادة الـ fit من الصفر بعد كل مباراة بتصير مستحيلة لما يكون عندك آلاف اللاعبين.
+$$O\!\left(\frac{\log(1/\delta)}{\Delta^2}\right)$$
 
-**Online fit = Elo.** Elo هو النسخة streaming من نفس الفكرة. اعتبر المباراة مثال logistic regression واحد وخذ عليه خطوة SGD واحدة. لو $i$ غلب $j$:
+مقارنات.
 
-$$s_i \leftarrow s_i + \eta\,(1-p), \qquad s_j \leftarrow s_j - \eta\,(1-p), \qquad p=\sigma(s_i-s_j)$$
+الفروقات الكبيرة بتنحسم بسرعة. الـ near ties بتاكل الميزانية.
 
-الـ update هو **المفاجأة**: $1-p$. لو فاز المرشّح المتوقع، $p\approx1$، فالترتيب بالكاد بتحرّك. لو عمل الأضعف مفاجأة، $p$ صغيرة وبتتحرك التقييمات بقوة.
+### من pairwise feedback لـ skill ratings
 
-بعالم الترتيب تحت الضجيج عنا loop واضح:
+**Batch fit.** خذ كل المباريات، وfit scores لنموذج Bradley-Terry بحيث النتائج اللي شفتها تصير أكثر احتمالاً.
 
-> **قدّر** المهارات من المباريات → **اقرا** الترتيب بفرزها → **اختار** المباراة الجاية.
+إذا A غلب B كثير، الـ fit بدفع A فوق B لحد ما $P(A \succ B)$ يقرّب من التاريخ. إذا B غلب C كثير، B بطلع فوق C. وبما إن الموديل عنده scale واحد، هالحقائق بتحرّك A بالنسبة لـ C حتى لو ما لعبوا.
 
-### وين تصرف المباريات
+الكود تحت بيستخدم batch update قياسي. ابدأ كل لاعب بنفس strength موجب. كرّر السؤال: given strengths الحالية للكل، قديش لازم تكون strength اللاعب $i$ حتى تفسّر wins تبعته؟
+
+بعد كل pass، normalize. Bradley-Terry بهمّه relative strength؛ ضرب كل strengths بنفس الثابت ما بغيّر أي احتمال مباراة.
+
+رتّب الـ fitted skills وبيطلع معك ranking. نظيف، بس مش رخيص: refit من الصفر بعد كل مباراة ما بيسكّل.
+
+**Online fit: Elo.** Elo هي نسخة streaming من نفس الفكرة. خليك ماسك rating واحد لكل لاعب، وحدّثه بعد كل مباراة.
+
+الفوز بنقل points من الخاسر للفائز. حجم الحركة بيعتمد على المفاجأة.
+
+غلب بطل العالم، لازم تكسب كثير. غلب مبتدئ، تقريباً لا شيء. خسر من لاعب أضعف بكثير، rating لازم ينزل بقوة.
+
+صيغة واحدة لهالتحديث هي خطوة logistic regression. إذا $i$ غلب $j$:
+
+$$s_i \leftarrow s_i + \eta(1-p), \qquad s_j \leftarrow s_j - \eta(1-p), \qquad p = \sigma(s_i-s_j)$$
+
+هنا $p$ هو احتمال الموديل قبل المباراة إن $i$ يغلب $j$. التحديث هو المفاجأة: $1-p$.
+
+لو $i$ كان favourite قوي، الحركة صغيرة. لو كان underdog، الحركة كبيرة.
+
+<details>
+<summary><strong>افتح الكود: Bradley–Terry batch fit وElo online</strong></summary>
+
+```python
+import numpy as np
+
+
+def fit_bradley_terry_mm(wins, iterations=100, eps=1e-9):
+    """
+    wins[i, j] is the number of times item i beat item j.
+    Returns log-strengths; sorting them gives the Bradley–Terry ranking.
+    """
+    wins = np.asarray(wins, dtype=float)
+    pair_games = wins + wins.T
+    total_wins = wins.sum(axis=1)
+    n_items = len(wins)
+    strength = np.ones(n_items)
+
+    for _ in range(iterations):
+        updated = strength.copy()
+        for i in range(n_items):
+            denominator = 0.0
+            for j in range(n_items):
+                if i != j and pair_games[i, j] > 0:
+                    denominator += pair_games[i, j] / (strength[i] + strength[j])
+
+            if denominator > 0:
+                updated[i] = max(total_wins[i], eps) / denominator
+
+        # Bradley–Terry is identifiable only up to an additive constant in log-space.
+        updated /= np.exp(np.mean(np.log(np.maximum(updated, eps))))
+        strength = updated
+
+    return np.log(np.maximum(strength, eps))
+
+
+def elo_update(rating, i, j, winner, learning_rate=0.25):
+    """One online logistic-regression step after i versus j."""
+    p_i_wins = 1.0 / (1.0 + np.exp(-(rating[i] - rating[j])))
+    target_i = 1.0 if winner == i else 0.0
+    delta = learning_rate * (target_i - p_i_wins)
+
+    rating[i] += delta
+    rating[j] -= delta
+    return rating
+
+
+# Batch: scores = fit_bradley_terry_mm(wins)
+# Online: rating = elo_update(rating, i, j, winner)
+```
+
+</details>
+
+الـ loop هو:
+
+> **قدّر** المهارات من المباريات → **اقرأ** الترتيب بفرزها → **جدوِل** المباراة الجاية.
+
+### وين تصرف المباريات؟
 
 المباراة الجاية لازم تروح لمكان النتيجة فيه ممكن تحرّك الترتيب.
 
-مباراة غير متكافئة غالباً بتأكّد اللي النموذج أصلاً مصدّقه. لو #1 غلب #8، الجدول بالكاد بيتحرك.
+مباراة غير متكافئة غالباً بتأكّد اللي الموديل أصلاً مصدّقه. لو #1 غلب #8، الجدول بالكاد بيتحرك.
 
-المباراة المتقاربة مختلفة. النتيجتين معقولتين، وكل نتيجة بتعلّمك شيء عن ترتيب محلي لسا مش محسوم.
+المباراة المتقاربة مختلفة. النتيجتين معقولتين، وكل نتيجة بتعلّمك شيء عن ترتيب محلي لسه مش محسوم.
 
-أربع سياسات، ونفس الدوري:
+scheduler مفيد بيصرف المباريات على أزواج قريبة وunder-sampled.
 
-- **Random** — اختار أي زوج. سهلة، بس بتصرف على blowouts بقد ما بتصرف على القرعات.
-- **Round-robin** — العب الزوج الأقل لعباً، $\arg\min_{(i,j)} n_{ij}$. تغطية عادلة، بس عمياء: بتعيد مباريات محسومة.
-- **Ladder** — العب بس لاعبين جنب بعض بالترتيب الحالي. الشك غالباً بين الجيران، مش بين #1 و#8.
-- **Active** — اصرف المباراة الجاية حيث عدم يقين الرتبة أعلى:
-  $\arg\max_{(i,j)}[\text{closeness}(|\hat{s}_i-\hat{s}_j|)+\text{uncertainty}(1/(1+n_{ij}))]$.
+- **Random** تختار أي زوج.
+- **Round-robin** تختار الزوج الأقل لعباً، $\arg\min_{(i,j)}n_{ij}$.
+- **Ladder** تقارن الجيران في الجدول الحالي.
+- **Active** تصرف المباراة الجاية وين عدم يقين الرتبة أعلى:
 
-الفكرة ببساطة: وجّه المباراة للمكان اللي ممكن تشتري فيه أكبر تحسّن بصحة الجدول.
+  $$\arg\max_{(i,j)}\left[\text{closeness}(|\hat{s}_i-\hat{s}_j|)+\text{uncertainty}\left(\frac{1}{1+n_{ij}}\right)\right]$$
 
 <Demo src="/demos/posts/edp-sort/pairing-race.html" title="وين تصرف مبارياتك" height={440} />
 
-المنحنى هو Kendall $\tau$ — صحة الجدول — مقابل عدد المباريات. السياسات اللي بتصوّب على الحدود بتفوز لأنها عم تصرف الدليل بالمكان اللي الترتيب لسا ممكن يتحرك فيه.
+المنحنى هو Kendall $\tau$ — صحة الجدول — مقابل عدد المباريات. السياسات اللي بتصوّب على الحدود بتحسم الجدول أسرع لأنها عم تصرف الميزانية وين الترتيب لسه ممكن يتحرك.
 
-خلّي الـ scheduler تبع الدوري على **إنت الكشّاف (اضغط 2)**. اختار لاعبين، اعمل مباراة، اطلع على الجدول، وقرّر كمان مرة.
+خلّي الـ scheduler على **إنت الكشّاف (اضغط 2)**. اختار لاعبين، اعمل مباراة، اطلع على الجدول، وقرّر مرة ثانية.
 
 المباريات الواضحة بتحسّسك بالأمان. نادراً بتغيّر شيء.
 
 ### ليش مجموعة المرشحين لازم تكون أوسع من K
 
-أحياناً ما بدك الترتيب كله. بدك أفضل **K**.
+كثير مرات ما بدك الترتيب كله. بدك أفضل **K**.
 
-الإغراء الواضح إنك تلعب مباريات جوّا الـ top-K الحالي بس. غلط، لثلاث أسباب:
+الإغراء: قارن بس العناصر الموجودة حالياً في top-K. غلط، بثلاث طرق.
 
-1. لاعب فعلاً من الـ top-K بس حالياً عند رتبة K+1 ما رح ينلعب، وبالتالي ما رح يطلع.
-2. جوّا top-K مستقرّة، كثير مباريات بتكون غير متكافئة؛ خط القطع ما بيتحرك.
-3. إذا القمة انفصلت عن الباقي، «المركز K» بفقد مرجعه.
+1. عنصر فعلاً من الـ top-K بس حالياً عند K+1 ما رح ينلعب، وبالتالي ما عنده طريق يرجع.
+2. داخل top-K مستقرّة، المقارنات غالباً blowouts؛ خط القطع ما بيتحرك.
+3. إذا القمة انعزلت عن الميدان، «المركز K» بفقد مرجعه.
 
-الحل هو **حزام مرشّحين حول خط القطع**. خلي أي لاعب عدم يقينه لسا بيلامس المركز K موجود. ضيّق الحزام بس لما الدليل يشطبه.
+الحل هو **حزام مرشّحين حول خط القطع**. خلي كل عنصر عدم يقينه لسه بيتداخل مع المركز K موجود. ضيّق الحزام فقط لما الدليل يشطبه.
 
-لو الحزام ضيّق كثير—بس K—بتجمّد غلطتك. ولو واسع كثير—كل الميدان—بترجع لـ round-robin وبتحرق مباريات على أشياء محسومة. الحزام اللي بيضيق هو successive elimination بروح عملية.
+<details>
+<summary><strong>افتح الكود: active matching حول cutline</strong></summary>
 
-### التمنية كانوا الدرس. هلأ عشرة آلاف.
+```python
+import numpy as np
 
-مع تمن لاعبين بتقدر تقريباً تلعّب الكل. مع **10,000** ما بتقدر: عندك $n(n-1)/2\approx50$ مليون زوج ممكن.
 
-فمنجمع الفكرتين:
+def candidate_band(scores, score_se, k, z=1.96):
+    """
+    Keep candidates whose confidence intervals overlap the current K-th item.
+    score_se can come from a Hessian approximation, a bootstrap, or a posterior.
+    """
+    order = np.argsort(-scores)
+    cutline_item = order[k - 1]
+    cutline_low = scores[cutline_item] - z * score_se[cutline_item]
+    cutline_high = scores[cutline_item] + z * score_se[cutline_item]
 
-- **Estimator:** Elo، تحديث online بـ $O(1)$ لكل مباراة.
-- **Scheduler:** adaptive matchmaking بيقدّر تقييم المركز K، أو خط القطع، وبيقرّب مباريات اللاعبين من حوله.
+    lower = scores - z * score_se
+    upper = scores + z * score_se
+    band = np.flatnonzero((upper >= cutline_low) & (lower <= cutline_high))
 
-المقياس هون هو **recall@100**: قديش من الـ top-100 الحقيقي مسكه الـ top-100 المقدّر تبعك.
+    # Keep enough local rivals even when the intervals are overconfident early on.
+    local = order[max(0, k - 4):min(len(scores), k + 4)]
+    return np.unique(np.concatenate([band, local]))
+
+
+def choose_active_pair(scores, score_se, pair_games, candidates):
+    """Prefer uncertain, close pairs inside the cutline candidate band."""
+    best_pair = None
+    best_value = -np.inf
+
+    for left in range(len(candidates)):
+        for right in range(left + 1, len(candidates)):
+            i, j = candidates[left], candidates[right]
+
+            # Lightweight heuristic. A full BTL fit should use uncertainty
+            # of the difference s_i - s_j, including covariance.
+            pair_se = np.sqrt(score_se[i] ** 2 + score_se[j] ** 2)
+            standardized_gap = abs(scores[i] - scores[j]) / (pair_se + 1e-9)
+            boundary_value = 1.0 / (1.0 + standardized_gap)
+            pair_uncertainty = 1.0 / np.sqrt(pair_games[i, j] + 1.0)
+            value = boundary_value * pair_uncertainty
+
+            if value > best_value:
+                best_value = value
+                best_pair = (i, j)
+
+    return best_pair
+
+
+# At every round:
+# band = candidate_band(elo_rating, score_se, k=100)
+# i, j = choose_active_pair(elo_rating, score_se, pair_games, band)
+# winner = observe_comparison(i, j)
+# elo_rating = elo_update(elo_rating, i, j, winner)
+```
+
+</details>
+
+الكود فوق هو المبدأ. احفظ حزام حول الـ cutline، واستعمل أي uncertainty estimate موديلك قادر يعطيه عشان تقرر مين لسه جوّا الحزام.
+
+مع **10,000** لاعب عندك تقريباً 50 مليون زوج ممكن. Exhaustive comparison ميتة من البداية.
+
+استعمل estimator online مثل Elo، وscheduler adaptive يركّز المقارنات حول rating المركز K. المقياس هو **recall@100**: قديش من top-100 الحقيقي موجود في top-100 المقدّر.
 
 <Demo src="/demos/posts/edp-sort/topk-scale.html" title="10,000 لاعب — لاقي أفضل 100" height={500} />
 
-الـ random عم يهدر مباريات على blowouts بعيدة عن الخط. الـ adaptive بترجّع معظم top-100 بعشرات الآلاف من المباريات بدل 50 مليون—مش لأنها اخترعت estimator أذكى، بل لأنها حطّت ميزانية الدليل بالحزام الضيّق اللي الجواب لسا مش محسوم فيه.
+بهالإعداد الصناعي، random pairing بيحرق مباريات بعيد عن cutline. Adaptive matching بيرجع معظم top-100 بعشرات الآلاف من المباريات بدل ما يعدّ خمسين مليون زوج.
 
-## الجزء الثالث — الـ combinatorial semi-bandits: لما القرار slate كاملة
+هو بيفوز لأنه بيركّز الجهد وين membership لسه مش محسومة. العدد الدقيق بيعتمد على gaps حول rank 100، ضجيج النتائج، fit الموديل، وstopping rule.
 
-لهون، القرار كان يا arm واحدة يا مباراة واحدة. هلأ القرار بيوسع: بدك تختار **slate** كاملة.
+## الجزء الثالث — Combinatorial semi-bandits: لما الفعل يصير slate
 
-وهذا أقرب للمنتج الحقيقي. الصفحة ما بتسألك عن عنصر واحد. بدها top 10 منتجات، 12 snippet، 20 candidate، أو صفحة recommendations.
+الفعل هلأ بيوسع.
 
-الترتيب pairwise بيعطيك global order، بس فاتورته **O(n²)**. مية عنصر يعني حوالي خمسة آلاف زوج. مليون عنصر انتهى الموضوع.
+الجزء الأول اختار arm واحدة. الجزء الثاني اختار زوج. الجزء الثالث بيختار **slate**.
 
-الحل هون lever ثاني: اختار slate، شوف feedback على العناصر اللي اخترتها، وحدّث هدول بس.
+وهذا أقرب للمنتج الحقيقي. الصفحة غالباً ما بدها عنصر واحد. بدها top 10 منتجات، 12 snippet، 20 candidate، أو صفحة recommendations.
 
-هذا هو **combinatorial semi-bandit**: القرار مجموعة، والـ feedback بيتفكك على القطع اللي اخترتها فعلاً.
+Pairwise ranking بيعطيك global order، بس الفاتورة **O(n²)**. مية عنصر يعني حوالي خمسة آلاف pair. مليون؟ انتهى.
 
-لكل عنصر، Combinatorial-UCB بتحتفظ بمعدل مكافآت جاري زائد bonus تفاؤل:
+الجزء الثاني خفّض الفاتورة بإنه صرف المقارنات حول cutline. الجزء الثالث يستخدم lever ثاني: اختار slate، شوف feedback على العناصر المختارة، وحدّث هدول بس.
 
-$$u_i=\bar{x}_i+\sqrt{c\,\ln t/n_i}$$
+هذا هو **combinatorial semi-bandit**: الفعل set، والـ feedback بيتفكك على القطع اللي اخترتها فعلاً.
 
-بكل جولة بتختار **top-K حسب $u_i$**. عنصر تقديره عالي بياخذ مقعد. عنصر عدم يقينه عالي ممكن ياخذ مقعد كمان. بعدين بتشوف reward لكل عنصر من الـ K اللي اخترتهم، وبتحدّث هدول بس.
+### لما تضطر تصنع الـ score
 
-بس السؤال الصعب: من وين إجت $\bar{x}_i$ أو $\hat{r}_i$؟
+السياسة هي optimism مرة ثانية، بس مستوى أعلى.
 
-- إذا عندك reward مباشر لكل عنصر—click، watch time، benchmark score—ممتاز. Comb-UCB عنده أكل.
-- إذا عندك بس «A غلب B»، فهاي مش reward لكل عنصر. **Comb-UCB ما بتقدر تشتغل على raw pairwise wins** لحالها.
+اعطِ كل عنصر estimate وuncertainty bonus، وبعدين اختار top-K حسب optimistic score:
 
-هون بتصنع الـ reward. بتعمل tournament صغير: judge بترتّب 10–20 عنصر، بتكسر الترتيب لـ pairwise wins، وبتfit Bradley-Terry. الناتج score مشاهد على scale مشتركة. الجزء الثاني بصنع السكور؛ الجزء الثالث بقرر وين يصرف الـ slate الجاية.
+$$u_i = \hat{r}_i + \sqrt{c\,\ln t / n_i}$$
+
+هنا $\hat{r}_i$ هو reward estimate الحالي، و$n_i$ عدد مرات الحكم على item رقم $i$.
+
+estimate عالي بياخذ مقعد في slate. uncertainty عالي ممكن ياخذ مقعد كمان. كل round: خذ top-K حسب $u_i$، راقب outcome لكل item مختار، وحدّث هدول items.
+
+على surface حقيقي، additive reward assumption هشّة — position bias، cannibalization، exposure، presentation كلها بتدخل. بس الـ loop الأساسي لسه مفيد.
+
+السؤال الصعب: من وين إجت $\hat{r}_i$؟
+
+- **Reward مباشر.** العالم بيعطيك رقم لكل item — click، watch time، benchmark score. وقتها السياسة تحت كافية.
+- **مقارنات فقط.** العالم بيعطيك “A beat B”. هاي مش reward لكل item، فـ **Comb-UCB ما بتشتغل على raw pairwise wins** لحالها.
+
+بالحالة الثانية، إنت **بتصنع** الـ reward.
+
+اعمل tournaments صغيرة: خلي judge يرتّب 10–20 items، اكسر الترتيب لـ pairwise wins، وfit Bradley-Terry مثل الجزء الثاني. الـ tournament بحوّل مقارنات محلية لـ latent $\hat{r}_i$ على scale مشتركة.
+
+الجزء الثاني بصنع الـ score. الجزء الثالث بقرر وين تصرف slate الحكم الجاية.
+
+<details>
+<summary><strong>افتح الكود: combinatorial UCB مع per-item rewards</strong></summary>
+
+```python
+import numpy as np
+
+
+class CombinatorialUCB:
+    def __init__(self, n_items, exploration=1.0):
+        self.reward_sum = np.zeros(n_items)
+        self.pulls = np.zeros(n_items, dtype=np.int64)
+        self.exploration = exploration
+
+    def select_slate(self, k, t):
+        means = np.divide(
+            self.reward_sum,
+            self.pulls,
+            out=np.zeros_like(self.reward_sum),
+            where=self.pulls > 0,
+        )
+        bonus = np.full_like(means, np.inf)
+        seen = self.pulls > 0
+        bonus[seen] = self.exploration * np.sqrt(np.log(max(t, 2)) / self.pulls[seen])
+        scores = means + bonus
+
+        # argpartition avoids sorting every item when k << n_items.
+        slate = np.argpartition(scores, -k)[-k:]
+        return slate[np.argsort(-scores[slate])]
+
+    def update(self, slate, rewards):
+        self.pulls[slate] += 1
+        self.reward_sum[slate] += np.asarray(rewards)
+
+
+slate = policy.select_slate(k=12, t=round_number)
+rewards = observe_per_item_rewards(slate)  # one reward for every selected item
+policy.update(slate, rewards)
+```
+
+</details>
+
+الديمو تحت تشخيص، مش benchmark عادل.
+
+الطريقتين بتقرأ نفس item quality مخفية عبر قناتين feedback مختلفتين. Comb-UCB بياخذ عدة rewards مباشرة بكل round، بس للعناصر اللي اختارها. Bradley-Terry بياخذ bit مقارنة وحدة بكل duel، وبعدين بيسترجع ranking كامل تقدر تستخدمه لأي K.
 
 <Demo src="/demos/posts/edp-sort/bt-vs-combucb.html" title="Bradley-Terry مقابل combinatorial-UCB: استرجاع top-K" height={400} />
 
-السباق مش حكم مين «أفضل». هو تشخيص لقناتين feedback مختلفتين. Comb-UCB بياخذ عدة rewards مباشرة بكل جولة بس للعناصر اللي اختارها. Bradley-Terry بياخذ bit مقارنة وحدة بكل duel، وببني ranking تقدر تعيد استخدامه لأي K.
+### المثال الأساسي: نعدّن reviews لأفضل line
 
-اختار الماكينة اللي إشارتك بتقدر تطعميها فعلاً.
+هلأ خذ pile حقيقي: آلاف customer reviews، وبدك تطلع كم line فعلاً noteworthy.
+
+ما في reward طبيعي لكل snippet. ما في click على الجملة الواحدة. ما في benchmark score. عندك judge يقدر يقارن.
+
+فهاي pure tournament case: الـ semi-bandit بيوزع **judgment**، Bradley-Terry بصنع الـ score، والـ loop هو الطريقة.
+
+```python
+candidates = extract_snippets(reviews)        # large pool, no scores yet
+score = {c: 0.0 for c in candidates}          # Bradley-Terry latent reward
+pulls = {c: 0   for c in candidates}
+pairs = []
+
+for t in range(1, rounds + 1):
+    # 1. SELECT an optimistic, diverse slate using current BT scores
+    ucb   = {c: score[c] + C * sqrt(log(t + 1) / (pulls[c] + 1)) for c in candidates}
+    slate = top_k_constrained(ucb, k=K, max_per_type=...)   # <= K, capped per type
+
+    # 2. JUDGE: one listwise ranking of the slate -- a small tournament
+    ranking = llm_rank(slate)               # "order these from best to worst"
+
+    # 3. CALIBRATE: ranking -> pairwise wins -> refit Bradley-Terry
+    pairs += ranking_to_pairs(ranking)      # i beats j for every i ranked above j
+    score  = fit_bradley_terry(pairs)
+
+    # 4. only judged items count as pulled
+    for c in slate:
+        pulls[c] += 1
+
+best = sorted(candidates, key=lambda c: score[c], reverse=True)[:K]
+```
+
+شغلتين بتخلّي هذا يهرب من فاتورة $O(n^2)$.
+
+**UCB selectivity** بيصرف الحكم وين الترتيب لسه مش محسوم، وبيترك الذيل settled.
+
+**Listwise judging** بيحوّل call واحدة لقيود كثيرة: ترتيب K items يعطي $\binom{K}{2}$ pairwise wins.
+
+شغّلت هذا على 1,500 review حقيقي أربع وخمس نجوم: 114 candidate lines بعد filtering، $K = 14$، و11 rounds.
+
+الفاتورة اللي ما دفعها:
+
+| | exhaustive pairwise | this run |
+|---|---|---|
+| candidates | 114 | 114 |
+| one full pass | 6,441 pairs | not taken |
+| expensive judge calls | thousands | **22** |
+| pairwise constraints | — | **2,582** |
+| the dull tail | compared anyway | judged 0–1× |
+
+أطرف lines طلعت، حسب Bradley-Terry score:
+
+| Bradley-Terry | judged | the line |
+|--:|--:|---|
+| **+4.05** | 11× | "3.6 Roentgen. Not great, not terrible." |
+| +3.16 | 9× | "There is a reason more people have Amazon Prime than own guns in the United States." |
+| +3.09 | 8× | "Thanks Amazon — if it was up to you, I would never have to leave my house. Unfortunately there are some inconveniences in my life, such as work." |
+| +2.86 | 11× | "I bought my uncle a penis enlargement book for 'Secret Santa'… Hoping this rating *grows* to five stars, depending on results." |
+| +2.28 | 9× | "Only problem is they don't come through my door and start performing." |
+| _+5.22_ | _1×_ | _"…the best thing that ever happened to me. Family comes second."_ |
+
+آخر row هو سبب وجود optimism أصلاً.
+
+عنده أعلى fitted score بعد **حكم واحد** — يعني أقل رقم موثوق في الجدول. UCB لازم يرفعه لـ *اختبره بعدين*، مش لـ *توّجه الآن*.
+
+الـ line الموثوق هو اللي انحكم 11 مرة. *أعلى score* و*أعلى score بتصدّقه* سؤالين مختلفين. ranking بـ $\hat{r}_i$ لحالها بتجاوب السؤال الغلط.
+
+تحذير إنتاجي: optimizer بتحسّن الهدف اللي تعطيه إياه.
+
+مرّة سابقة، بدون فلتر الأربع والخمس نجوم، طلع النظام بس outrage — جدار من قصص توصيل سيئة. الطريقة ما «اكتشفت» المضحك. هي تبعت الفلتر وتعليمات الـ judge.
+
+*noteworthy* و*funny* اختيارات بتشفّرها، مش خصائص optimizer بيلقاها لحاله.
+
+## Appendix: وين RUCB يدخل؟
+
+Bradley-Terry بيعطيك scale عالمي واحد. هذا قوي، وهو افتراض.
+
+لو التفضيلات بتعمل cycle — A بغلب B، B بغلب C، C بغلب A — القصة ذات الـ scale الواحد بتتكسر. وقتها بدك طريقة تقرأ جدول المقارنات مباشرة بدل ما تجبر كل شيء على ranking واحد.
+
+RUCB عايش هناك: dueling bandit يحاول يلاقي Condorcet winner، عنصر بغلب كل الباقي باحتمال أكبر من 1/2، بدل ما يفترض من البداية إن في score خطّي مخفي بيرتّب الجميع.
+
+## تاريخ قصير للـ bandits
+
+القصة ما إجت دفعة واحدة. إجت عبر تسعين سنة تقريباً، من ناس كانوا يسألوا: كيف نجرب من غير ما نضيع التجربة؟
+
+- **1933 — Thompson.** جرّب actions بنسبة احتمال إنها الأفضل. الفكرة انبعثت بعد عقود باسم Thompson sampling.
+- **1952 — Robbins.** صاغ trade-off بين إنك تستغل اللي باين أحسن، وإنك تدفع حتى تتعلم.
+- **1952 — Bradley & Terry.** score مخفي لكل عنصر، واحتمالات الفوز من فرق الـ scores.
+- **1979 — Gittins.** index policy أنيقة للـ Bayesian discounted bandit.
+- **1985 — Lai & Robbins.** حدود regret: السياسات الجيدة تدفع regret ينمو مثل $\log t$.
+- **2002 — Auer, Cesa-Bianchi & Fischer.** UCB1 خلى optimism عملي وبضمانات finite-time.
+- **2009–2012 — dueling bandits.** feedback صار «A غلب B»، مش reward رقمية.
+- **2010 — contextual bandits.** أفضل arm صار يعتمد على context معروف قبل القرار.
+- **2013 — combinatorial semi-bandits.** تختار slate كاملة وتشوف reward لكل قطعة مختارة.
+
+المنحنى العام: arm واحدة، بعدين زوج، بعدين context، بعدين slate.
 
 ## شو طلع معنا؟
 
 نفس المشكلة، قناة feedback مختلفة.
 
-المعروف: شكل القرار.
+المعروف: الأفعال الممكنة.
 
-المجهول: الأرقام اللي بتخلي قرار أحسن من قرار.
+المجهول: القيم اللي بتخلي فعل أحسن من فعل.
 
-النادر: المشاهدات اللي بتكشف هالأرقام.
+النادر: المشاهدات اللي بتكشف هالقيم.
 
-لو القرار arm مستقلة، هاي multi-armed bandit. لو الـ feedback مقارنة، هاي dueling/ranking problem، وBradley-Terry طريقة تحوّل «مين غلب مين» لـ score مشتركة. لو القرار slate والـ feedback بيرجع لكل عنصر مختار، هاي combinatorial semi-bandit.
+لو الأفعال مستقلة، هاي multi-armed bandit. لو الـ feedback مقارنات، هاي dueling/ranking problem؛ Bradley-Terry طريقة واحدة لتحويل المقارنات لـ score مشترك. لو الفعل slate والـ feedback بيرجع لكل عنصر مختار، هاي combinatorial semi-bandit.
 
 السطح بيتغيّر: مطعم، مباراة، slate.
 
