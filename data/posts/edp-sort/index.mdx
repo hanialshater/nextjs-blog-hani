@@ -9,25 +9,27 @@ layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'dueling-bandits', 'sorting', 'interactive', 'edp']
 ---
 
-Five restaurants are near your home. One is probably best on average.
+Five restaurants are near your home. One of them is probably the best.
 
-If you could read their true qualities, this would be trivial: sort the numbers and take the maximum.
+If their true quality was written on the door, the problem would be boring:
 
 $$\arg\max_i \mu_i$$
 
-But you cannot read them. You can try one tonight, another tomorrow, and another next week. Each dinner tells you something, but never enough. Perhaps the chef had a bad night. Perhaps you ordered badly. Perhaps the place is excellent and you found its one terrible dish.
+Read the numbers. Sort. Pick the largest.
 
-So you begin by **sorting unknown numbers**.
+But the numbers are not written anywhere. You have to discover them by eating. One dinner tells you something, but never the whole truth. Perhaps the chef had a bad night. Perhaps you ordered badly. Perhaps the place is excellent and you found its one terrible dish.
 
-Each restaurant has a real average quality $\mu_i$. The values are hidden. A dinner is one noisy observation of one value. You need to learn enough of their order without spending all your dinners on bad restaurants.
+That is the first crack in the simple idea of “ranking.”
 
-That creates a trade-off. You can **exploit** what currently looks best, or **explore** a restaurant whose quality is still unclear. Explore too little and an early lucky dinner can lock you into the wrong answer. Explore too much and you keep paying for mediocre meals after the answer is mostly clear.
+Each restaurant has a real average quality $\mu_i$. The value is hidden. A dinner is one noisy observation. You need enough evidence to order the restaurants without spending all your dinners on bad ones.
+
+That creates the trade-off: exploit what currently looks best, or explore a restaurant whose quality is still unclear. Explore too little and an early lucky dinner can lock you into the wrong answer. Explore too much and you keep paying for mediocre meals after the answer is mostly clear.
 
 The question is not just “which restaurant is best?” It is:
 
 > **Where should the next try go?**
 
-The restaurant is the small version of a broader problem. You begin by sorting unknown numbers; more generally, you are optimizing a known structure whose decisive parameters are unknown.
+The restaurant is the small version of a broader problem. We often pretend we are sorting restaurants, products, models, sellers, ads, or creators. But in real systems, the values we sort by are usually hidden. We do not read them. We buy evidence about them.
 
 To find a shortest path through a city, the graph may be known while travel times on its edges are uncertain and variable. You do not merely run Dijkstra on fixed weights; driving a road is how you learn its weight.
 
@@ -35,28 +37,29 @@ To match customers with experts, the feasible matches may be known while the qua
 
 To rank products, sellers, ads, or creators, the candidate set and objective may be known while the quantities that determine the right order are not. You learn from clicks, purchases, returns, comparisons, ratings—whatever feedback reality gives you. But clicks and purchases are not pure item quality: they are outcomes conditional on exposure, rank, price, inventory, presentation, and the policy that chose the item. Logged feedback must therefore be treated with care.
 
-In all of these cases, the optimization problem is known. The actions, constraints, and objective are clear. What is unknown are the parameters that determine which solution is best, and the observations are stochastic.
+In all of these cases, the decision structure is known. The actions, constraints, and objective are clear. What is unknown are the parameters that determine which solution is best.
 
-So the problem must be solved while its parameters are being learned.
+So before naming algorithms, separate two things:
 
-Before choosing an algorithm, separate the **decision** from the **feedback channel**:
+1. **The decision structure** — what you are allowed to choose.
+2. **The feedback channel** — what the world tells you after you choose.
 
 ![Flow chart separating decisions, feedback after acting, and the natural learning machinery](/static/images/posts/edp-sort/decision-feedback-flow.png)
 
 <Caption>
-  The label “top-K” is not enough to choose the method. What matters is what reality tells
-  you after you act.
+  “Top-K” is not enough to choose the method. What matters is what reality tells
+  you after the action.
 </Caption>
 
 ## Part I — The multi-armed bandit: choosing dinner
 
-This dinner problem has a formal name: a **multi-armed bandit**. The name is old casino language, but the loop is ordinary.
+The restaurant problem has an old name: a **multi-armed bandit**. The casino metaphor is ugly, but the loop is useful.
 
-Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**. The important word is _one_. You do not get a report card for all five restaurants tonight. You get one meal from the place you picked. The other four meals remain imaginary.
+Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**. The important part is what you do **not** get. You do not receive a report card for all five restaurants tonight. You choose one place, observe one noisy outcome, and the other four outcomes remain imaginary.
 
-That missing information is the whole problem.
+That missing information is the whole game.
 
-### The cost of not knowing: regret
+### Regret: the hidden tax of ignorance
 
 If the sushi place is truly best and you eat somewhere weaker tonight, you paid a hidden tax. You may still have had a fine dinner, but compared with the best available dinner, you left quality on the table. Bandit theory calls that tax **regret**:
 
@@ -64,11 +67,11 @@ $$\text{Regret}(T) = \sum_{t=1}^{T}\big(\mu^* - \mu_{a_t}\big), \qquad \mu^* = \
 
 The formula is just bookkeeping. Each night, compare the place you chose, $\mu_{a_t}$, with the best hidden average, $\mu^*$. Add up the gap.
 
-The trap is that you can lose regret in two opposite ways.
+Regret comes from two opposite mistakes.
 
 Commit too early, and one lucky ramen night can crown the wrong winner. Explore forever, and you keep buying mediocre dinners after the answer is mostly obvious.
 
-So a bandit policy is not really a rule for “choosing the best.” It is a rule for spending ignorance. Which uncertainty is still worth paying for?
+So a bandit policy is not really a rule for “choosing the best arm.” It is a rule for spending ignorance: which uncertainty is still worth paying for?
 
 Try that before naming the algorithms.
 
@@ -82,7 +85,7 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
 ### Four ways to spend uncertainty
 
-- **ε-greedy.** Most nights, go to the place that currently looks best. Every so often, ignore your notes and try a random place. That random night is insurance against an early mistake. The downside is obvious too: even after the winner is clear, ε-greedy keeps paying the insurance premium.
+- **ε-greedy.** Most nights, go to the place that currently looks best. Every so often, ignore your notes and try a random place. That random night protects you from an early mistake, but it has a dumb habit: even after the winner is obvious, ε-greedy keeps paying the exploration tax.
 
 - **UCB1** — _optimism in the face of uncertainty._ Score each arm by
 
@@ -102,28 +105,21 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
   is the exploration bonus.
 
-  It is large when $n_i$ is small, because the arm is under-sampled. It shrinks as $n_i$ grows, because the estimate has more evidence behind it. The $\ln t$ term grows slowly, so under-tested arms can still get a chance later. UCB1 chooses the arm with the best **optimistic estimate**: observed mean plus uncertainty bonus.
+  It is large when $n_i$ is small and shrinks as evidence accumulates. UCB does not explore randomly. It explores where being wrong could still matter.
 
-- **KL-UCB.** UCB1 uses a deliberately blunt safety margin. That is nice because it works for any bounded reward, but it can be too cautious for yes/no feedback: click or no click, purchase or no purchase, good dinner or rough dinner.
+- **KL-UCB.** UCB1 uses a generic confidence radius. KL-UCB uses a Bernoulli-shaped one.
 
-  KL-UCB keeps the same optimism idea, but uses a confidence bound matched to Bernoulli rewards. Its score is the largest $q$ in $[\hat{\mu}_i,1]$ such that
+  For click/no-click or purchase/no-purchase feedback, it scores an arm by the largest plausible success rate $q$ in $[\hat{\mu}_i,1]$ such that
 
   $$n_i\,\mathrm{KL}(\hat{\mu}_i\,\|\,q) \leq \ln t + c\ln\ln t$$
 
-  Here $q$ is an optimistic candidate for the true mean. The KL term measures how statistically far $q$ is from the observed mean $\hat{\mu}_i$.
+  The constraint says: choose the highest optimistic value that is still plausible under the observed Bernoulli data.
 
-  The constraint says: choose the highest optimistic value that is still plausible under the data.
-
-  So the difference is:
-
-  - UCB1: observed mean plus a simple uncertainty bonus.
-  - KL-UCB: highest statistically plausible mean under the right reward model.
-
-  This matters for clicks and purchases. Moving from a 2% click rate to 5% is not the same statistical move as 50% to 53%, even though both are a three-point gap. UCB1 uses distance in value space. KL-UCB uses distance in probability-distribution space.
+  The move from 2% to 5% is not statistically the same as the move from 50% to 53%, even though both are three percentage points. KL-UCB respects that geometry.
 
 - **Thompson sampling** — _let your beliefs race._ Keep a whole distribution of possible qualities for each restaurant, not just one average. Each night, draw one plausible quality from every restaurant's belief and go to the highest draw.
 
-  A barely tried restaurant has a wide belief, so it sometimes draws high and earns another visit. A known-bad restaurant has a narrow low belief, so it almost never wins the draw. Nothing says “explore now” explicitly. Exploration falls out of uncertainty.
+  A barely tried restaurant has a wide belief, so it sometimes draws high and earns another visit. A known-bad restaurant has a narrow low belief, so it almost never wins the draw. Nobody says “explore now.” Exploration falls out of uncertainty.
 
 <Demo
   src="/demos/posts/edp-sort/bandit-race-averaged.en.html"
@@ -133,7 +129,7 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
 Run the **hard** setting, where the top two restaurants are close. Pure exploit can lock onto an early lucky arm. ε-greedy avoids that by sampling randomly, but it keeps spending some trials on arms whose uncertainty no longer matters. UCB1 and KL-UCB direct exploration toward arms with large confidence bounds. Thompson sampling does the same through posterior samples rather than an explicit bonus.
 
-KL-UCB is useful when the reward is close to Bernoulli, such as clicks or purchases. If the feedback is richer, delayed, or misspecified, the sharper bound can become fake precision.
+KL-UCB is useful when the reward is close to Bernoulli, such as clicks or purchases. The catch is production feedback: if clicks are delayed, rank-biased, or mixed with presentation effects, the sharper bound can become fake precision.
 
 <details>
 <summary><strong>Click to reveal: compact Bernoulli-bandit code</strong></summary>
@@ -196,23 +192,23 @@ def update(successes, pulls, arm, reward):
 
 </details>
 
-The useful action is not always the one with the highest current average. It is the one whose dinner is worth both the meal and the information.
+The useful action is not always the one with the highest current average. Sometimes it is the one whose result can still change your mind.
 
-### Context changes which arm is best
+### Context changes the answer
 
 The plain bandit gives each restaurant one number: $\mu_a$. That is clean, and often false.
 
-A quick lunch, a date, and a rainy solo dinner are not the same decision. A restaurant can be wrong for one and perfect for another. The point of context is to stop averaging those cases together.
+A quick lunch, a family dinner, a work meal, guests visiting from out of town, and a rainy solo evening are not the same decision. A restaurant can be wrong for one and perfect for another. The point of context is to stop averaging those cases together.
 
-That is a **contextual bandit**: see the situation first, then choose.
+That is the point of a **contextual bandit**: see the situation first, then choose.
 
-In a linear contextual bandit, the situation is a feature vector $x_t$. For dinner, features might be things like quick, social, spicy, or budget. Each arm has a response vector $\theta_a$ that says how much those features matter for that arm.
+In a linear contextual bandit, the situation is a feature vector $x_t$. For dinner, features might be things like quick, quiet, cheap, child-friendly, spicy, or suitable for a group. Each arm has a response vector $\theta_a$ that says how much those features matter for that arm.
 
 The predicted reward is
 
 $$\mathbb{E}[r_t \mid x_t, a] = x_t^\top\theta_a$$
 
-The dot product is the model's answer to: how well does this arm fit this context?
+The dot product asks: how well does this arm fit this situation?
 
 This is where context helps. A dinner on one quick-budget night is not only evidence about that exact night. It also updates the coefficients attached to quick and budget, so it informs other contexts that share those features. The model learns from correlated contexts instead of treating every situation as unrelated.
 
@@ -228,11 +224,11 @@ Then it chooses the arm with the largest optimistic score:
 
 $$x_t^\top\hat{\theta}_a + \alpha\sqrt{x_t^\top A_a^{-1}x_t}$$
 
-The first term is predicted reward in the current context. The second term is the uncertainty bonus for this context. If the model has little evidence in this part of feature space, the bonus is larger. If it has seen many similar contexts, the bonus shrinks.
+The first term is predicted reward in the current context. The second term is uncertainty in this part of the context space. If the model has little evidence there, the bonus is larger. If it has seen many similar contexts, the bonus shrinks.
 
-So the unknown thing is no longer “how good is this restaurant?” It is “what kinds of situations is this restaurant good for?”
+So the unknown thing is no longer “how good is this restaurant?” It is “what situations is this restaurant good for?”
 
-Context means information available before choosing. If you only learn it after the dinner, it belongs in the feedback, not in the context.
+Context must be known before the choice. If you only learn it after the meal, click, purchase, delivery, or complaint, it is feedback — not context.
 
 <Demo
   src="/demos/posts/edp-sort/bandit-contextual.html?lang=en&v=2"
@@ -270,7 +266,7 @@ class DisjointLinUCB:
 
 
 # x must contain only information known before the action.
-# Example: [1, is_lunch, is_date, is_raining, mobile_user].
+# Example: [1, is_lunch, is_family_dinner, is_raining, mobile_user].
 arm = policy.choose_arm(x_t)
 reward = observe_reward(arm)
 policy.update(arm, x_t, reward)
@@ -278,11 +274,11 @@ policy.update(arm, x_t, reward)
 
 </details>
 
-Sometimes you do not get a reward number.
+Sometimes, though, you do not get a reward number at all.
 
 In sports, it is hard to say a player is exactly 173 points strong. It is easier to observe that player A beat player B. With LLM responses, it is often hard to assign one clean quality score to an answer. It is easier for a judge to say: response A was better than response B.
 
-So the feedback changes. You do not choose one item and observe one reward. You choose two items and observe a winner.
+So the feedback changes again. You do not choose one item and observe one reward. You choose two items and observe a winner.
 
 ## Part II — Sorting: when the arm is a pair
 
