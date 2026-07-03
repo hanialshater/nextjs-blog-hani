@@ -25,7 +25,7 @@ Each restaurant has a real average quality $\mu_i$. The value is hidden. A dinne
 
 That creates the trade-off: exploit what currently looks best, or explore a restaurant whose quality is still unclear. Explore too little and an early lucky dinner can lock you into the wrong answer. Explore too much and you keep paying for mediocre meals after the answer is mostly clear.
 
-The question is not just “which restaurant is best?” It is:
+The question becomes:
 
 > **Where should the next try go?**
 
@@ -53,7 +53,9 @@ So before naming algorithms, separate two things:
 
 The restaurant problem has an old name: a **multi-armed bandit**. The casino metaphor is ugly, but the loop is useful.
 
-Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**. The important part is what you do **not** get. You do not receive a report card for all five restaurants tonight. You choose one place, observe one noisy outcome, and the other four outcomes remain imaginary.
+Each restaurant is an **arm**. A visit is a **pull**. The dinner is the **reward**.
+
+The catch is missing data. You choose one place, observe one noisy outcome, and the other four outcomes remain imaginary.
 
 That missing information is the whole game.
 
@@ -69,7 +71,7 @@ Regret comes from two opposite mistakes.
 
 Commit too early, and one lucky ramen night can crown the wrong winner. Explore forever, and you keep buying mediocre dinners after the answer is mostly obvious.
 
-So a bandit policy is not really a rule for “choosing the best arm.” It is a rule for spending ignorance: which uncertainty is still worth paying for?
+A bandit policy is a rule for spending ignorance: which uncertainty is still worth paying for?
 
 Try that before naming the algorithms.
 
@@ -190,7 +192,7 @@ def update(successes, pulls, arm, reward):
 
 </details>
 
-The useful action is not always the one with the highest current average. Sometimes it is the one whose result can still change your mind.
+The useful action is the one whose result can still change your mind.
 
 ### Context changes the answer
 
@@ -224,7 +226,9 @@ $$x_t^\top\hat{\theta}_a + \alpha\sqrt{x_t^\top A_a^{-1}x_t}$$
 
 The first term is predicted reward in the current context. The second term is uncertainty in this part of the context space. If the model has little evidence there, the bonus is larger. If it has seen many similar contexts, the bonus shrinks.
 
-So the unknown thing is no longer “how good is this restaurant?” It is “what situations is this restaurant good for?”
+The unknown has moved from average quality to situational fit:
+
+> What situations is this restaurant good for?
 
 Context must be known before the choice. If you only learn it after the meal, click, purchase, delivery, or complaint, it is feedback — not context.
 
@@ -272,13 +276,11 @@ policy.update(arm, x_t, reward)
 
 </details>
 
-Sometimes, though, the world does not give you a direct value.
+Sometimes the clean number never arrives.
 
-No click rate, no score, no clean reward attached to one item. But it can still compare.
+Sports gives you matches. LLM evaluation gives you preferences. A judge may struggle to assign an absolute score, but it can still say: this answer beats that one.
 
-In sports, it is hard to say a player is exactly 173 points strong. It is easier to observe that player A beat player B. With LLM responses, it is often hard to assign one clean quality score to an answer. It is easier for a judge to say: response A was better than response B.
-
-So the feedback channel changes. You are not choosing one item and observing one reward.
+Now the feedback is pairwise.
 
 You choose two items and observe a winner.
 
@@ -288,43 +290,43 @@ Eight players. No stat sheet. No clean skill number to read.
 
 You can schedule any two players and watch who wins.
 
-A match is a noisy comparison. The skill gap changes the bias of the coin; it does not remove the coin. Strong players usually beat weak ones. Evenly matched players are close to a toss-up.
+A match is a noisy comparison. Strong players usually beat weak ones. Close players need rematches because one result settles little.
 
 With $n$ players, there are $O(n^2)$ possible pairs. Comparing everything is already expensive at a small scale, and impossible at product scale.
 
-So the problem is not only to estimate the table. It is to decide which comparison still has value.
+The table improves only when the next comparison has value.
 
-If a new player beats the world champion, matching them against weak players next teaches almost nothing. The useful comparisons sit near the unresolved boundaries of the table.
+If a new player beats the world champion, playing them against weak players next is mostly ceremony. Useful matches sit near unresolved boundaries.
 
 So the question becomes: **which match should happen next?**
 
 <Demo src="/demos/posts/edp-sort/pitch-match.html?lang=en&v=3" title="A league table built from noisy 1v1 matches" height={660} />
 
-This is still sorting, but the comparison oracle is noisy.
+This is still sorting, with a noisy comparator.
 
-In a textbook sort, comparing two items gives the truth. Here, the better player only *probably* wins.
+In a textbook sort, comparing two items gives the truth. Here it gives one sample.
 
 The action is a **pair**. The feedback is one bit: who won?
 
-No score for player A. No score for player B. No absolute quality number.
+No absolute quality number.
 
-The standard structural assumption is **Bradley-Terry**.
+A common way to make this usable is **Bradley-Terry**.
 
-Each item has one hidden skill score. Pairwise probabilities come from score differences:
+Assume each item has one hidden skill score, and win probabilities come from score differences:
 
 $$P(i \succ j) = \sigma(s_i-s_j)$$
 
-Equal scores give a 50/50 match. A large gap gives a near-certain result. The absolute scale is arbitrary; the differences do the work.
+Equal scores give a 50/50 match. A large gap gives a near-certain result. The absolute scale is arbitrary; only differences matter.
 
-The point of the model is transfer. If A repeatedly beats B, and B repeatedly beats C, the shared scale already says something about A versus C before you ever schedule that match.
+The payoff is transfer. If A repeatedly beats B, and B repeatedly beats C, the model already has evidence about A versus C.
 
-The painful part is the boundary. Up to constants, distinguishing a small skill gap $\Delta$ with confidence $1-\delta$ takes roughly
+The boundary is expensive. Up to constants, distinguishing a small skill gap $\Delta$ with confidence $1-\delta$ takes roughly
 
 $$O\!\left(\frac{\log(1/\delta)}{\Delta^2}\right)$$
 
 comparisons.
 
-Big gaps settle quickly. Near ties consume the budget.
+Big gaps settle quickly. Near ties eat the budget.
 
 ### From pairwise feedback to skill ratings
 
@@ -332,15 +334,15 @@ Big gaps settle quickly. Near ties consume the budget.
 
 If A beat B many times, the fit pushes A above B until $P(A \succ B)$ roughly matches the history. If B beat C many times, B rises above C. Because the model has one shared scale, those facts also move A relative to C even if A and C never played.
 
-The code below uses a standard batch update. Start every player with the same positive strength. Repeatedly ask: given everyone else’s current strength, how strong must player $i$ be to explain their total wins?
+The code below uses a standard batch update. Start every player with the same positive strength. Then repeatedly update each player’s strength to explain their observed wins against the current field.
 
-After each pass, normalize. Bradley-Terry only cares about relative strength; multiplying all strengths by the same constant changes nothing.
+After each pass, normalize. Bradley-Terry only cares about relative strength; multiplying every strength by the same constant changes nothing.
 
-Sort the fitted skills and you have a ranking. Clean, but not cheap: refitting from scratch after every match does not scale.
+Sort the fitted skills and you have a ranking. Clean. Expensive. Refitting from scratch after every match does not scale.
 
-**Online fit: Elo.** Elo is the streaming version of the same idea. Keep one rating per player and update it after each match.
+**Online fit: Elo.** Elo is the streaming version. Keep one rating per player and update it after each match.
 
-A win moves points from loser to winner. The size of the move depends on surprise.
+A win moves rating from loser to winner. The move is bigger when the result was surprising.
 
 Beat the world champion and you should gain a lot. Beat a beginner and you should gain almost nothing. Lose to a much weaker player and your rating should fall sharply.
 
@@ -411,13 +413,13 @@ The loop is:
 
 ### Where to spend the matches
 
-The next match should go where the result can still move the ranking.
+The next match should be one where the result can still move the table.
 
-A lopsided match usually confirms what the model already believes. If #1 beats #8, the table barely moves.
+A lopsided match usually confirms the obvious. If #1 beats #8, the table barely moves.
 
-A close match is different. Either result is plausible, and either result teaches something about the local order.
+A close match does real work. Either result is plausible. Either result teaches something about the local order.
 
-So a useful scheduler spends matches on pairs that are both close and under-sampled.
+A useful scheduler looks for pairs that are both close and under-sampled.
 
 - **Random** chooses any pair.
 - **Round-robin** chooses the least-played pair, $\arg\min_{(i,j)}n_{ij}$.
@@ -428,17 +430,17 @@ So a useful scheduler spends matches on pairs that are both close and under-samp
 
 <Demo src="/demos/posts/edp-sort/pairing-race.html?lang=en&v=3" title="Where to spend your matches" height={440} />
 
-The curve is Kendall $\tau$ — table correctness — against matches played. Boundary-seeking schedulers settle the table faster because they spend the budget where the order is still movable.
+The curve is Kendall $\tau$ — table correctness — against matches played. Boundary-seeking schedulers settle the table faster because they spend matches near live disagreements.
 
 Set the table to **you scout (click 2)**. Pick two players, run a match, inspect the table, and choose again.
 
-Obvious mismatches feel safe. They rarely change anything.
+Obvious mismatches feel safe. They mostly waste the match.
 
 ### Why the candidate pool must be wider than K
 
-Often you do not need the whole ranking. You need the **best K**.
+Often you do not need the whole ranking. You only need the **best K**.
 
-Comparing only the current top-K is tempting, and wrong, for three reasons.
+Comparing only the current top-K freezes early mistakes.
 
 1. A genuinely top-K item currently sitting at K+1 receives no matches and has no path back into contention.
 2. Inside a settled top-K, comparisons are often lopsided; the cutline does not move.
@@ -446,7 +448,7 @@ Comparing only the current top-K is tempting, and wrong, for three reasons.
 
 The fix is a **candidate band around the cutline**.
 
-Keep sampling items whose uncertainty still overlaps the K-th position. Narrow the band only when evidence rules them out.
+Keep sampling items whose uncertainty still overlaps the K-th position. Narrow the band only when evidence pushes them out.
 
 <details>
 <summary><strong>Click to reveal: active matching around a top-K cutline</strong></summary>
@@ -509,15 +511,15 @@ def choose_active_pair(scores, score_se, pair_games, candidates):
 
 The implementation above is only the principle. Keep a band around the cutline; use whatever uncertainty estimate your model can support to decide who still belongs.
 
-With **10,000** players there are about 50 million possible pairs. Exhaustive comparison is dead on arrival.
+With **10,000** players there are about 50 million possible pairs. Exhaustive comparison is not a plan.
 
 Use an online estimator such as Elo and an adaptive scheduler that focuses comparisons near the K-th rating. The metric is **recall@100**: how much of the true top-100 appears in the estimated top-100.
 
 <Demo src="/demos/posts/edp-sort/topk-scale.html?lang=en&v=3" title="10,000 players: find the best 100" height={500} />
 
-In the synthetic setting used by this demo, random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches instead of enumerating fifty million pairs.
+In this synthetic setting, random pairing wastes matches far from the cutline. Adaptive matching recovers most of the top 100 in tens of thousands of matches instead of enumerating fifty million pairs.
 
-It wins because it concentrates effort where set membership is still uncertain. The exact sample count depends on the gaps around rank 100, outcome noise, model fit, and the stopping rule.
+It wins by spending matches where membership is still uncertain. The exact count depends on the gaps around rank 100, outcome noise, model fit, and the stopping rule.
 
 ## Part III — Combinatorial semi-bandits: when the action is a slate
 
@@ -550,7 +552,7 @@ On a real surface, the additive-reward assumption is fragile — position bias, 
 The hard question is where $\hat{r}_i$ comes from.
 
 - **Direct reward.** The world gives a number per item — click, watch time, benchmark score. Then the policy below is enough.
-- **Only comparisons.** The world gives “A beat B.” That is not a per-item reward, so **Comb-UCB cannot run on raw pairwise wins** by itself.
+- **Only comparisons.** The world gives “A beat B.” Comb-UCB needs a per-item reward, so raw pairwise wins need a scoring layer first.
 
 In the second case, you **manufacture** the reward.
 
@@ -609,9 +611,9 @@ Both methods read the same hidden item quality through different feedback channe
 
 Now point the loop at a real pile: thousands of customer reviews, and you want the handful of most noteworthy lines.
 
-There is no natural per-item reward. No click for a single snippet. No benchmark score. Only a judge that can compare.
+There is no natural per-item reward for a snippet: no click, no benchmark score, no clean scalar target. The available signal is judgment.
 
-So this is the pure tournament case: the semi-bandit allocates **judgment**, Bradley-Terry manufactures the score, and the loop is the method.
+The semi-bandit allocates **judgment**. Bradley-Terry manufactures the score. The loop becomes the method.
 
 ```python
 candidates = extract_snippets(reviews)        # large pool, no scores yet
