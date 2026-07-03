@@ -35,8 +35,6 @@ To find a shortest path through a city, the graph may be known while travel time
 
 To match customers with experts, the feasible matches may be known while the quality of each pairing is not. Every match teaches you something about preferences and compatibility, but it also uses an opportunity.
 
-To rank products, sellers, ads, or creators, the candidate set and objective may be known while the quantities that determine the right order are not. You learn from clicks, purchases, returns, comparisons, ratings—whatever feedback reality gives you. But clicks and purchases are not pure item quality: they are outcomes conditional on exposure, rank, price, inventory, presentation, and the policy that chose the item. Logged feedback must therefore be treated with care.
-
 In all of these cases, the decision structure is known. The actions, constraints, and objective are clear. What is unknown are the parameters that determine which solution is best.
 
 So before naming algorithms, separate two things:
@@ -274,13 +272,13 @@ policy.update(arm, x_t, reward)
 
 </details>
 
-Sometimes, though, you do not get a reward number at all.
+Sometimes, though, the world does not give you a direct value.
+
+No click rate, no score, no clean reward attached to one item. But it can still compare.
 
 In sports, it is hard to say a player is exactly 173 points strong. It is easier to observe that player A beat player B. With LLM responses, it is often hard to assign one clean quality score to an answer. It is easier for a judge to say: response A was better than response B.
 
-So the feedback changes again. The action is no longer one arm.
-
-It is a pair.
+So the feedback channel changes. You are not choosing one item and observing one reward.
 
 You choose two items and observe a winner.
 
@@ -607,7 +605,7 @@ Both methods read the same hidden item quality through different feedback channe
 
 <Demo src="/demos/posts/edp-sort/bt-vs-combucb.html?lang=en&v=3" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
 
-### Part III.2 — The core example: mining reviews for the best line
+### Part III.2 — Mining reviews for the best line
 
 Now point the loop at a real pile: thousands of customer reviews, and you want the handful of most noteworthy lines.
 
