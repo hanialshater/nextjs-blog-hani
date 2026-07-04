@@ -4,106 +4,211 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where to spend noisy pairwise matches</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--orange:#f0a058;--gray:#8b95a8;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:10px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:14px;background:var(--card);border:1px solid var(--edge);border-radius:14px;overflow:hidden}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:8px}.card{min-width:0;background:var(--panel);border:1px solid var(--edge);border-left-width:4px;border-radius:9px;padding:8px 9px}.name{font:11px var(--mono);font-weight:700;overflow-wrap:anywhere}.line{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--muted);font:10px var(--mono)}.line b{color:var(--text)}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}button,input{font:12px var(--mono)}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}label{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--muted)}input[type=range]{max-width:170px;width:38vw}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}@media(max-width:420px){body{padding:8px}.root{padding:12px}.cards{grid-template-columns:1fr 1fr}.controls{gap:7px}button{padding:7px 9px}.note{font-size:11.5px}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--orange:#f0a058;--gray:#8b95a8;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:10px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:14px;background:var(--card);border:1px solid var(--edge);border-radius:14px;overflow:hidden}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.card{min-width:0;background:var(--panel);border:1px solid var(--edge);border-left-width:4px;border-radius:9px;padding:8px 9px}.name{font:11px var(--mono);font-weight:700;overflow-wrap:anywhere}.line{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--muted);font:10px var(--mono)}.line b{color:var(--text)}canvas{display:block;width:100%;height:250px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}button,input{font:12px var(--mono)}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.status{font:11px var(--mono);color:var(--muted)}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}@media(max-width:520px){body{padding:8px}.root{padding:12px}.cards{grid-template-columns:1fr}.controls{gap:7px}.controls button{flex:1 1 auto}.status{flex-basis:100%}canvas{height:235px}.note{font-size:11.5px}}
 </style>
 </head>
 <body>
 <div class="root">
   <div class="cards" id="cards"></div>
-  <div class="controls"><button class="primary" id="play">▶ play</button><button id="reset">new league</button><label>match sharpness β <input id="beta" type="range" min="0.5" max="2.0" step="0.1" value="0.8"></label><span id="betaValue">0.8</span></div>
-  <canvas id="chart" height="240"></canvas>
-  <div class="note" id="note"><b>Read the early budget.</b> Each scheduler gets the same hidden league and at most 120 matches. The final curves may still get close; the lesson is the first 40 matches, where a bad schedule spends evidence on pairs that no longer teach much. τ@40 is the early-budget score. Kendall τ ranges from −1 (reversed) to +1 (perfect).</div>
+  <div class="controls"><button class="primary" id="run">rerun trials</button><button id="trials">trials: 48</button><span class="status" id="status">ready</span></div>
+  <canvas id="chart" height="250"></canvas>
+  <div class="note"><b>Read this as early-budget top-K recovery.</b> Every scheduler gets the same family of hidden leagues and only 120 matches. The curve is mean top-5 recall across trials: how many of the true best five players have entered the estimated best five. The active cutline scheduler spends matches near the current boundary instead of trying to learn the whole table.</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
 (() => {
-  const { eloUpdate, kendallTau, mulberry32, ranks, resizeCanvas, sigmoid } = window.EDP
+  const { eloUpdate, mulberry32, resizeCanvas, sigmoid } = window.EDP
   const policies = [
     { key: 'random', label: 'random', color: '#8b95a8' },
     { key: 'round_robin', label: 'round-robin', color: '#f0a058' },
     { key: 'ladder', label: 'ladder', color: '#4c8df6' },
-    { key: 'information', label: 'info heuristic', color: '#5fd2a3' },
+    { key: 'active', label: 'active cutline', color: '#5fd2a3' },
   ]
-  const n = 8, maxMatches = 120, earlyBudget = 40
+  const n = 24, topK = 5, maxMatches = 120, earlyBudget = 40
+  let nTrials = 48, results = {}, running = false, runId = 0
   const $ = (id) => document.getElementById(id)
-  let beta = 0.8, trueSkills, trueRanks, runs, running, animationId
+
+  function order(values) {
+    return values.map((value, index) => ({ value, index })).sort((a, b) => b.value - a.value || a.index - b.index).map(row => row.index)
+  }
+
+  function ranks(values) {
+    const ranked = order(values), out = Array(values.length)
+    ranked.forEach((item, rank) => { out[item] = rank })
+    return out
+  }
+
+  function topKRecall(ratings, trueSkills) {
+    const estimated = new Set(order(ratings).slice(0, topK))
+    const truth = order(trueSkills).slice(0, topK)
+    return truth.filter(item => estimated.has(item)).length / topK
+  }
+
+  function percentile(sorted, q) {
+    return sorted[Math.floor((sorted.length - 1) * q)]
+  }
+
+  function allPairs() {
+    const out = []
+    for (let left = 0; left < n; left += 1) for (let right = left + 1; right < n; right += 1) out.push([left, right])
+    return out
+  }
+
+  const pairs = allPairs()
 
   function makeLeague(seed) {
     const rng = mulberry32(seed)
-    const values = Array.from({ length: n }, (_, index) => 0.7 - 1.4 * index / (n - 1))
-    for (let index = n - 1; index > 0; index -= 1) { const swap = Math.floor(rng() * (index + 1)); [values[index], values[swap]] = [values[swap], values[index]] }
-    trueSkills = values
-    trueRanks = ranks(values)
-    runs = policies.map((policy, index) => ({
-      ...policy,
-      rng: mulberry32(seed * 97 + index * 101 + 11),
-      ratings: Array(n).fill(0),
-      games: Array.from({ length: n }, () => Array(n).fill(0)),
-      matches: 0,
-      history: [],
-      tau: 0,
-      tauAtEarlyBudget: null,
-    }))
+    const values = Array.from({ length: n }, (_, index) => 1.5 - 3.0 * index / (n - 1))
+    for (let index = n - 1; index > 0; index -= 1) {
+      const swap = Math.floor(rng() * (index + 1))
+      ;[values[index], values[swap]] = [values[swap], values[index]]
+    }
+    return values
   }
 
-  function pairs() { const result=[]; for(let left=0;left<n;left+=1)for(let right=left+1;right<n;right+=1)result.push([left,right]); return result }
+  function choosePair(run, rng) {
+    if (run.key === 'random') return pairs[Math.floor(rng() * pairs.length)]
 
-  function choosePair(run) {
-    const all = pairs()
-    if (run.key === 'random') return all[Math.floor(run.rng() * all.length)]
-    if (run.key === 'round_robin') return all.reduce((best, pair) => run.games[pair[0]][pair[1]] < run.games[best[0]][best[1]] ? pair : best, all[0])
+    if (run.key === 'round_robin') {
+      return pairs.reduce((best, pair) => run.games[pair[0]][pair[1]] < run.games[best[0]][best[1]] ? pair : best, pairs[0])
+    }
+
     const currentRanks = ranks(run.ratings)
     if (run.key === 'ladder') {
-      const adjacent = all.filter(([left,right]) => Math.abs(currentRanks[left] - currentRanks[right]) === 1)
+      const adjacent = pairs.filter(([left, right]) => Math.abs(currentRanks[left] - currentRanks[right]) === 1)
       return adjacent.reduce((best, pair) => run.games[pair[0]][pair[1]] < run.games[best[0]][best[1]] ? pair : best, adjacent[0])
     }
-    return all.reduce((best, pair) => information(pair, run) > information(best, run) ? pair : best, all[0])
+
+    const itemGames = run.games.map(row => row.reduce((sum, value) => sum + value, 0))
+    if (Math.min(...itemGames) < 2) {
+      const candidates = [...Array(n).keys()].sort((a, b) => itemGames[a] - itemGames[b] || rng() - 0.5).slice(0, 8)
+      const localPairs = pairs.filter(([left, right]) => candidates.includes(left) && candidates.includes(right))
+      return localPairs[Math.floor(rng() * localPairs.length)]
+    }
+
+    const currentOrder = order(run.ratings)
+    const band = new Set(currentOrder.slice(Math.max(0, topK - 4), Math.min(n, topK + 8)))
+    const localPairs = pairs.filter(([left, right]) => band.has(left) && band.has(right))
+    const score = ([left, right]) => {
+      const p = sigmoid(run.ratings[left] - run.ratings[right])
+      return p * (1 - p) / Math.sqrt(run.games[left][right] + 1)
+    }
+    return localPairs.reduce((best, pair) => score(pair) > score(best) ? pair : best, localPairs[0])
   }
 
-  function information([left, right], run) {
-    const p = sigmoid(run.ratings[left] - run.ratings[right])
-    return p * (1 - p) / Math.sqrt(run.games[left][right] + 1)
+  function simulate(policy, trialSeed) {
+    const trueSkills = makeLeague(trialSeed)
+    const rng = mulberry32(trialSeed * 97 + policy.key.length * 1009)
+    const run = {
+      key: policy.key,
+      ratings: Array(n).fill(0),
+      games: Array.from({ length: n }, () => Array(n).fill(0)),
+    }
+    const history = []
+    for (let match = 1; match <= maxMatches; match += 1) {
+      const [left, right] = choosePair(run, rng)
+      const leftWon = rng() < sigmoid(1.2 * (trueSkills[left] - trueSkills[right]))
+      eloUpdate(run.ratings, left, right, leftWon, 0.34)
+      run.games[left][right] += 1
+      run.games[right][left] += 1
+      history.push(topKRecall(run.ratings, trueSkills))
+    }
+    return history
   }
 
-  function stepRun(run) {
-    const [left, right] = choosePair(run)
-    const leftWon = run.rng() < sigmoid(beta * (trueSkills[left] - trueSkills[right]))
-    eloUpdate(run.ratings, left, right, leftWon, 0.34)
-    run.games[left][right] += 1
-    run.games[right][left] += 1
-    run.matches += 1
-    run.tau = kendallTau(ranks(run.ratings), trueRanks)
-    if (run.matches === earlyBudget) run.tauAtEarlyBudget = run.tau
-    run.history.push(run.tau)
+  function summarize(rows) {
+    const mean = [], p20 = [], p80 = []
+    for (let index = 0; index < maxMatches; index += 1) {
+      const values = rows.map(row => row[index]).sort((a, b) => a - b)
+      mean.push(values.reduce((sum, value) => sum + value, 0) / values.length)
+      p20.push(percentile(values, 0.2))
+      p80.push(percentile(values, 0.8))
+    }
+    return { mean, p20, p80 }
   }
 
-  function stepAll(count = 1) { for (let step = 0; step < count; step += 1) runs.forEach(stepRun) }
+  async function runAll() {
+    const token = ++runId
+    running = true
+    $('run').disabled = true
+    $('trials').disabled = true
+    $('status').textContent = 'simulating…'
+    results = {}
+    for (const policy of policies) {
+      const rows = []
+      for (let trial = 0; trial < nTrials; trial += 1) {
+        rows.push(simulate(policy, 7001 + trial * 7919))
+        if ((trial + 1) % 8 === 0) {
+          $('status').textContent = `${policy.label} · ${trial + 1}/${nTrials}`
+          await new Promise(resolve => requestAnimationFrame(resolve))
+          if (token !== runId) return
+        }
+      }
+      results[policy.key] = summarize(rows)
+      draw()
+    }
+    $('status').textContent = 'ready'
+    $('run').disabled = false
+    $('trials').disabled = false
+    running = false
+  }
 
   function draw() {
-    $('cards').innerHTML = runs.map((run) => `<div class="card" style="border-left-color:${run.color}"><div class="name" style="color:${run.color}">${run.label}</div><div class="line"><span>current τ</span><b>${run.tau.toFixed(2)}</b></div><div class="line"><span>τ@${earlyBudget}</span><b>${run.tauAtEarlyBudget == null ? (run.matches >= earlyBudget ? '—' : '…') : run.tauAtEarlyBudget.toFixed(2)}</b></div></div>`).join('')
-    const { context, width, height } = resizeCanvas($('chart'), 240)
-    const pad = { left: 36, right: 14, top: 14, bottom: 24 }, plotWidth = width-pad.left-pad.right, plotHeight=height-pad.top-pad.bottom
-    const yOf = (tau) => pad.top + (1 - (tau + 1) / 2) * plotHeight
-    context.strokeStyle='rgba(255,255,255,.08)';context.fillStyle='#9aa8bd';context.font='10px ui-monospace'
-    ;[-1,-.5,0,.5,1].forEach((value)=>{const y=yOf(value);context.beginPath();context.moveTo(pad.left,y);context.lineTo(pad.left+plotWidth,y);context.stroke();context.fillText(value.toFixed(1),4,y+3)})
-    const xMax=Math.max(...runs.map((run)=>run.matches),1)
-    const budgetX = pad.left + Math.min(earlyBudget, xMax) / Math.max(xMax, 1) * plotWidth
-    if (xMax >= earlyBudget) { context.strokeStyle='rgba(255,255,255,.16)'; context.setLineDash([4,4]); context.beginPath(); context.moveTo(budgetX,pad.top); context.lineTo(budgetX,pad.top+plotHeight); context.stroke(); context.setLineDash([]); context.fillStyle='#9aa8bd'; context.fillText(`τ@${earlyBudget}`, Math.min(budgetX+4, width-48), pad.top+12) }
-    runs.forEach((run)=>{if(run.history.length<2)return;context.strokeStyle=run.color;context.lineWidth=2;context.beginPath();run.history.forEach((tau,index)=>{const x=pad.left+index/Math.max(run.history.length-1,1)*plotWidth;const y=yOf(tau);index?context.lineTo(x,y):context.moveTo(x,y)});context.stroke()})
-    context.fillStyle='#9aa8bd';context.fillText('Kendall τ (−1 to +1)',pad.left+2,11);context.fillText(`matches per scheduler: ${xMax}/${maxMatches}`,pad.left+2,height-6)
+    $('cards').innerHTML = policies.map(policy => {
+      const data = results[policy.key]
+      const early = data ? data.mean[earlyBudget - 1].toFixed(2) : '—'
+      const final = data ? data.mean[maxMatches - 1].toFixed(2) : '—'
+      return `<div class="card" style="border-left-color:${policy.color}"><div class="name" style="color:${policy.color}">${policy.label}</div><div class="line"><span>recall@${earlyBudget}</span><b>${early}</b></div><div class="line"><span>recall@${maxMatches}</span><b>${final}</b></div></div>`
+    }).join('')
+
+    const { context, width, height } = resizeCanvas($('chart'), 250)
+    const pad = { left: 36, right: 14, top: 16, bottom: 26 }, plotWidth = width - pad.left - pad.right, plotHeight = height - pad.top - pad.bottom
+    const xOf = index => pad.left + index / Math.max(maxMatches - 1, 1) * plotWidth
+    const yOf = value => pad.top + (1 - value) * plotHeight
+
+    context.clearRect(0, 0, width, height)
+    context.strokeStyle = 'rgba(255,255,255,.08)'
+    context.fillStyle = '#9aa8bd'
+    context.font = '10px ui-monospace'
+    ;[0, .25, .5, .75, 1].forEach(value => {
+      const y = yOf(value)
+      context.beginPath(); context.moveTo(pad.left, y); context.lineTo(pad.left + plotWidth, y); context.stroke()
+      context.fillText(value.toFixed(2), 4, y + 3)
+    })
+
+    const budgetX = xOf(earlyBudget - 1)
+    context.strokeStyle = 'rgba(255,255,255,.16)'
+    context.setLineDash([4, 4])
+    context.beginPath(); context.moveTo(budgetX, pad.top); context.lineTo(budgetX, pad.top + plotHeight); context.stroke()
+    context.setLineDash([])
+    context.fillStyle = '#9aa8bd'
+    context.fillText(`@${earlyBudget}`, Math.min(budgetX + 4, width - 36), pad.top + 12)
+
+    for (const policy of policies) {
+      const data = results[policy.key]
+      if (!data) continue
+      context.save()
+      context.fillStyle = policy.color + '20'
+      context.beginPath()
+      data.p80.forEach((value, index) => index ? context.lineTo(xOf(index), yOf(value)) : context.moveTo(xOf(index), yOf(value)))
+      for (let index = data.p20.length - 1; index >= 0; index -= 1) context.lineTo(xOf(index), yOf(data.p20[index]))
+      context.closePath(); context.fill(); context.restore()
+      context.strokeStyle = policy.color
+      context.lineWidth = 2
+      context.beginPath()
+      data.mean.forEach((value, index) => index ? context.lineTo(xOf(index), yOf(value)) : context.moveTo(xOf(index), yOf(value)))
+      context.stroke()
+    }
+    context.fillStyle = '#9aa8bd'
+    context.fillText('mean top-5 recall', pad.left + 2, 11)
+    context.fillText(`matches: ${maxMatches}`, pad.left + 2, height - 6)
   }
 
-  function loop() {
-    if (!running) return
-    if (runs.every((run) => run.matches >= maxMatches)) { running=false; $('play').textContent='▶ play'; return }
-    stepAll(2); draw(); animationId=requestAnimationFrame(loop)
-  }
-
-  $('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ play';if(running)loop()}
-  $('reset').onclick=()=>{running=false;cancelAnimationFrame(animationId);$('play').textContent='▶ play';makeLeague((Date.now()>>>0)||7);draw()}
-  $('beta').oninput=(event)=>{beta=Number(event.target.value);$('betaValue').textContent=beta.toFixed(1);makeLeague(7);draw()}
-  window.addEventListener('resize',draw)
-  makeLeague(7);draw()
+  $('run').onclick = runAll
+  $('trials').onclick = () => { nTrials = nTrials === 48 ? 96 : 48; $('trials').textContent = `trials: ${nTrials}`; runAll() }
+  window.addEventListener('resize', draw)
+  draw()
+  requestAnimationFrame(runAll)
 })()
 </script>
 <script>(function(){function h(){parent.postMessage({type:'demo-height',height:Math.ceil(document.documentElement.getBoundingClientRect().height)},'*')}addEventListener('load',()=>{h();setTimeout(h,250)});addEventListener('resize',h);if(window.ResizeObserver)new ResizeObserver(h).observe(document.body)})();</script>
