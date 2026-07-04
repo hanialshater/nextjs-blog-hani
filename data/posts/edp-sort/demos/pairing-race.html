@@ -4,33 +4,33 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where to spend noisy pairwise matches</title>
 <style>
-:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--orange:#f0a058;--gray:#8b95a8;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:12px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:16px;background:var(--card);border:1px solid var(--edge);border-radius:14px}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.card{background:var(--panel);border:1px solid var(--edge);border-left-width:4px;border-radius:9px;padding:8px 10px}.name{font:11px var(--mono);font-weight:700}.line{display:flex;justify-content:space-between;margin-top:5px;color:var(--muted);font:10px var(--mono)}.line b{color:var(--text)}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}button,input{font:12px var(--mono)}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}@media(max-width:620px){.cards{grid-template-columns:repeat(2,minmax(0,1fr)}}
+:root{--bg:#0b1220;--card:#131c30;--panel:#0e1626;--edge:#263552;--text:#e6edf3;--muted:#9aa8bd;--blue:#4c8df6;--green:#5fd2a3;--orange:#f0a058;--gray:#8b95a8;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}body{padding:10px;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.root{padding:14px;background:var(--card);border:1px solid var(--edge);border-radius:14px;overflow:hidden}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:8px}.card{min-width:0;background:var(--panel);border:1px solid var(--edge);border-left-width:4px;border-radius:9px;padding:8px 9px}.name{font:11px var(--mono);font-weight:700;overflow-wrap:anywhere}.line{display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--muted);font:10px var(--mono)}.line b{color:var(--text)}canvas{display:block;width:100%;height:240px;background:var(--panel);border:1px solid var(--edge);border-radius:9px;margin-top:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}button,input{font:12px var(--mono)}button{border:1px solid var(--edge);border-radius:7px;background:#1a2440;color:var(--text);padding:7px 10px;cursor:pointer}button:hover{border-color:var(--blue)}button.primary{background:var(--blue);border-color:var(--blue);color:#06101d;font-weight:700}label{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--muted)}input[type=range]{max-width:170px;width:38vw}.note{background:var(--panel);border:1px solid var(--edge);border-radius:9px;padding:9px 10px;color:var(--muted);font-size:12px;margin-top:12px}.note b{color:var(--green)}@media(max-width:420px){body{padding:8px}.root{padding:12px}.cards{grid-template-columns:1fr 1fr}.controls{gap:7px}button{padding:7px 9px}.note{font-size:11.5px}}
 </style>
 </head>
 <body>
 <div class="root">
   <div class="cards" id="cards"></div>
-  <div class="controls"><button class="primary" id="play">▶ play</button><button id="reset">new league</button><label>BTL noise β <input id="beta" type="range" min="0.5" max="2.5" step="0.1" value="1.1"></label><span id="betaValue">1.1</span></div>
+  <div class="controls"><button class="primary" id="play">▶ play</button><button id="reset">new league</button><label>match sharpness β <input id="beta" type="range" min="0.5" max="2.0" step="0.1" value="0.8"></label><span id="betaValue">0.8</span></div>
   <canvas id="chart" height="240"></canvas>
-  <div class="note" id="note"><b>Same hidden league; different schedules.</b> Every policy observes one BTL winner per match and updates the same online-Elo estimator. “Stable τ=1” means the estimated table stayed exactly correct for 20 consecutive matches. Kendall τ ranges from −1 (reversed) to +1 (perfect). No scheduler is universally best: compare the trajectories and stability, not one lucky first hit.</div>
+  <div class="note" id="note"><b>Read the early budget.</b> Each scheduler gets the same hidden league and at most 120 matches. The final curves may still get close; the lesson is the first 40 matches, where a bad schedule spends evidence on pairs that no longer teach much. τ@40 is the early-budget score. Kendall τ ranges from −1 (reversed) to +1 (perfect).</div>
 </div>
 <script src="./edp-core.js"></script>
 <script>
 (() => {
   const { eloUpdate, kendallTau, mulberry32, ranks, resizeCanvas, sigmoid } = window.EDP
   const policies = [
-    { key: 'random', label: 'random draw', color: '#8b95a8' },
+    { key: 'random', label: 'random', color: '#8b95a8' },
     { key: 'round_robin', label: 'round-robin', color: '#f0a058' },
     { key: 'ladder', label: 'ladder', color: '#4c8df6' },
-    { key: 'information', label: 'information heuristic', color: '#5fd2a3' },
+    { key: 'information', label: 'info heuristic', color: '#5fd2a3' },
   ]
-  const n = 8, maxMatches = 420, stableWindow = 20
+  const n = 8, maxMatches = 120, earlyBudget = 40
   const $ = (id) => document.getElementById(id)
-  let beta = 1.1, trueSkills, trueRanks, runs, running, animationId
+  let beta = 0.8, trueSkills, trueRanks, runs, running, animationId
 
   function makeLeague(seed) {
     const rng = mulberry32(seed)
-    const values = Array.from({ length: n }, (_, index) => 1.8 - 3.6 * index / (n - 1))
+    const values = Array.from({ length: n }, (_, index) => 0.7 - 1.4 * index / (n - 1))
     for (let index = n - 1; index > 0; index -= 1) { const swap = Math.floor(rng() * (index + 1)); [values[index], values[swap]] = [values[swap], values[index]] }
     trueSkills = values
     trueRanks = ranks(values)
@@ -42,8 +42,7 @@
       matches: 0,
       history: [],
       tau: 0,
-      perfectStreak: 0,
-      stableAt: null,
+      tauAtEarlyBudget: null,
     }))
   }
 
@@ -74,34 +73,35 @@
     run.games[right][left] += 1
     run.matches += 1
     run.tau = kendallTau(ranks(run.ratings), trueRanks)
-    run.perfectStreak = run.tau >= 0.999 ? run.perfectStreak + 1 : 0
-    if (run.stableAt === null && run.perfectStreak >= stableWindow) run.stableAt = run.matches
+    if (run.matches === earlyBudget) run.tauAtEarlyBudget = run.tau
     run.history.push(run.tau)
   }
 
   function stepAll(count = 1) { for (let step = 0; step < count; step += 1) runs.forEach(stepRun) }
 
   function draw() {
-    $('cards').innerHTML = runs.map((run) => `<div class="card" style="border-left-color:${run.color}"><div class="name" style="color:${run.color}">${run.label}</div><div class="line"><span>current τ</span><b>${run.tau.toFixed(2)}</b></div><div class="line"><span>stable τ=1</span><b>${run.stableAt ?? (run.matches >= maxMatches ? '—' : '…')}</b></div></div>`).join('')
+    $('cards').innerHTML = runs.map((run) => `<div class="card" style="border-left-color:${run.color}"><div class="name" style="color:${run.color}">${run.label}</div><div class="line"><span>current τ</span><b>${run.tau.toFixed(2)}</b></div><div class="line"><span>τ@${earlyBudget}</span><b>${run.tauAtEarlyBudget == null ? (run.matches >= earlyBudget ? '—' : '…') : run.tauAtEarlyBudget.toFixed(2)}</b></div></div>`).join('')
     const { context, width, height } = resizeCanvas($('chart'), 240)
     const pad = { left: 36, right: 14, top: 14, bottom: 24 }, plotWidth = width-pad.left-pad.right, plotHeight=height-pad.top-pad.bottom
     const yOf = (tau) => pad.top + (1 - (tau + 1) / 2) * plotHeight
     context.strokeStyle='rgba(255,255,255,.08)';context.fillStyle='#9aa8bd';context.font='10px ui-monospace'
     ;[-1,-.5,0,.5,1].forEach((value)=>{const y=yOf(value);context.beginPath();context.moveTo(pad.left,y);context.lineTo(pad.left+plotWidth,y);context.stroke();context.fillText(value.toFixed(1),4,y+3)})
     const xMax=Math.max(...runs.map((run)=>run.matches),1)
+    const budgetX = pad.left + Math.min(earlyBudget, xMax) / Math.max(xMax, 1) * plotWidth
+    if (xMax >= earlyBudget) { context.strokeStyle='rgba(255,255,255,.16)'; context.setLineDash([4,4]); context.beginPath(); context.moveTo(budgetX,pad.top); context.lineTo(budgetX,pad.top+plotHeight); context.stroke(); context.setLineDash([]); context.fillStyle='#9aa8bd'; context.fillText(`τ@${earlyBudget}`, Math.min(budgetX+4, width-48), pad.top+12) }
     runs.forEach((run)=>{if(run.history.length<2)return;context.strokeStyle=run.color;context.lineWidth=2;context.beginPath();run.history.forEach((tau,index)=>{const x=pad.left+index/Math.max(run.history.length-1,1)*plotWidth;const y=yOf(tau);index?context.lineTo(x,y):context.moveTo(x,y)});context.stroke()})
-    context.fillStyle='#9aa8bd';context.fillText('Kendall τ (−1 to +1)',pad.left+2,11);context.fillText(`matches per policy: ${xMax}`,pad.left+2,height-6)
+    context.fillStyle='#9aa8bd';context.fillText('Kendall τ (−1 to +1)',pad.left+2,11);context.fillText(`matches per scheduler: ${xMax}/${maxMatches}`,pad.left+2,height-6)
   }
 
   function loop() {
     if (!running) return
     if (runs.every((run) => run.matches >= maxMatches)) { running=false; $('play').textContent='▶ play'; return }
-    stepAll(3); draw(); animationId=requestAnimationFrame(loop)
+    stepAll(2); draw(); animationId=requestAnimationFrame(loop)
   }
 
   $('play').onclick=()=>{running=!running;$('play').textContent=running?'⏸ pause':'▶ play';if(running)loop()}
   $('reset').onclick=()=>{running=false;cancelAnimationFrame(animationId);$('play').textContent='▶ play';makeLeague((Date.now()>>>0)||7);draw()}
-  $('beta').oninput=(event)=>{beta=Number(event.target.value);$('betaValue').textContent=beta.toFixed(1)}
+  $('beta').oninput=(event)=>{beta=Number(event.target.value);$('betaValue').textContent=beta.toFixed(1);makeLeague(7);draw()}
   window.addEventListener('resize',draw)
   makeLeague(7);draw()
 })()
