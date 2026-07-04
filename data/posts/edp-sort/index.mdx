@@ -71,9 +71,9 @@ Regret comes from two opposite mistakes.
 
 Commit too early, and one lucky ramen night can crown the wrong winner. Explore forever, and you keep buying mediocre dinners after the answer is mostly obvious.
 
-A bandit policy is a rule for spending ignorance: which uncertainty is still worth paying for?
+A bandit policy is the rule that chooses the next pull. In practice, it is a rule for spending ignorance: which uncertainty is still worth paying for?
 
-Try that before naming the algorithms.
+Before naming the algorithms, try the decision.
 
 <Demo
   src="/demos/posts/edp-sort/mysterious-policy.en.html"
@@ -81,7 +81,11 @@ Try that before naming the algorithms.
   height={560}
 />
 
-There are five hidden restaurant qualities. You choose where to eat; a second policy chooses in parallel. The goal is not to win one dinner. It is to stop paying for bad information once it has stopped being useful.
+Use the demo to feel the trade-off before the algorithms show up.
+
+Pick restaurants for a few dozen nights. Watch what happens when you trust early luck too much, and what happens when you keep sampling places that are clearly behind.
+
+The lesson is the shape of the problem: exploration is useful only while it can still change the decision.
 
 ### Four ways to spend uncertainty
 
@@ -113,6 +117,8 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
 
   $$n_i\,\mathrm{KL}(\hat{\mu}_i\,\|\,q) \leq \ln t + c\ln\ln t$$
 
+  Here KL is the statistical distance between the observed Bernoulli rate $\hat{\mu}_i$ and the candidate rate $q$.
+
   The constraint says: choose the highest optimistic value that is still plausible under the observed Bernoulli data.
 
   The move from 2% to 5% is not statistically the same as the move from 50% to 53%, even though both are three percentage points. KL-UCB respects that geometry.
@@ -127,7 +133,9 @@ There are five hidden restaurant qualities. You choose where to eat; a second po
   height={560}
 />
 
-Run the **hard** setting, where the top two restaurants are close. Pure exploit can lock onto an early lucky arm. ε-greedy avoids that by sampling randomly, but it keeps spending some trials on arms whose uncertainty no longer matters. UCB1 and KL-UCB direct exploration toward arms with large confidence bounds. Thompson sampling does the same through posterior samples rather than an explicit bonus.
+The hard case is when the top two restaurants are close.
+
+Pure exploitation can crown the wrong winner after a lucky early meal. ε-greedy avoids some of that by forcing random exploration, then keeps paying the random tax after it has become less useful. UCB1 and KL-UCB spend more of their exploration on under-tested arms. Thompson sampling does the same through posterior samples rather than an explicit bonus.
 
 KL-UCB is useful when the reward is close to Bernoulli, such as clicks or purchases. The catch is production feedback: if clicks are delayed, rank-biased, or mixed with presentation effects, the sharper bound can become fake precision.
 
@@ -192,7 +200,7 @@ def update(successes, pulls, arm, reward):
 
 </details>
 
-The useful action is the one whose result can still change your mind.
+The next useful pull is usually the one that can still change your mind.
 
 ### Context changes the answer
 
@@ -238,7 +246,9 @@ Context must be known before the choice. If you only learn it after the meal, cl
   height={420}
 />
 
-The comparison in the demo matters: **non-contextual Thompson sampling** keeps learning one average per restaurant, while LinUCB sees the context first. Over enough nights, the contextual policy should lose less regret because it stops pretending all dinners ask the same question.
+In the demo, the non-contextual policy keeps one average per restaurant. LinUCB conditions on the situation first.
+
+When the same restaurant is good in one context and bad in another, the contextual policy should lose less regret because it stops pooling incompatible dinners.
 
 <details>
 <summary><strong>Click to reveal: disjoint LinUCB in NumPy</strong></summary>
@@ -278,17 +288,15 @@ policy.update(arm, x_t, reward)
 
 Sometimes the clean number never arrives.
 
-Sports gives you matches. LLM evaluation gives you preferences. A judge may struggle to assign an absolute score, but it can still say: this answer beats that one.
+Sports gives you matches. LLM evaluation gives you preferences. A judge may struggle to assign an absolute score, but it can still compare two outputs.
 
-Now the feedback is pairwise.
-
-You choose two items and observe a winner.
+The feedback becomes pairwise: choose two items, observe a winner.
 
 ## Part II — Pairwise ranking: when the arm is a match
 
 Eight players. No stat sheet. No clean skill number to read.
 
-You can schedule any two players and watch who wins.
+The only instrument you have is a match: schedule two players, observe who wins.
 
 A match is a noisy comparison. Strong players usually beat weak ones. Close players need rematches because one result settles little.
 
@@ -302,9 +310,9 @@ So the question becomes: **which match should happen next?**
 
 <Demo src="/demos/posts/edp-sort/pitch-match.html?lang=en&v=3" title="A league table built from noisy 1v1 matches" height={660} />
 
-This is still sorting, with a noisy comparator.
+This is sorting with an unreliable comparator.
 
-In a textbook sort, comparing two items gives the truth. Here it gives one sample.
+In a textbook sort, one comparison resolves the order of two items. Here, one match is only evidence.
 
 The action is a **pair**. The feedback is one bit: who won?
 
@@ -430,15 +438,17 @@ A useful scheduler looks for pairs that are both close and under-sampled.
 
 <Demo src="/demos/posts/edp-sort/pairing-race.html?lang=en&v=3" title="Where to spend your matches" height={440} />
 
-The curve is Kendall $\tau$ — table correctness — against matches played. Boundary-seeking schedulers settle the table faster because they spend matches near live disagreements.
+The curve is Kendall $\tau$ — table correctness — against matches played. Higher is better; a perfect ordering is 1. Boundary-seeking schedulers settle the table faster because they spend matches near live disagreements.
 
-Set the table to **you scout (click 2)**. Pick two players, run a match, inspect the table, and choose again.
+Set the table to **you scout (click 2)**. Pick a match, inspect how the ranking moves, then pick again.
 
-Obvious mismatches feel safe. They mostly waste the match.
+The easy-looking matches are usually the least useful. The valuable matches are the ones where either result would teach you something.
 
 ### Why the candidate pool must be wider than K
 
 Often you do not need the whole ranking. You only need the **best K**.
+
+If $K=100$, the cutline is the current boundary around rank 100: the place where inclusion in the set is still up for grabs.
 
 Comparing only the current top-K freezes early mistakes.
 
@@ -523,11 +533,13 @@ It wins by spending matches where membership is still uncertain. The exact count
 
 ## Part III — Combinatorial semi-bandits: when the action is a slate
 
-The action now gets wider.
+So far, one round bought one observation: one dinner, one match.
 
-Part I chose one arm. Part II chose one pair. Part III chooses a **slate**.
+Now one round buys a slate.
 
-That matters because a product surface rarely asks for one item. It asks for a list: top 10 products, 12 snippets, 20 candidates, a page of recommendations.
+Part III chooses several items at once.
+
+A product surface rarely asks for one item. It asks for a list: top 10 products, 12 snippets, 20 candidates, a page of recommendations.
 
 Pairwise ranking buys a global order, but the bill is **O(n²)**. A hundred items is already about five thousand pairs. A million is dead.
 
@@ -543,7 +555,7 @@ Give each item an estimate and an uncertainty bonus, then select the top-K by op
 
 $$u_i = \hat{r}_i + \sqrt{c\,\ln t / n_i}$$
 
-Here $\hat{r}_i$ is the current reward estimate and $n_i$ is how many times item $i$ has been judged.
+Here $\hat{r}_i$ is the current reward estimate and $n_i$ is how many times item $i$ has received usable feedback.
 
 A high estimate earns a slate seat. High uncertainty can earn one too. Each round: take the top-K by $u_i$, observe one outcome per selected item, and update those items.
 
@@ -554,9 +566,11 @@ The hard question is where $\hat{r}_i$ comes from.
 - **Direct reward.** The world gives a number per item — click, watch time, benchmark score. Then the policy below is enough.
 - **Only comparisons.** The world gives “A beat B.” Comb-UCB needs a per-item reward, so raw pairwise wins need a scoring layer first.
 
-In the second case, you **manufacture** the reward.
+In the second case, you **manufacture** a reward proxy.
 
 Run small tournaments: ask one judge to rank 10–20 items, break the ranking into pairwise wins, and fit Bradley-Terry as in Part II. The tournament turns local comparisons into a latent $\hat{r}_i$ on a shared scale.
+
+That score is not ground truth. It is the current best utility estimate used to allocate the next round of judgment.
 
 Part II creates the score. Part III decides where to spend the next slate.
 
@@ -601,19 +615,19 @@ policy.update(slate, rewards)
 
 </details>
 
-The demo below is diagnostic, not a fair benchmark.
+Read the demo as a feedback-channel comparison.
 
-Both methods read the same hidden item quality through different feedback channels. Comb-UCB gets several direct rewards per round but only for selected items. Bradley-Terry gets one comparison bit per duel, then recovers a global ranking reusable for any K.
+Comb-UCB receives several direct rewards per round, one for each selected item. Bradley-Terry receives one comparison bit per duel, then fits a reusable global ranking.
 
 <Demo src="/demos/posts/edp-sort/bt-vs-combucb.html?lang=en&v=3" title="Bradley-Terry versus combinatorial-UCB: top-K recovery" height={400} />
 
 ### Part III.2 — Mining reviews for the best line
 
-Now point the loop at a real pile: thousands of customer reviews, and you want the handful of most noteworthy lines.
+Now use the same loop on a real pile: thousands of customer reviews, with the goal of surfacing a few noteworthy lines.
 
 There is no natural per-item reward for a snippet: no click, no benchmark score, no clean scalar target. The available signal is judgment.
 
-The semi-bandit allocates **judgment**. Bradley-Terry manufactures the score. The loop becomes the method.
+The semi-bandit decides which snippets deserve judgment next. Bradley-Terry turns those judgments into a score.
 
 ```python
 candidates = extract_snippets(reviews)        # large pool, no scores yet
@@ -644,7 +658,7 @@ Two things keep this away from the $O(n^2)$ bill.
 
 **UCB selectivity** spends judgment where the order is still in doubt and leaves the settled tail alone.
 
-**Listwise judging** multiplies one call into many constraints: one ranking of K items yields $\binom{K}{2}$ pairwise wins.
+**Listwise judging** multiplies one call into many constraints: one ranking of K items yields $\binom{K}{2}$ pairwise wins. They are not independent observations, but they are still useful ordering constraints.
 
 I ran this on 1,500 real four- and five-star reviews: 114 candidate lines after filtering, $K = 14$, eleven rounds.
 
@@ -669,9 +683,9 @@ The funniest lines it surfaced, by Bradley-Terry score (every line a verbatim re
 | +2.28 | 9× | "Only problem is they don't come through my door and start performing." |
 | _+5.22_ | _1×_ | _"…the best thing that ever happened to me. Family comes second."_ |
 
-That last row is why the optimism term exists.
+That last row is the failure mode optimism is meant to catch.
 
-It has the **highest** fitted score after **one** judgment — the least trustworthy number in the table. UCB should flag it to *test next*, not crown it.
+It has the **highest** fitted score after **one** judgment, which makes it interesting, not trustworthy. UCB should send it back for another test instead of crowning it.
 
 The trustworthy line is the one judged eleven times. *Highest score* and *highest score you believe* are different questions. Ranking by $\hat{r}_i$ alone answers the wrong one.
 
