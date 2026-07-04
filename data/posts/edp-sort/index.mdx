@@ -17,9 +17,7 @@ $$\arg\max_i \mu_i$$
 
 Read the numbers. Sort. Pick the largest.
 
-But the numbers are not written anywhere. You have to discover them by eating. One dinner tells you something, but never the whole truth. Perhaps the chef had a bad night. Perhaps you ordered badly. Perhaps the place is excellent and you found its one terrible dish.
-
-That is the first crack in the simple idea of “ranking.”
+But the numbers are not written anywhere. You have to discover them by eating. One dinner tells you something, but never the whole truth. Perhaps the chef had a bad night. Perhaps you ordered badly. Perhaps a usually average place served its best dish. Perhaps the excellent place had one terrible night.
 
 Each restaurant has a real average quality $\mu_i$. The value is hidden. A dinner is one noisy observation. You need enough evidence to order the restaurants without spending all your dinners on bad ones.
 
@@ -29,7 +27,7 @@ The question becomes:
 
 > **Where should the next try go?**
 
-The restaurant is the small version of a broader problem. We often pretend we are sorting restaurants, products, models, sellers, ads, or creators. But in real systems, the values we sort by are usually hidden. We do not read them. We buy evidence about them.
+That explore/exploit trade-off is the broader bandit problem. The action can be a restaurant, a road segment, a product candidate, a seller, an ad, a model, or a match. The structure of the decision may be known; the values that make one choice better than another are learned by spending attempts.
 
 To find a shortest path through a city, the graph may be known while travel times on its edges are uncertain and variable. You do not merely run Dijkstra on fixed weights; driving a road is how you learn its weight.
 
@@ -294,17 +292,17 @@ The feedback becomes pairwise: choose two items, observe a winner.
 
 ## Part II — Pairwise ranking: when the arm is a match
 
-Eight players. No stat sheet. No clean skill number to read.
+The action has changed.
 
-The only instrument you have is a match: schedule two players, observe who wins.
+Part I chose one arm and received one reward. Here the unit of evidence is a match: choose two candidates, observe which one wins.
 
 A match is a noisy comparison. Strong players usually beat weak ones. Close players need rematches because one result settles little.
 
-With $n$ players, there are $O(n^2)$ possible pairs. Comparing everything is already expensive at a small scale, and impossible at product scale.
+With $n$ candidates, there are $O(n^2)$ possible pairs. Comparing everything is already expensive at a small scale, and impossible at product scale.
 
 The table improves only when the next comparison has value.
 
-If a new player beats the world champion, playing them against weak players next is mostly ceremony. Useful matches sit near unresolved boundaries.
+If a new candidate beats the current champion, testing it only against weak candidates next is mostly ceremony. Useful matches sit near unresolved boundaries.
 
 So the question becomes: **which match should happen next?**
 
@@ -342,11 +340,21 @@ Big gaps settle quickly. Near ties eat the budget.
 
 If A beat B many times, the fit pushes A above B until $P(A \succ B)$ roughly matches the history. If B beat C many times, B rises above C. Because the model has one shared scale, those facts also move A relative to C even if A and C never played.
 
-The code below uses a standard batch update. Start every player with the same positive strength. Then repeatedly update each player’s strength to explain their observed wins against the current field.
+One standard batch update works with positive strengths $\lambda_i = e^{s_i}$ instead of log-scores directly. Let
 
-After each pass, normalize. Bradley-Terry only cares about relative strength; multiplying every strength by the same constant changes nothing.
+$$w_{ij}=\text{number of times }i\text{ beat }j, \qquad n_{ij}=w_{ij}+w_{ji}$$
 
-Sort the fitted skills and you have a ranking. Clean. Expensive. Refitting from scratch after every match does not scale.
+Then a Bradley-Terry MM update is
+
+$$
+\lambda_i^{\text{new}} =
+\frac{\sum_{j\ne i} w_{ij}}
+     {\sum_{j\ne i} n_{ij}/(\lambda_i+\lambda_j)}
+$$
+
+After each pass, normalize the strengths and return $s_i=\log\lambda_i$. Bradley-Terry only cares about relative strength; multiplying every $\lambda_i$ by the same constant changes nothing.
+
+Sort the fitted scores and you have a ranking. Clean. Expensive. Refitting from scratch after every match does not scale.
 
 **Online fit: Elo.** Elo is the streaming version. Keep one rating per player and update it after each match.
 
@@ -372,6 +380,10 @@ import numpy as np
 def fit_bradley_terry_mm(wins, iterations=100, eps=1e-9):
     """
     wins[i, j] is the number of times item i beat item j.
+
+    MM update in positive strengths:
+        strength_i <- wins_i / sum_j n_ij / (strength_i + strength_j)
+
     Returns log-strengths; sorting them gives the Bradley–Terry ranking.
     """
     wins = np.asarray(wins, dtype=float)
@@ -438,7 +450,7 @@ A useful scheduler looks for pairs that are both close and under-sampled.
 
 <Demo src="/demos/posts/edp-sort/pairing-race.html?lang=en&v=3" title="Where to spend your matches" height={440} />
 
-The curve is Kendall $\tau$ — table correctness — against matches played. Higher is better; a perfect ordering is 1. Boundary-seeking schedulers settle the table faster because they spend matches near live disagreements.
+The curve is mean top-5 recall across repeated leagues: how many of the true best five candidates have entered the estimated best five. The early part matters most, because with enough matches most reasonable schedulers eventually catch up.
 
 Set the table to **you scout (click 2)**. Pick a match, inspect how the ranking moves, then pick again.
 
