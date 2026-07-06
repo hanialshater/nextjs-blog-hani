@@ -114,39 +114,21 @@ function SemiBanditPanel() {
     <aside className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-5 text-sm dark:border-gray-700 dark:bg-gray-800/40">
       <h3 className="mt-0 text-xl font-semibold">One semi-bandit round, slowly</h3>
       <p>
-        Put football aside for a moment. You have <strong>80 candidate models</strong>, but a fixed evaluation
-        budget: this week you can run only <strong>10</strong> candidates on the same standardized benchmark.
-        The benchmark has noise—hardware, random seeds, test samples—but a score belongs to the candidate that
-        produced it. That makes this a clean place to see semi-bandit feedback.
+        Start with a clean case. You have <strong>80 candidate models</strong>, but this week you can run only
+        <strong> 10</strong> of them on the same benchmark. The benchmark is noisy, but every returned score is
+        attached to the candidate that produced it.
       </p>
 
-      <div className="my-5 grid gap-3 md:grid-cols-4">
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">1. Action</div>
-          <strong>Choose a batch</strong>
-          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Pick 10 of the 80 candidates. The action is a set, not one arm.</p>
-        </div>
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">2. Run</div>
-          <strong>Same benchmark</strong>
-          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Every selected candidate faces the same test protocol.</p>
-        </div>
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">3. Observe</div>
-          <strong>Ten separate scores</strong>
-          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Each score updates the candidate that generated it.</p>
-        </div>
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="font-mono text-xs text-blue-600 dark:text-blue-300">4. Learn</div>
-          <strong>Nothing about 70 others</strong>
-          <p className="mb-0 mt-1 text-gray-600 dark:text-gray-300">Unselected candidates remain counterfactual and uncertain.</p>
-        </div>
-      </div>
+      <p>
+        One round has four pieces. First, choose the batch. Second, run the benchmark. Third, receive one labelled
+        score for each selected candidate. Fourth, update only those selected candidates. The other 70 candidates
+        remain uncertain because they were not run.
+      </p>
 
       <div className="rounded-lg border border-gray-300 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/40">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-          <strong>Round 17: the selected benchmark batch</strong>
-          <span className="font-mono text-xs text-gray-500 dark:text-gray-400">10 chosen · 10 scores returned</span>
+          <strong>Round 17: selected benchmark batch</strong>
+          <span className="font-mono text-xs text-gray-500 dark:text-gray-400">10 chosen · 10 labelled scores</span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {selectedCandidates.map(([candidate, score]) => (
@@ -157,50 +139,19 @@ function SemiBanditPanel() {
           ))}
         </div>
         <p className="mb-0 mt-3 text-gray-600 dark:text-gray-300">
-          The crucial fact is not that the batch contains ten candidates. It is that the response comes back as
-          ten labelled observations: <code>C-07 → 81.4</code>, <code>C-18 → 73.2</code>, and so on. The learner
-          can assign credit correctly.
+          The useful part is attribution: <code>C-07 → 81.4</code>, <code>C-18 → 73.2</code>, and so on.
+          The learner knows exactly which selected candidate each observation belongs to.
         </p>
       </div>
 
       <h4 className="mb-2 mt-6 text-lg font-semibold">Why it is called a semi-bandit</h4>
       <p>
-        A full-information evaluator would reveal every candidate score, including all 70 candidates you did not
-        run. A normal one-arm bandit would let you run only one candidate and observe one score. Here you get the
-        useful middle ground: feedback for <em>every selected component</em>, but none for the rest.
+        Full information would reveal all 80 benchmark scores. A one-arm bandit would reveal one score. A
+        semi-bandit sits in the middle: the action is a set, and the feedback is item-level for the selected set.
       </p>
-      <div className="my-4 overflow-x-auto">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="border-b border-gray-300 dark:border-gray-700">
-              <th className="p-2">What you choose</th>
-              <th className="p-2">What returns</th>
-              <th className="p-2">What can be updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-gray-200 dark:border-gray-800">
-              <td className="p-2 font-medium">One candidate</td>
-              <td className="p-2">One benchmark score</td>
-              <td className="p-2">One candidate</td>
-            </tr>
-            <tr className="border-b border-gray-200 dark:border-gray-800">
-              <td className="p-2 font-medium">Ten-candidate batch</td>
-              <td className="p-2">Ten labelled benchmark scores</td>
-              <td className="p-2">All ten selected candidates</td>
-            </tr>
-            <tr>
-              <td className="p-2 font-medium">Ten-candidate batch</td>
-              <td className="p-2">Only one batch average: 75.4</td>
-              <td className="p-2">Not cleanly attributable: this is full-bandit feedback</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
       <p>
-        That last row is the boundary. Seeing only “the batch averaged 75.4” is not semi-bandit feedback; you do
-        not know whether C-07 was excellent and C-29 poor, or the reverse. You have a single outcome for a whole
-        structured action and need a more difficult slate-level learner.
+        If the system returned only one batch average, such as “these ten averaged 75.4,” the feedback would no
+        longer be semi-bandit. You would know the slate outcome, but not which candidate deserved credit.
       </p>
 
       <h4 className="mb-2 mt-6 text-lg font-semibold">What Comb-UCB does with the ten scores</h4>
@@ -285,12 +236,11 @@ export function BanditHistoryPanel() {
         <li><a className="underline" href="https://link.springer.com/article/10.1023/A:1013689704352" target="_blank" rel="noreferrer">Auer, Cesa-Bianchi, and Fischer (2002), <em>Finite-Time Analysis of the Multiarmed Bandit Problem</em></a>.</li>
         <li><a className="underline" href="https://arxiv.org/abs/1003.0146" target="_blank" rel="noreferrer">Li, Chu, Langford, and Schapire (2010), <em>A Contextual-Bandit Approach to Personalized News Article Recommendation</em></a>.</li>
         <li><a className="underline" href="https://www.cs.cornell.edu/people/tj/publications/yue_joachims_09a.pdf" target="_blank" rel="noreferrer">Yue and Joachims (2009), <em>Interactively Optimizing Information Retrieval Systems as a Dueling Bandits Problem</em></a>.</li>
-        <li><a className="underline" href="https://arxiv.org/abs/1312.3393" target="_blank" rel="noreferrer">Zoghi et al. (2014), <em>Relative Upper Confidence Bound for the K-Armed Dueling Bandit Problem</em></a>.</li>
         <li><a className="underline" href="https://arxiv.org/abs/1410.0949" target="_blank" rel="noreferrer">Kveton et al. (2015), <em>Tight Regret Bounds for Stochastic Combinatorial Semi-Bandits</em></a>.</li>
       </ol>
       <p className="mb-0 mt-5 text-gray-600 dark:text-gray-300">
         <strong>About the interactive demos:</strong> UCB1, KL-UCB, Thompson sampling, LinUCB, Bradley–Terry,
-        Elo, RUCB, and combinatorial semi-bandits correspond to established families above. The active-pairing
+        Elo, and combinatorial semi-bandits correspond to established families above. The active-pairing
         scheduler, the cutline matcher, and the overlapping bootstrap-Elo leagues are explanatory heuristics
         built for this post; they are not claimed as canonical algorithms or theorem-optimal policies.
       </p>
@@ -300,8 +250,6 @@ export function BanditHistoryPanel() {
 
 export default function Demo({ src, title = 'Interactive demo', height = 480 }: DemoProps) {
   const pathname = src.split('?')[0]
-  // The RUCB and bandit-history panels are placed explicitly in the appendix via the
-  // RucbAppendix / BanditHistory MDX components, not auto-attached to a demo by src.
   const showSemiBandit = pathname === '/demos/posts/edp-sort/bt-vs-combucb.html'
 
   return (
