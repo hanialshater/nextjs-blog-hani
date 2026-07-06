@@ -672,7 +672,7 @@ Two things keep this away from the $O(n^2)$ bill.
 
 **Listwise judging** multiplies one call into many constraints: one ranking of K items yields $\binom{K}{2}$ pairwise wins. They are not independent observations, but they are still useful ordering constraints.
 
-I ran this on 1,500 real four- and five-star reviews: 114 candidate lines after filtering, $K = 14$, eleven rounds.
+I ran this on a random sample of 1,500 reviews from the McAuley Amazon Reviews dataset. Before snippet extraction, I filtered to four- and five-star reviews. That left 114 candidate lines, $K = 14$, and eleven rounds.
 
 The bill it did **not** pay:
 
@@ -691,7 +691,6 @@ The funniest lines it surfaced, by Bradley-Terry score (every line a verbatim re
 | **+4.05** | 11× | "3.6 Roentgen. Not great, not terrible." |
 | +3.16 | 9× | "There is a reason more people have Amazon Prime than own guns in the United States." |
 | +3.09 | 8× | "Thanks Amazon — if it was up to you, I would never have to leave my house. Unfortunately there are some inconveniences in my life, such as work." |
-| +2.86 | 11× | "I bought my uncle a penis enlargement book for 'Secret Santa'… Hoping this rating *grows* to five stars, depending on results." |
 | +2.28 | 9× | "Only problem is they don't come through my door and start performing." |
 | _+5.22_ | _1×_ | _"…the best thing that ever happened to me. Family comes second."_ |
 
@@ -707,28 +706,4 @@ An earlier pass without the four-and-five-star filter surfaced only outrage — 
 
 *Noteworthy* and *funny* are choices you encode, not properties the optimizer finds on its own.
 
-## Appendix: where RUCB fits
-
-Bradley-Terry gives you one global scale. That is powerful, and it is an assumption.
-
-When preferences cycle — A beats B, B beats C, C beats A — the single-scale story breaks. Then you want a method that reads the pairwise table directly instead of forcing everything into one ranking.
-
-<RucbAppendix />
-
 <BanditHistory />
-
-## What this adds up to
-
-Same problem, different feedback channel.
-
-Known: the feasible actions.
-
-Unknown: the parameters that make one action better than another.
-
-Scarce: the observations that reveal those parameters.
-
-For independent arms, that becomes a multi-armed bandit. For pairwise feedback, it becomes a dueling/ranking problem; Bradley-Terry is one way to turn comparisons into a shared score. For a slate with per-item feedback, it becomes a combinatorial semi-bandit.
-
-The surface changes: restaurant, match, slate.
-
-> **You are choosing which ignorance is worth paying to remove.**
