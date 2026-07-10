@@ -11,6 +11,7 @@ import AlgorithmDemos from './AlgorithmDemos'
 import EvolvedDemos from './EvolvedDemos'
 import Demo, { RucbPanel, BanditHistoryPanel } from './Demo'
 import CollisionBoard from './CollisionBoard'
+import BookIllustration from './BookIllustration'
 
 export const components: MDXComponents = {
   Image,
@@ -22,6 +23,7 @@ export const components: MDXComponents = {
   Caption,
   Demo,
   CollisionBoard,
+  BookIllustration,
   RucbAppendix: RucbPanel,
   BanditHistory: BanditHistoryPanel,
   MapElitesDemo,
