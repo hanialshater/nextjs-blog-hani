@@ -10,6 +10,7 @@ import MapElitesDemo from './MapElitesDemo'
 import AlgorithmDemos from './AlgorithmDemos'
 import EvolvedDemos from './EvolvedDemos'
 import Demo, { RucbPanel, BanditHistoryPanel } from './Demo'
+import CollisionBoard from './CollisionBoard'
 
 export const components: MDXComponents = {
   Image,
@@ -20,6 +21,7 @@ export const components: MDXComponents = {
   BlogNewsletterForm,
   Caption,
   Demo,
+  CollisionBoard,
   RucbAppendix: RucbPanel,
   BanditHistory: BanditHistoryPanel,
   MapElitesDemo,
