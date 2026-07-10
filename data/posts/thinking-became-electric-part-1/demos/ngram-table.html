@@ -1,0 +1,1665 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Arabic Ngram Language Model</title>
+<style>:root {
+  color-scheme: light dark;
+  background-color: transparent !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --main-surface-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 10px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z'/%3E%3C/svg%3E");
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-visualize-standalone] {
+  background-color: var(--background) !important;
+}
+
+/* Generic mobile code-block hosts provide light/dark mode but no series palette.
+   AppBlock hosts set all six variables themselves. */
+:root:not([data-app-block-surface]) {
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(#f3883b, #f59a56);
+  --viz-series-3: light-dark(#5dc977, #74d58b);
+  --viz-series-4: light-dark(#eb77b1, #f08fc0);
+  --viz-series-5: light-dark(#9b79ec, #aa91ef);
+  --viz-series-6: light-dark(#3ab9b1, #5acbc2);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html > body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+:root:not([data-app-block-surface]) > body {
+  padding: 12px;
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget > :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-legend,
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls > .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls > .form-label > :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type="checkbox"]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: "";
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type="radio"]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: "";
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed="true"],
+    [aria-selected="true"],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed="true"], [aria-selected="true"], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget > svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+</style>
+</head>
+<body>
+<div id="arabic-ngram-tour" dir="rtl">
+  <style>
+    :root[data-visualize-standalone],
+    :root[data-visualize-standalone] body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-y: auto !important;
+      overscroll-behavior-y: auto;
+    }
+
+    #arabic-ngram-tour {
+      display: grid;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      gap: 1rem;
+      color: var(--foreground);
+      overflow-x: clip;
+      overflow-y: visible;
+    }
+
+    #arabic-ngram-tour > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    #arabic-ngram-tour [hidden] {
+      display: none !important;
+    }
+
+    #arabic-ngram-tour .ng-guide,
+    #arabic-ngram-tour .ng-step-panel,
+    #arabic-ngram-tour .ng-table-panel {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    #arabic-ngram-tour .ng-guide-head,
+    #arabic-ngram-tour .ng-guide-actions,
+    #arabic-ngram-tour .ng-section-head,
+    #arabic-ngram-tour .ng-status {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+
+    #arabic-ngram-tour .ng-guide-title,
+    #arabic-ngram-tour .ng-section-title {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #arabic-ngram-tour .ng-guide-title strong,
+    #arabic-ngram-tour .ng-section-title strong,
+    #arabic-ngram-tour .ng-status strong,
+    #arabic-ngram-tour .ng-context-word,
+    #arabic-ngram-tour .ng-table strong {
+      font-weight: 500;
+    }
+
+    #arabic-ngram-tour .ng-guide-dots {
+      display: flex;
+      direction: ltr;
+      gap: 0.35rem;
+    }
+
+    #arabic-ngram-tour .ng-guide-dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+
+    #arabic-ngram-tour .ng-guide-dot.is-active {
+      background: var(--primary);
+    }
+
+    #arabic-ngram-tour .ng-corpus-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    #arabic-ngram-tour .ng-stat {
+      display: grid;
+      min-width: 0;
+      gap: 0.15rem;
+    }
+
+    #arabic-ngram-tour .ng-stat strong {
+      font-weight: 500;
+    }
+
+    #arabic-ngram-tour .ng-corpus-preview summary {
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    #arabic-ngram-tour .ng-corpus-preview ol {
+      margin-block: 0.75rem;
+      padding-inline-start: 1.5rem;
+    }
+
+    #arabic-ngram-tour .ng-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    #arabic-ngram-tour .ng-controls > .form-label {
+      min-width: min(100%, 15rem);
+      flex: 1 1 15rem;
+    }
+
+    #arabic-ngram-tour .ng-context {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      min-width: 0;
+    }
+
+    #arabic-ngram-tour .ng-context-word {
+      display: inline-flex;
+      padding: 0.3rem 0.55rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--accent-foreground);
+    }
+
+    #arabic-ngram-tour .ng-table-shell {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+    }
+
+    #arabic-ngram-tour .ng-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    #arabic-ngram-tour .ng-table th,
+    #arabic-ngram-tour .ng-table td {
+      padding: 0.55rem;
+      border-bottom: 1px solid var(--border);
+      text-align: start;
+      overflow-wrap: anywhere;
+    }
+
+    #arabic-ngram-tour .ng-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    #arabic-ngram-tour .ng-table th {
+      color: var(--muted-foreground);
+      font-weight: 400;
+    }
+
+    #arabic-ngram-tour .ng-probability-cell {
+      display: grid;
+      grid-template-columns: minmax(2rem, 1fr) 3.6rem;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    #arabic-ngram-tour .ng-probability-track {
+      display: block;
+      height: 0.4rem;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+
+    #arabic-ngram-tour .ng-probability-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--viz-series-1);
+    }
+
+    #arabic-ngram-tour .ng-equation {
+      direction: ltr;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    #arabic-ngram-tour .ng-empty {
+      display: grid;
+      min-height: 7rem;
+      place-items: center;
+      padding: 1rem;
+      color: var(--muted-foreground);
+      text-align: center;
+    }
+
+    #arabic-ngram-tour .ng-output {
+      min-height: 6.5rem;
+      padding: 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+      background: color-mix(in srgb, var(--foreground) 3%, transparent);
+      overflow-wrap: anywhere;
+    }
+
+    #arabic-ngram-tour .ng-generated-word.is-latest {
+      color: var(--primary);
+    }
+
+    #arabic-ngram-tour .ng-sparse-compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    #arabic-ngram-tour .ng-sparse-case {
+      display: grid;
+      min-width: 0;
+      gap: 0.45rem;
+      padding: 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    #arabic-ngram-tour .ng-sparse-case.is-empty {
+      border-color: var(--destructive);
+    }
+
+    #arabic-ngram-tour .ng-sparse-count {
+      font-weight: 500;
+    }
+
+    @media (max-width: 620px) {
+      #arabic-ngram-tour .ng-corpus-strip,
+      #arabic-ngram-tour .ng-sparse-compare {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      #arabic-ngram-tour .ng-guide-actions .btn {
+        flex: 1 1 auto;
+      }
+
+      #arabic-ngram-tour .ng-controls > .form-label {
+        flex-basis: 100%;
+      }
+
+      #arabic-ngram-tour .ng-table th,
+      #arabic-ngram-tour .ng-table td {
+        padding-inline: 0.4rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #arabic-ngram-tour * {
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+
+  <section class="card ng-guide" aria-label="جولة نموذج الجداول اللغوي">
+    <div class="ng-guide-head">
+      <div class="ng-guide-title">
+        <span class="viz-badge" id="ng-guide-count">1 / 4</span>
+        <strong id="ng-guide-title">النص يصير صفوفاً في جدول</strong>
+      </div>
+      <div class="ng-guide-dots" aria-hidden="true">
+        <i class="ng-guide-dot is-active"></i>
+        <i class="ng-guide-dot"></i>
+        <i class="ng-guide-dot"></i>
+        <i class="ng-guide-dot"></i>
+      </div>
+    </div>
+    <div class="text-small text-muted" id="ng-guide-copy">مرّ على كل جملة، خذ آخر كلمتين، وعدّ الكلمة التي جاءت بعدهما.</div>
+    <div class="ng-guide-actions">
+      <button class="btn" id="ng-guide-back" type="button" disabled>السابق</button>
+      <button class="btn btn-primary" id="ng-guide-action" type="button">▶ ابنِ الجدول</button>
+      <button class="btn" id="ng-guide-next" type="button">التالي</button>
+    </div>
+  </section>
+
+  <section class="ng-step-panel" data-ng-step="0">
+    <div class="card ng-corpus-strip" aria-label="بيانات نموذج الجداول">
+      <div class="ng-stat">
+        <strong id="ng-sentence-count">—</strong>
+        <span class="text-small text-muted">جملة</span>
+      </div>
+      <div class="ng-stat">
+        <strong id="ng-token-count">—</strong>
+        <span class="text-small text-muted">token</span>
+      </div>
+      <div class="ng-stat">
+        <strong id="ng-row-count">—</strong>
+        <span class="text-small text-muted">صف في جدول trigram</span>
+      </div>
+    </div>
+
+    <details class="card ng-corpus-preview">
+      <summary>اعرض نص التدريب</summary>
+      <ol class="text-small" id="ng-training-text"></ol>
+      <button class="btn" id="ng-more-text" type="button">جمل أخرى</button>
+    </details>
+
+    <div class="ng-section-head">
+      <div class="ng-section-title">
+        <span class="viz-badge">مثال</span>
+        <strong>من جملة إلى صف واحد</strong>
+      </div>
+    </div>
+    <div class="ng-context" id="ng-build-example"></div>
+  </section>
+
+  <div class="ng-controls" data-ng-visible="1,2" hidden>
+    <label class="form-label" for="ng-order">
+      درجة النموذج
+      <select class="form-select" id="ng-order">
+        <option value="2">bigram · كلمة واحدة من الذاكرة</option>
+        <option value="3" selected>trigram · كلمتان من الذاكرة</option>
+        <option value="4">4-gram · ثلاث كلمات من الذاكرة</option>
+      </select>
+    </label>
+    <label class="form-label" for="ng-prompt">
+      السياق
+      <input class="form-control" id="ng-prompt" type="text" value="شرب الولد" />
+    </label>
+  </div>
+
+  <section class="ng-table-panel" data-ng-visible="1,2,3" hidden>
+    <div class="ng-section-head">
+      <div class="ng-section-title">
+        <span class="viz-badge" id="ng-row-badge">trigram</span>
+        <strong id="ng-row-title">صف السياق: «شرب الولد»</strong>
+      </div>
+      <span class="text-small text-muted" id="ng-row-total">—</span>
+    </div>
+
+    <div class="ng-context" id="ng-active-context"></div>
+
+    <div class="ng-table-shell" id="ng-table-shell">
+      <table class="ng-table">
+        <thead>
+          <tr>
+            <th>الكلمة التالية</th>
+            <th>العدد</th>
+            <th>الاحتمال</th>
+          </tr>
+        </thead>
+        <tbody id="ng-table-body"></tbody>
+      </table>
+      <div class="ng-empty" id="ng-empty-row" hidden>لا يوجد صف لهذا السياق.</div>
+    </div>
+
+      <code class="ng-equation" id="ng-equation">P(الحليب | شرب الولد) = 50 / 100</code>
+  </section>
+
+  <section class="ng-step-panel" data-ng-step="2" hidden>
+    <div class="ng-status" aria-live="polite">
+      <span>الاختيار: <strong id="ng-last-choice">—</strong></span>
+      <span id="ng-generation-status">جاهز</span>
+    </div>
+    <div class="ng-output" id="ng-output" aria-live="polite">اضغط «ولّد من الجدول».</div>
+  </section>
+
+  <section class="ng-step-panel" data-ng-step="3" hidden>
+    <div class="ng-sparse-compare">
+      <div class="ng-sparse-case">
+        <span class="text-small text-muted">سياق موجود</span>
+        <strong>شرب الولد</strong>
+        <span><span class="ng-sparse-count" id="ng-known-count">100</span> مشاهدة</span>
+      </div>
+      <div class="ng-sparse-case is-empty">
+        <span class="text-small text-muted">سياق قريب لغوياً لكنه غائب</span>
+        <strong>شرب الطفل</strong>
+        <span><span class="ng-sparse-count" id="ng-unknown-count">0</span> مشاهدة</span>
+      </div>
+    </div>
+    <div class="text-small text-muted" id="ng-backoff-note">الجدول لا يعرف أن «الولد» و«الطفل» متقاربان. كل سياق خانة مستقلة.</div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById("arabic-ngram-tour");
+      const START = "<بداية>";
+      const END = "<نهاية>";
+
+      function tokenize(sentence) {
+        return sentence
+          .replace(/[ًٌٍَُِّْـ]/g, "")
+          .replace(/[^\u0621-\u064A\s]/g, " ")
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      function buildCorpus() {
+        const sentences = [];
+        const add = (sentence, count) => {
+          const tokens = tokenize(sentence);
+          for (let index = 0; index < count; index++) sentences.push(tokens);
+        };
+        add("شرب الولد الحليب في المطبخ", 50);
+        add("شرب الولد الماء في المطبخ", 30);
+        add("شرب الولد العصير في الحديقة", 15);
+        add("شرب الولد البنزين", 5);
+        add("شرب الرجل القهوة في البيت", 45);
+        add("شرب الرجل الماء في المطعم", 30);
+        add("شربت المرأة القهوة في البيت", 45);
+        add("شربت المرأة الماء في المطعم", 30);
+        add("شربت البنت الحليب في المطبخ", 48);
+        add("شربت البنت العصير في الحديقة", 35);
+        add("أكل الولد الخبز في البيت", 42);
+        add("أكل الولد الأرز في المطعم", 34);
+        add("أكلت البنت التفاحة في الحديقة", 39);
+        add("أكلت المرأة الحساء في البيت", 28);
+        add("لعب الطفل في الحديقة", 36);
+        add("نام الطفل في البيت", 31);
+        add("قرأ الطفل القصة في المدرسة", 24);
+        add("الملك يحكم المملكة من القصر", 25);
+        add("الملكة تحكم المملكة من القصر", 25);
+        add("الطبيب يعمل في المستشفى", 20);
+        add("الطبيبة تعمل في المستشفى", 20);
+        add("المعلم يشرح الدرس في المدرسة", 20);
+        add("المعلمة تشرح الدرس في المدرسة", 20);
+        add("الكلمة تأخذ معناها من السياق", 15);
+        add("النموذج يتوقع الكلمة التالية", 15);
+        add("اللغة شبكة من العلاقات", 15);
+        return sentences;
+      }
+
+      const corpus = buildCorpus();
+      const tokenCount = corpus.reduce((sum, sentence) => sum + sentence.length, 0);
+      const tables = new Map();
+
+      function contextKey(words) {
+        return words.join("\u0001");
+      }
+
+      function buildTable(contextSize) {
+        if (tables.has(contextSize)) return tables.get(contextSize);
+        const table = new Map();
+        for (const sentence of corpus) {
+          const padded = [...Array(contextSize).fill(START), ...sentence, END];
+          for (let index = contextSize; index < padded.length; index++) {
+            const context = padded.slice(index - contextSize, index);
+            const nextWord = padded[index];
+            const key = contextKey(context);
+            if (!table.has(key)) table.set(key, new Map());
+            const row = table.get(key);
+            row.set(nextWord, (row.get(nextWord) || 0) + 1);
+          }
+        }
+        tables.set(contextSize, table);
+        return table;
+      }
+
+      function lookup(words, order, allowBackoff = false) {
+        const targetSize = order - 1;
+        const minimum = allowBackoff ? 1 : targetSize;
+        for (let size = targetSize; size >= minimum; size--) {
+          const context = words.slice(-size);
+          const row = buildTable(size).get(contextKey(context));
+          if (row) return { row, context, usedSize: size };
+        }
+        return { row: null, context: words.slice(-targetSize), usedSize: targetSize };
+      }
+
+      function rowEntries(row) {
+        if (!row) return [];
+        const total = [...row.values()].reduce((sum, count) => sum + count, 0);
+        return [...row.entries()]
+          .map(([word, count]) => ({ word, count, probability: count / total }))
+          .sort((a, b) => b.count - a.count);
+      }
+
+      let lessonStep = 0;
+      let corpusOffset = 0;
+      let tableBuilt = false;
+      let generationTimer = null;
+      let generationRun = 0;
+      let sparseBackoff = false;
+      let randomState = 4781;
+
+      function random() {
+        randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+        return randomState / 4294967296;
+      }
+
+      function selectedOrder() {
+        return Number(root.querySelector("#ng-order").value);
+      }
+
+      function promptWords() {
+        return tokenize(root.querySelector("#ng-prompt").value);
+      }
+
+      function displayWord(word) {
+        if (word === END) return "نهاية الجملة";
+        if (word === START) return "بداية الجملة";
+        return word;
+      }
+
+      function renderTrainingText() {
+        const list = root.querySelector("#ng-training-text");
+        list.innerHTML = "";
+        for (let index = 0; index < 12; index++) {
+          const item = document.createElement("li");
+          item.textContent = corpus[(corpusOffset + index) % corpus.length].join(" ");
+          list.appendChild(item);
+        }
+      }
+
+      function renderBuildExample() {
+        const words = ["شرب", "الولد", "الحليب"];
+        root.querySelector("#ng-build-example").innerHTML = words
+          .map((word, index) => `<span class="ng-context-word">${word}${index === 2 ? " · الهدف" : ""}</span>${index < 2 ? "<span aria-hidden=\"true\">→</span>" : ""}`)
+          .join("");
+      }
+
+      function renderRow() {
+        const order = selectedOrder();
+        const words = lessonStep === 3 ? tokenize("شرب الطفل") : promptWords();
+        const result = lookup(words, order, lessonStep === 3 && sparseBackoff);
+        const entries = rowEntries(result.row);
+        const total = entries.reduce((sum, entry) => sum + entry.count, 0);
+        const orderNames = { 2: "bigram", 3: "trigram", 4: "4-gram" };
+        root.querySelector("#ng-row-badge").textContent = result.usedSize < order - 1 ? `backoff → ${result.usedSize + 1}-gram` : orderNames[order];
+        root.querySelector("#ng-row-title").textContent = `صف السياق: «${result.context.join(" ")}»`;
+        root.querySelector("#ng-row-total").textContent = result.row ? `${total.toLocaleString("en-US")} مشاهدة` : "صف غير موجود";
+        root.querySelector("#ng-active-context").innerHTML = result.context.map((word) => `<span class="ng-context-word">${displayWord(word)}</span>`).join("");
+        const body = root.querySelector("#ng-table-body");
+        body.innerHTML = entries
+          .map((entry) => `<tr><td><strong>${displayWord(entry.word)}</strong></td><td>${entry.count.toLocaleString("en-US")}</td><td><span class="ng-probability-cell"><span class="ng-probability-track" aria-hidden="true"><i class="ng-probability-fill" style="width:${Math.max(2, entry.probability * 100)}%"></i></span><span>${(entry.probability * 100).toFixed(1)}%</span></span></td></tr>`)
+          .join("");
+        root.querySelector("#ng-table-shell").querySelector("table").hidden = !entries.length;
+        root.querySelector("#ng-empty-row").hidden = Boolean(entries.length);
+        if (entries.length) {
+          const first = entries[0];
+          root.querySelector("#ng-equation").textContent = `P(${displayWord(first.word)} | ${result.context.join(" ")}) = ${first.count} / ${total}`;
+        } else {
+          root.querySelector("#ng-equation").textContent = "P(next | شرب الطفل) غير معرّفة في هذا الجدول";
+        }
+      }
+
+      function stopGeneration() {
+        generationRun++;
+        if (generationTimer) clearTimeout(generationTimer);
+        generationTimer = null;
+        root.querySelector("#ng-generation-status").textContent = "جاهز";
+        root.querySelector("#ng-guide-action").disabled = false;
+      }
+
+      function sampleEntry(entries) {
+        let threshold = random();
+        for (const entry of entries) {
+          threshold -= entry.probability;
+          if (threshold <= 0) return entry;
+        }
+        return entries[entries.length - 1];
+      }
+
+      function playGeneration() {
+        stopGeneration();
+        const run = generationRun;
+        randomState = 4781 + selectedOrder();
+        const words = promptWords();
+        const output = root.querySelector("#ng-output");
+        root.querySelector("#ng-generation-status").textContent = "يقرأ صفاً بعد صف";
+        root.querySelector("#ng-guide-action").disabled = true;
+
+        function renderWords() {
+          output.innerHTML = words.map((word, index) => `<span class="ng-generated-word ${index === words.length - 1 ? "is-latest" : ""}">${word} </span>`).join("");
+        }
+
+        function next() {
+          if (run !== generationRun) return;
+          const result = lookup(words, selectedOrder(), true);
+          const entries = rowEntries(result.row);
+          if (!entries.length) {
+            stopGeneration();
+            root.querySelector("#ng-generation-status").textContent = "توقف: لا يوجد صف";
+            return;
+          }
+          const choice = sampleEntry(entries);
+          root.querySelector("#ng-last-choice").textContent = `${displayWord(choice.word)} · ${(choice.probability * 100).toFixed(1)}%`;
+          if (choice.word === END) {
+            stopGeneration();
+            root.querySelector("#ng-generation-status").textContent = "وصل إلى نهاية الجملة";
+            return;
+          }
+          words.push(choice.word);
+          root.querySelector("#ng-prompt").value = words.join(" ");
+          renderRow();
+          renderWords();
+          if (words.length >= 22) {
+            stopGeneration();
+            root.querySelector("#ng-generation-status").textContent = "اكتمل النص";
+            return;
+          }
+          const reducedMotion = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          generationTimer = setTimeout(next, reducedMotion ? 0 : 350);
+        }
+
+        renderWords();
+        next();
+      }
+
+      const guideContent = [
+        {
+          title: "النص يصير صفوفاً في جدول",
+          copy: "مرّ على كل جملة، خذ آخر كلمتين، وعدّ الكلمة التي جاءت بعدهما.",
+          action: "▶ ابنِ الجدول",
+        },
+        {
+          title: "العدد يصير احتمالاً",
+          copy: "اقسم عدد كل كلمة على مجموع الصف. هذا كل ما يعرفه النموذج عن الكلمة التالية.",
+          action: "غيّر السياق",
+        },
+        {
+          title: "الجدول يستطيع أن يكتب",
+          copy: "اختر من توزيع الصف، أضف الكلمة، ثم استعمل السياق الجديد لفتح الصف التالي.",
+          action: "▶ ولّد من الجدول",
+        },
+        {
+          title: "لكن كل سياق جزيرة منفصلة",
+          copy: "«شرب الولد» له صف غني؛ «شرب الطفل» غير موجود، حتى لو كان المعنى قريباً.",
+          action: "جرّب backoff",
+        },
+      ];
+
+      function renderGuide() {
+        const content = guideContent[lessonStep];
+        root.querySelector("#ng-guide-count").textContent = `${lessonStep + 1} / ${guideContent.length}`;
+        root.querySelector("#ng-guide-title").textContent = content.title;
+        root.querySelector("#ng-guide-copy").textContent = content.copy;
+        root.querySelector("#ng-guide-action").textContent = lessonStep === 3 && sparseBackoff ? "ألغِ backoff" : content.action;
+        root.querySelector("#ng-guide-back").disabled = lessonStep === 0;
+        root.querySelector("#ng-guide-next").textContent = lessonStep === guideContent.length - 1 ? "ابدأ من الأول" : "التالي";
+        root.querySelectorAll(".ng-guide-dot").forEach((dot, index) => dot.classList.toggle("is-active", index === lessonStep));
+      }
+
+      function setLessonStep(step) {
+        stopGeneration();
+        lessonStep = (step + guideContent.length) % guideContent.length;
+        for (const element of root.querySelectorAll("[data-ng-step]")) element.hidden = Number(element.dataset.ngStep) !== lessonStep;
+        for (const element of root.querySelectorAll("[data-ng-visible]")) {
+          element.hidden = !element.dataset.ngVisible.split(",").map(Number).includes(lessonStep);
+        }
+        if (lessonStep === 0) root.querySelector("#ng-prompt").value = "شرب الولد";
+        if (lessonStep === 1) root.querySelector("#ng-prompt").value = "شرب الولد";
+        if (lessonStep === 2) {
+          root.querySelector("#ng-prompt").value = "شرب الولد";
+          root.querySelector("#ng-output").textContent = "اضغط «ولّد من الجدول».";
+          root.querySelector("#ng-last-choice").textContent = "—";
+        }
+        if (lessonStep === 3) {
+          sparseBackoff = false;
+          root.querySelector("#ng-prompt").value = "شرب الطفل";
+          root.querySelector("#ng-backoff-note").textContent = "الجدول لا يعرف أن «الولد» و«الطفل» متقاربان. كل سياق خانة مستقلة.";
+        }
+        renderRow();
+        renderGuide();
+      }
+
+      function runGuideAction() {
+        if (lessonStep === 0) {
+          tableBuilt = true;
+          root.querySelector("#ng-build-example").querySelectorAll(".ng-context-word").forEach((word) => word.classList.add("is-active"));
+          root.querySelector("#ng-guide-copy").textContent = "وجد النموذج «شرب الولد» 100 مرة وصنع له صفاً بأربع نتائج.";
+        } else if (lessonStep === 1) {
+          root.querySelector("#ng-prompt").value = root.querySelector("#ng-prompt").value === "شرب الولد" ? "شرب الرجل" : "شرب الولد";
+          renderRow();
+        } else if (lessonStep === 2) {
+          playGeneration();
+        } else {
+          sparseBackoff = !sparseBackoff;
+          root.querySelector("#ng-backoff-note").textContent = sparseBackoff
+            ? "رجع النموذج إلى صف «الطفل» الأقصر. قدر يكمل، لكنه فقد الفعل «شرب»: حل هندسي، لا فهم للتشابه."
+            : "الجدول لا يعرف أن «الولد» و«الطفل» متقاربان. كل سياق خانة مستقلة.";
+          renderRow();
+          renderGuide();
+        }
+      }
+
+      root.querySelector("#ng-sentence-count").textContent = corpus.length.toLocaleString("en-US");
+      root.querySelector("#ng-token-count").textContent = tokenCount.toLocaleString("en-US");
+      root.querySelector("#ng-row-count").textContent = buildTable(2).size.toLocaleString("en-US");
+      root.querySelector("#ng-known-count").textContent = rowEntries(lookup(tokenize("شرب الولد"), 3).row).reduce((sum, entry) => sum + entry.count, 0);
+      root.querySelector("#ng-unknown-count").textContent = rowEntries(lookup(tokenize("شرب الطفل"), 3).row).reduce((sum, entry) => sum + entry.count, 0);
+      root.querySelector("#ng-more-text").addEventListener("click", () => {
+        corpusOffset = (corpusOffset + 12) % corpus.length;
+        renderTrainingText();
+      });
+      root.querySelector("#ng-order").addEventListener("change", renderRow);
+      root.querySelector("#ng-prompt").addEventListener("input", renderRow);
+      root.querySelector("#ng-guide-action").addEventListener("click", runGuideAction);
+      root.querySelector("#ng-guide-back").addEventListener("click", () => {
+        if (lessonStep > 0) setLessonStep(lessonStep - 1);
+      });
+      root.querySelector("#ng-guide-next").addEventListener("click", () => setLessonStep(lessonStep === guideContent.length - 1 ? 0 : lessonStep + 1));
+
+      renderTrainingText();
+      renderBuildExample();
+      setLessonStep(0);
+    })();
+  </script>
+  <script>
+    (() => {
+      if (window.parent === window) return;
+      const reportHeight = () =>
+        requestAnimationFrame(() =>
+          window.parent.postMessage(
+            { type: "demo-height", height: document.documentElement.scrollHeight },
+            "*",
+          ),
+        );
+      if (typeof ResizeObserver === "function") {
+        new ResizeObserver(reportHeight).observe(document.body);
+      }
+      window.addEventListener("load", reportHeight, { once: true });
+      document.addEventListener("click", reportHeight);
+      document.addEventListener("input", reportHeight);
+      reportHeight();
+    })();
+  </script>
+</div>
+
+<script id="codex-visualization-floating-ui-core" src="https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js"></script>
+<script id="codex-visualization-floating-ui-dom" src="https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js"></script>
+<script id="codex-visualization-lucide" async src="https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js"></script>
+<script id="codex-visualization-tooltip">/* oxlint-disable typescript/no-unsafe-argument, typescript/no-unsafe-call, typescript/no-unsafe-return */
+// Runs inside the visualization sandbox, not the host webview.
+(() => {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set(["top", "right", "bottom", "left"]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =>
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest("[data-tooltip]")
+      : null;
+  const containsTarget = (trigger, target) =>
+    target?.nodeType != null && trigger.contains(target);
+  const getContent = (trigger) =>
+    trigger.getAttribute("data-tooltip")?.trim() ?? "";
+  const getPlacement = (trigger) => {
+    const placement = trigger.getAttribute("data-tooltip-placement");
+    return tooltipPlacements.has(placement) ? placement : "top";
+  };
+  const getTooltip = () => {
+    if (tooltip == null) {
+      tooltip = document.createElement("div");
+      tooltip.id = tooltipId;
+      tooltip.className = "tooltip";
+      tooltip.setAttribute("role", "tooltip");
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) => {
+    const ids = new Set(
+      (trigger.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute("aria-describedby");
+    } else {
+      trigger.setAttribute("aria-describedby", [...ids].join(" "));
+    }
+  };
+  const clearOpenTimeout = () => {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) => {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) => {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              "--tooltip-available-width",
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              "--tooltip-available-height",
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: "fixed",
+    })
+      .then(({ x, y }) => {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = "visible";
+      })
+      .catch(() => {
+        if (activeTrigger === trigger && request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) => {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = "hidden";
+    floating.style.transform = "translate(0, 0)";
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () => {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) => {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() < skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() => {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) => {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) => {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(":focus-visible")) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) => {
+    if (event.key === "Escape") {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) => {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () => {
+    closeTooltip(false);
+    document.removeEventListener("pointerover", handlePointerOpen);
+    document.removeEventListener("pointerout", handleLeave);
+    document.removeEventListener("focusin", handleFocusIn);
+    document.removeEventListener("focusout", handleLeave);
+    document.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("contextmenu", handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener("pointerover", handlePointerOpen);
+  document.addEventListener("pointerout", handleLeave);
+  document.addEventListener("focusin", handleFocusIn);
+  document.addEventListener("focusout", handleLeave);
+  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("contextmenu", handleContextMenu);
+  window.addEventListener("pagehide", destroy, { once: true });
+})();
+</script>
+<script id="codex-visualization-lucide-initialization">(() => {
+  const initialize = () => {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById("codex-visualization-lucide")
+    ?.addEventListener("load", initialize, { once: true });
+})();
+</script>
+</body>
+</html>

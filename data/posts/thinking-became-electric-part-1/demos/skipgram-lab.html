@@ -1,789 +1,3022 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>مختبر skip-gram</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        --bg: #f7f4ee;
-        --panel: rgba(255, 255, 255, 0.88);
-        --ink: #18201f;
-        --muted: #69716e;
-        --line: #d8d4ca;
-        --accent: #0f766e;
-        --accent-soft: #ccfbf1;
-        --positive: #15803d;
-        --negative: #be123c;
-        --amber: #b45309;
-        --shadow: 0 18px 55px rgba(60, 50, 30, 0.1);
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Arabic Word2vec Lab</title>
+<style>:root {
+  color-scheme: light dark;
+  background-color: transparent !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --main-surface-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 10px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z'/%3E%3C/svg%3E");
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-visualize-standalone] {
+  background-color: var(--background) !important;
+}
+
+/* Generic mobile code-block hosts provide light/dark mode but no series palette.
+   AppBlock hosts set all six variables themselves. */
+:root:not([data-app-block-surface]) {
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(#f3883b, #f59a56);
+  --viz-series-3: light-dark(#5dc977, #74d58b);
+  --viz-series-4: light-dark(#eb77b1, #f08fc0);
+  --viz-series-5: light-dark(#9b79ec, #aa91ef);
+  --viz-series-6: light-dark(#3ab9b1, #5acbc2);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html > body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+:root:not([data-app-block-surface]) > body {
+  padding: 12px;
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget > :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-legend,
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls > .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls > .form-label > :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type="checkbox"]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: "";
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type="radio"]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: "";
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed="true"],
+    [aria-selected="true"],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed="true"], [aria-selected="true"], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget > svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+</style>
+</head>
+<body>
+<div id="word2vec-v2">
+  <style>
+    :root[data-visualize-standalone],
+    :root[data-visualize-standalone] body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-y: auto !important;
+      overscroll-behavior-y: auto;
+    }
+
+    #word2vec-v2 {
+      color: var(--foreground);
+      display: grid;
+      gap: 1rem;
+      width: 100%;
+      max-width: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow-x: clip;
+      overflow-y: visible;
+    }
+
+    #word2vec-v2 > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    #word2vec-v2 [hidden] {
+      display: none !important;
+    }
+
+    #word2vec-v2 .wv-guide {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    #word2vec-v2 .wv-guide-head,
+    #word2vec-v2 .wv-guide-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+
+    #word2vec-v2 .wv-guide-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #word2vec-v2 .wv-guide-title strong {
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-guide-dots {
+      display: flex;
+      direction: ltr;
+      gap: 0.35rem;
+    }
+
+    #word2vec-v2 .wv-guide-dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+
+    #word2vec-v2 .wv-guide-dot.is-active {
+      background: var(--primary);
+    }
+
+    #word2vec-v2 .wv-step-panel {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    #word2vec-v2 .wv-gradient {
+      display: grid;
+      grid-template-columns: repeat(5, auto);
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-align: center;
+    }
+
+    #word2vec-v2 .wv-gradient-node {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 0.6rem;
+    }
+
+    #word2vec-v2 .wv-map-switch {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    #word2vec-v2 .wv-corpus-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem 1rem;
+    }
+
+    #word2vec-v2 .wv-corpus-stat {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+
+    #word2vec-v2 .wv-corpus-stat strong,
+    #word2vec-v2 .wv-section-title strong {
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-corpus-preview summary {
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-corpus-preview ol {
+      margin: 0.75rem 0;
+      padding-inline-start: 1.5rem;
+    }
+
+    #word2vec-v2 .wv-section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    #word2vec-v2 .wv-example {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    #word2vec-v2 .wv-sentence {
+      justify-content: center;
+    }
+
+    #word2vec-v2 .wv-pairs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    #word2vec-v2 .wv-pair-group {
+      min-width: 0;
+    }
+
+    #word2vec-v2 .wv-pair-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+    }
+
+    #word2vec-v2 .wv-positive,
+    #word2vec-v2 .wv-negative {
+      border-radius: 999px;
+      padding: 0.25rem 0.55rem;
+      border: 1px solid var(--border);
+      color: var(--foreground);
+    }
+
+    #word2vec-v2 .wv-positive {
+      background: color-mix(in srgb, var(--viz-series-2) 15%, transparent);
+    }
+
+    #word2vec-v2 .wv-negative {
+      background: color-mix(in srgb, var(--viz-series-5) 15%, transparent);
+    }
+
+    #word2vec-v2 .wv-status {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: var(--muted-foreground);
+    }
+
+    #word2vec-v2 .wv-status strong {
+      color: var(--foreground);
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-plot {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #word2vec-v2 .wv-plot svg {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      aspect-ratio: var(--wv-plot-ratio, 760 / 450);
+      overflow: hidden;
+    }
+
+    #word2vec-v2 .wv-axis {
+      stroke: var(--border);
+      stroke-width: 1;
+    }
+
+    #word2vec-v2 .wv-point {
+      transition:
+        cx 240ms ease,
+        cy 240ms ease,
+        r 160ms ease;
+      stroke: var(--background);
+      stroke-width: 2;
+    }
+
+    #word2vec-v2 .wv-label {
+      fill: var(--foreground);
+      font-size: 12px;
+      font-weight: 400;
+      paint-order: stroke;
+      stroke: var(--background);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    #word2vec-v2 .wv-label-link {
+      stroke: var(--border);
+      stroke-width: 1;
+    }
+
+    #word2vec-v2 .wv-analogy-line {
+      fill: none;
+      stroke-width: 4;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    #word2vec-v2 .wv-analogy-source {
+      stroke: var(--viz-series-4);
+      marker-end: url(#wv-arrowhead-source);
+    }
+
+    #word2vec-v2 .wv-analogy-copy {
+      stroke: var(--viz-series-6);
+      marker-end: url(#wv-arrowhead-copy);
+    }
+
+    #word2vec-v2 .wv-analogy-halo {
+      fill: none;
+      stroke: var(--background);
+      stroke-width: 9;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    #word2vec-v2 .wv-analogy-arrow-label {
+      fill: var(--foreground);
+      font-size: 12px;
+      font-weight: 500;
+      paint-order: stroke;
+      stroke: var(--background);
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    #word2vec-v2 .wv-analogy-match {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 2;
+      stroke-dasharray: 5 5;
+      vector-effect: non-scaling-stroke;
+    }
+
+    #word2vec-v2 .wv-analogy-ring {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 3;
+      vector-effect: non-scaling-stroke;
+    }
+
+    #word2vec-v2 .wv-analogy-target {
+      fill: var(--primary);
+      stroke: var(--background);
+      stroke-width: 2;
+      animation: wv-reveal-target 260ms ease both;
+    }
+
+    #word2vec-v2 .wv-analogy {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    #word2vec-v2 .wv-analogy-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+
+    #word2vec-v2 .wv-analogy-stage {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    #word2vec-v2 .wv-analogy-stage strong {
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-equation {
+      direction: rtl;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #word2vec-v2 .wv-equation code {
+      direction: rtl;
+    }
+
+    #word2vec-v2 .wv-equation strong {
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-analogy-candidates {
+      display: grid;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+
+    #word2vec-v2 .wv-neighbors {
+      display: grid;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+
+    #word2vec-v2 .wv-ranked-list,
+    #word2vec-v2 .wv-candidate-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.35rem 0.8rem;
+      width: 100%;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #word2vec-v2 .wv-ranked-row {
+      display: grid;
+      grid-template-columns: 1.4rem minmax(3.8rem, auto) minmax(2.5rem, 1fr) 2.7rem;
+      align-items: center;
+      gap: 0.45rem;
+      min-width: 0;
+      padding-block: 0.25rem;
+    }
+
+    #word2vec-v2 .wv-ranked-row strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-weight: 500;
+    }
+
+    #word2vec-v2 .wv-rank,
+    #word2vec-v2 .wv-ranked-row small {
+      color: var(--muted-foreground);
+    }
+
+    #word2vec-v2 .wv-score-track {
+      display: block;
+      height: 0.35rem;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+
+    #word2vec-v2 .wv-score-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--viz-series-1);
+    }
+
+    #word2vec-v2 .wv-swatch {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    @keyframes wv-reveal-target {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 620px) {
+      #word2vec-v2 .wv-pairs {
+        grid-template-columns: 1fr;
       }
 
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        background:
-          radial-gradient(circle at 10% 5%, rgba(20, 184, 166, 0.12), transparent 28rem),
-          radial-gradient(circle at 95% 35%, rgba(245, 158, 11, 0.09), transparent 24rem), var(--bg);
-        color: var(--ink);
-        font-family:
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          'Segoe UI',
-          sans-serif;
+      #word2vec-v2 .wv-corpus-strip {
+        justify-content: flex-start;
       }
 
-      button,
-      select,
-      input {
-        font: inherit;
-      }
-      .shell {
-        max-width: 1040px;
-        margin: 0 auto;
-        padding: 22px;
-      }
-      .eyebrow {
-        color: var(--accent);
-        font-size: 12px;
-        font-weight: 850;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      h1 {
-        margin: 7px 0 8px;
-        font-size: clamp(24px, 4vw, 40px);
-        line-height: 1.15;
-      }
-      .lede {
-        margin: 0;
-        max-width: 760px;
-        color: var(--muted);
-        line-height: 1.8;
+      #word2vec-v2 .wv-corpus-stat {
+        flex: 1 1 40%;
       }
 
-      .card {
-        margin-top: 18px;
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        background: var(--panel);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-      }
-      .card-head {
-        padding: 16px 18px;
-        border-bottom: 1px solid var(--line);
-        display: flex;
-        gap: 12px;
-        align-items: end;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
-      .card-title {
-        font-weight: 850;
-      }
-      .hint {
-        color: var(--muted);
-        font-size: 12px;
-      }
-      .controls {
-        display: flex;
-        gap: 9px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      select,
-      .button {
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 8px 13px;
-        background: rgba(255, 255, 255, 0.72);
-        color: var(--ink);
-      }
-      .button {
-        cursor: pointer;
-        font-weight: 750;
-        transition:
-          transform 0.15s ease,
-          border-color 0.15s ease;
-      }
-      .button:hover {
-        transform: translateY(-1px);
-        border-color: var(--accent);
-      }
-      .button.primary {
-        background: var(--accent);
-        color: white;
-        border-color: var(--accent);
-      }
-      .range-wrap {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        color: var(--muted);
-        font-size: 13px;
-      }
-      input[type='range'] {
-        accent-color: var(--accent);
-        width: 92px;
-      }
-
-      .sentence {
-        min-height: 76px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        padding: 18px;
-      }
-      .token {
-        border: 1px solid transparent;
-        background: #ece9e1;
-        color: var(--ink);
-        border-radius: 11px;
-        padding: 8px 11px;
-        cursor: pointer;
-        transition: 0.18s ease;
-      }
-      .token:hover {
-        border-color: var(--accent);
-      }
-      .token.context {
-        background: #fef3c7;
-        color: #78350f;
-      }
-      .token.center {
-        background: var(--accent);
-        color: white;
-        transform: translateY(-3px);
-        box-shadow: 0 8px 18px rgba(15, 118, 110, 0.24);
-      }
-
-      .pipeline {
-        direction: ltr;
-        display: grid;
-        grid-template-columns: 1fr 42px 1fr 42px 1.35fr;
-        gap: 8px;
+      #word2vec-v2 .viz-controls[data-lesson-step="2"] {
         align-items: stretch;
-        padding: 0 18px 18px;
-      }
-      .stage {
-        direction: rtl;
-        border: 1px solid var(--line);
-        border-radius: 15px;
-        padding: 14px;
-        background: rgba(255, 255, 255, 0.58);
-        min-height: 150px;
-      }
-      .stage-label {
-        color: var(--muted);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-      .stage strong {
-        display: block;
-        margin: 7px 0;
-        font-size: 18px;
-      }
-      .arrow {
-        align-self: center;
-        color: var(--accent);
-        font-size: 28px;
-        text-align: center;
-      }
-      .onehot {
-        display: flex;
-        direction: ltr;
-        gap: 3px;
-        margin-top: 15px;
-      }
-      .onehot i {
-        width: 18px;
-        height: 34px;
-        border-radius: 5px;
-        background: #e5e7eb;
-        border: 1px solid #d1d5db;
-      }
-      .onehot i.on {
-        background: var(--accent);
-        border-color: var(--accent);
-      }
-      .vector {
-        direction: ltr;
-        display: flex;
-        gap: 5px;
-        margin: 14px 0 8px;
-      }
-      .vector span {
-        flex: 1;
-        min-width: 58px;
-        border-radius: 9px;
-        padding: 10px 6px;
-        background: var(--accent-soft);
-        color: #115e59;
-        text-align: center;
-        font:
-          750 13px ui-monospace,
-          monospace;
-      }
-      .pair {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        border-radius: 9px;
-        padding: 6px 8px;
-        margin-top: 5px;
-        font-size: 12px;
-      }
-      .pair.pos {
-        background: rgba(34, 197, 94, 0.12);
-        color: var(--positive);
-      }
-      .pair.neg {
-        background: rgba(244, 63, 94, 0.1);
-        color: var(--negative);
-      }
-      .score {
-        direction: ltr;
-        font:
-          700 11px ui-monospace,
-          monospace;
       }
 
-      .lower {
-        display: grid;
-        grid-template-columns: minmax(0, 1.75fr) minmax(210px, 0.75fr);
-        gap: 14px;
-        padding: 0 18px 18px;
-      }
-      .plot-wrap {
-        position: relative;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.58);
-        overflow: hidden;
-      }
-      .plot-title {
-        position: absolute;
-        z-index: 2;
-        top: 12px;
-        right: 14px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      svg {
-        display: block;
+      #word2vec-v2 .viz-controls[data-lesson-step="2"] > .form-label,
+      #word2vec-v2 .wv-map-switch {
         width: 100%;
-        height: auto;
-        min-height: 330px;
+        flex: 1 1 100%;
       }
-      .axis {
-        stroke: #d8d4ca;
-        stroke-width: 1;
-        stroke-dasharray: 4 6;
+
+      #word2vec-v2 .wv-map-switch .btn {
+        flex: 1 1 8rem;
       }
-      .word-dot {
-        transition:
-          cx 0.25s ease,
-          cy 0.25s ease;
+
+      #word2vec-v2 .wv-analogy-head .btn {
+        width: 100%;
       }
-      .word-label {
-        font-size: 11px;
-        fill: var(--ink);
-        paint-order: stroke;
-        stroke: var(--panel);
-        stroke-width: 4px;
-        stroke-linejoin: round;
+
+      #word2vec-v2 .wv-guide-actions .btn {
+        flex: 1 1 auto;
       }
-      .side {
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.58);
-        padding: 14px;
+
+      #word2vec-v2 .wv-gradient {
+        grid-template-columns: 1fr;
       }
-      .metric-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+
+      #word2vec-v2 .wv-gradient-arrow {
+        transform: rotate(90deg);
       }
-      .metric {
-        border-radius: 11px;
-        background: #eeece6;
-        padding: 9px;
-      }
-      .metric b {
-        display: block;
-        direction: ltr;
-        font:
-          800 18px ui-monospace,
-          monospace;
-      }
-      .metric span {
-        color: var(--muted);
-        font-size: 11px;
-      }
-      .neighbors {
-        margin-top: 14px;
-      }
-      .neighbor {
-        display: grid;
-        grid-template-columns: 1fr 70px;
-        gap: 8px;
-        align-items: center;
-        margin-top: 8px;
+
+      #word2vec-v2 .wv-label {
         font-size: 12px;
       }
-      .bar {
-        height: 7px;
-        background: #e5e7eb;
-        border-radius: 999px;
-        overflow: hidden;
-        direction: ltr;
+
+      #word2vec-v2 .wv-ranked-list,
+      #word2vec-v2 .wv-candidate-list {
+        grid-template-columns: minmax(0, 1fr);
       }
-      .bar i {
-        display: block;
-        height: 100%;
-        background: var(--accent);
-        border-radius: inherit;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #word2vec-v2 .wv-point,
+      #word2vec-v2 .wv-analogy-line,
+      #word2vec-v2 .wv-analogy-target {
+        transition: none;
+        animation: none;
       }
-      .foot {
-        padding: 0 18px 20px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.7;
+    }
+  </style>
+
+  <section class="card wv-guide" aria-label="الشرح المتدرج">
+    <div class="wv-guide-head">
+      <div class="wv-guide-title">
+        <span class="viz-badge" id="wv-guide-count">1 / 4</span>
+        <strong id="wv-guide-title">من النص إلى أمثلة التدريب</strong>
+      </div>
+      <div class="wv-guide-dots" aria-hidden="true">
+        <i class="wv-guide-dot is-active"></i>
+        <i class="wv-guide-dot"></i>
+        <i class="wv-guide-dot"></i>
+        <i class="wv-guide-dot"></i>
+      </div>
+    </div>
+    <div class="text-small text-muted" id="wv-guide-copy">
+      اختَر كلمة مركزية. الكلمات داخل النافذة تصبح أزواجاً حقيقية؛ كلمات الضجيج
+      تصبح أزواجاً سالبة.
+    </div>
+    <div class="wv-guide-actions">
+      <button class="btn" id="wv-guide-back" type="button" disabled>
+        السابق
+      </button>
+      <button class="btn btn-primary" id="wv-guide-action" type="button">
+        ▶ كوّن الأزواج
+      </button>
+      <button class="btn" id="wv-guide-next" type="button">التالي</button>
+    </div>
+  </section>
+
+  <div
+    class="card wv-corpus-strip wv-step-panel"
+    data-lesson-step="0"
+    aria-label="حجم بيانات التدريب"
+  >
+    <span class="wv-corpus-stat"
+      ><strong id="wv-sentences">—</strong
+      ><span class="text-small text-muted">جملة</span></span
+    >
+    <span class="wv-corpus-stat"
+      ><strong id="wv-tokens">—</strong
+      ><span class="text-small text-muted">كلمة</span></span
+    >
+    <span class="wv-corpus-stat"
+      ><strong>24D</strong
+      ><span class="text-small text-muted">ثم PCA للعرض</span></span
+    >
+  </div>
+
+  <details class="card wv-corpus-preview wv-step-panel" data-lesson-step="0">
+    <summary>اعرض نص التدريب</summary>
+    <ol class="text-small" id="wv-training-text"></ol>
+    <button class="btn" id="wv-more-text" type="button">جمل أخرى</button>
+  </details>
+
+  <div class="viz-controls wv-step-panel" data-lesson-step="0">
+    <label class="form-label" for="wv-window">
+      نافذة السياق: <strong id="wv-window-value">2</strong>
+      <input
+        class="form-range"
+        id="wv-window"
+        type="range"
+        min="1"
+        max="3"
+        value="2"
+      />
+    </label>
+  </div>
+
+  <div class="viz-controls wv-step-panel" data-lesson-step="1" hidden>
+    <button class="btn btn-primary" id="wv-train" type="button">
+      +10,000 خطوة تدريب
+    </button>
+    <button class="btn" id="wv-reset" type="button">أعد التدريب</button>
+  </div>
+
+  <div class="viz-controls wv-step-panel" data-lesson-step="2" hidden>
+    <label class="form-label" for="wv-anchor">
+      الكلمة المختارة
+      <select class="form-select" id="wv-anchor"></select>
+    </label>
+    <div class="wv-map-switch">
+      <button
+        class="btn btn-primary"
+        id="wv-map-pca"
+        type="button"
+        aria-pressed="true"
+      >
+        PCA · اتجاهات
+      </button>
+      <button class="btn" id="wv-map-tsne" type="button" aria-pressed="false">
+        t-SNE · أحياء
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="text-small text-muted wv-step-panel"
+    id="wv-map-note"
+    data-lesson-step="2"
+    hidden
+  >
+    PCA ضغط خطي: يحافظ على اتجاهات المتجهات، لذلك يصلح للـ analogy.
+  </div>
+
+  <section
+    class="card wv-example wv-step-panel"
+    data-lesson-step="0"
+    aria-label="مثال واحد من تدريب skip-gram"
+  >
+    <div class="text-small text-muted">اختَر الكلمة المركزية في الجملة</div>
+    <div class="viz-row wv-sentence" id="wv-sentence"></div>
+    <div class="wv-pairs" id="wv-pairs" hidden>
+      <div class="wv-pair-group">
+        <span class="text-small text-muted"
+          >أزواج موجبة · نرفع الضرب النقطي</span
+        >
+        <div class="wv-pair-list" id="wv-positive-pairs"></div>
+      </div>
+      <div class="wv-pair-group">
+        <span class="text-small text-muted"
+          >عينات سالبة · نخفض الضرب النقطي</span
+        >
+        <div class="wv-pair-list" id="wv-negative-pairs"></div>
+      </div>
+    </div>
+  </section>
+
+  <div
+    class="wv-status wv-step-panel"
+    data-lesson-step="1"
+    aria-live="polite"
+    hidden
+  >
+    <span
+      >التدريب: <strong id="wv-steps">—</strong> زوج · loss متحركة:
+      <strong id="wv-loss">—</strong></span
+    >
+    <span id="wv-progress">جاهز</span>
+  </div>
+
+  <div class="card wv-gradient wv-step-panel" data-lesson-step="1" hidden>
+    <span class="wv-gradient-node">الحليب</span>
+    <span class="wv-gradient-arrow">←</span>
+    <span class="wv-gradient-node">ارفع: الولد، شرب</span>
+    <span class="wv-gradient-arrow">+</span>
+    <span class="wv-gradient-node">اخفض: ضجيج عشوائي</span>
+  </div>
+
+  <section
+    class="card wv-analogy wv-step-panel"
+    data-lesson-step="3"
+    aria-label="حساب علاقة الملك والرجل والمرأة"
+    hidden
+  >
+    <div class="wv-analogy-head">
+      <div class="wv-analogy-stage" aria-live="polite">
+        <span class="viz-badge" id="wv-analogy-step">جاهز</span>
+        <strong id="wv-analogy-instruction"
+          >اتبع اتجاه الرجل نحو الملك، ثم انقله إلى المرأة</strong
+        >
+      </div>
+    </div>
+    <div class="wv-equation">
+      <code>الملك − الرجل + المرأة</code>
+      <span>≈</span>
+      <strong id="wv-analogy-answer">؟</strong>
+      <span class="viz-badge" id="wv-analogy-score">بانتظار التشغيل</span>
+    </div>
+    <div class="wv-analogy-candidates" id="wv-analogy-candidate-row" hidden>
+      <span class="text-small text-muted">أقرب مرشحين ضمن كلمات الخريطة:</span>
+      <ol id="wv-analogy-candidates" class="wv-candidate-list"></ol>
+    </div>
+  </section>
+
+  <div
+    class="wv-plot wv-step-panel"
+    id="wv-plot"
+    data-lesson-visible="1,2,3"
+    hidden
+  >
+    <svg
+      id="wv-svg"
+      viewBox="0 0 760 450"
+      role="img"
+      aria-labelledby="wv-svg-title wv-svg-desc"
+    >
+      <title id="wv-svg-title">إسقاط ثنائي الأبعاد لمتجهات الكلمات</title>
+      <desc id="wv-svg-desc">
+        نقاط تمثل كلمات عربية تعلّمت من سياقاتها باستخدام skip-gram وnegative
+        sampling.
+      </desc>
+      <defs>
+        <marker
+          id="wv-arrowhead-source"
+          markerWidth="8"
+          markerHeight="8"
+          refX="7"
+          refY="4"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 0 0 L 8 4 L 0 8 z"
+            fill="var(--viz-series-4)"
+          ></path>
+        </marker>
+        <marker
+          id="wv-arrowhead-copy"
+          markerWidth="8"
+          markerHeight="8"
+          refX="7"
+          refY="4"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 0 0 L 8 4 L 0 8 z"
+            fill="var(--viz-series-6)"
+          ></path>
+        </marker>
+      </defs>
+      <line class="wv-axis" x1="380" y1="30" x2="380" y2="420"></line>
+      <line class="wv-axis" x1="34" y1="225" x2="726" y2="225"></line>
+      <g id="wv-points"></g>
+    </svg>
+  </div>
+
+  <div
+    class="wv-neighbors wv-step-panel"
+    data-lesson-step="2"
+    aria-live="polite"
+    hidden
+  >
+    <span class="text-small text-muted" id="wv-neighbor-title"
+      >أقرب 10 كلمات:</span
+    >
+    <ol id="wv-neighbor-list" class="wv-ranked-list"></ol>
+  </div>
+
+  <div
+    class="viz-legend wv-step-panel"
+    data-lesson-step="2"
+    aria-label="مفتاح فئات الكلمات"
+    hidden
+  >
+    <span
+      ><i class="wv-swatch" style="background: var(--viz-series-1)"></i>
+      أشخاص</span
+    >
+    <span
+      ><i class="wv-swatch" style="background: var(--viz-series-2)"></i> طعام
+      وشراب</span
+    >
+    <span
+      ><i class="wv-swatch" style="background: var(--viz-series-3)"></i> أماكن
+      ودول</span
+    >
+    <span
+      ><i class="wv-swatch" style="background: var(--viz-series-4)"></i>
+      أدوار</span
+    >
+    <span
+      ><i class="wv-swatch" style="background: var(--viz-series-5)"></i>
+      نقل</span
+    >
+    <span
+      ><i class="wv-swatch" style="background: var(--viz-series-6)"></i> لغة
+      ومعنى</span
+    >
+  </div>
+
+  <script>
+    (() => {
+      const root = document.getElementById("word2vec-v2");
+      const naturalText = `
+        اللغة شبكة من الفروق، والكلمة تتعلم مكانها من الكلمات التي تأتي حولها.
+        المعنى لا يسكن في الرمز وحده؛ يظهر في الاستعمال والسياق والعلاقة بين العلامات.
+        الطفل يتعلم الكلمة حين يسمعها في مواقف كثيرة، ويربط الصوت بالفعل والنتيجة.
+        النموذج يقرأ النص ويحاول توقع ما يأتي بعده، وكل خطأ يحرك الأوزان قليلا.
+        الكلمات المتشابهة لا تتطابق، لكنها تظهر في أحياء لغوية متقاربة.
+        كلمة حليب تظهر مع الشرب والكأس والمطبخ، وكلمة خبز تظهر مع الأكل والطبق والمائدة.
+        السيارة والحافلة والقطار وسائل نقل، لكنها تختلف في الطريق والمحطة والرحلة.
+        عمان مدينة وعاصمة الأردن، وبرلين مدينة وعاصمة ألمانيا، وباريس مدينة وعاصمة فرنسا.
+        الملك يحكم المملكة، والملكة تحكم المملكة، والطبيب يعمل في المستشفى، والمعلم يعمل في المدرسة.
+        من جدول العد إلى المتجهات، تنتقل اللغة من خانات منفصلة إلى فضاء مستمر.
+        في ذلك الفضاء يصبح التشابه مسافة، وتصبح بعض العلاقات اتجاهات قابلة للقياس.
+        هذا لا يجعل المتجه معنى كاملا، لكنه يضغط انتظامات الاستعمال في أرقام.
+        سوسير رأى أن قيمة العلامة تأتي من موقعها داخل نظام الفروق.
+        النموذج لا يملك قاموسا سريا يصل الكلمة بالشيء؛ عنده استعمالات تفسر استعمالات.
+        السياق القريب يعلم النموذج عن النحو، والسياق المتكرر يعلمه عن الموضوع والعلاقة.
+        البنت شربت الماء قرب النافذة، والولد شرب العصير في المطبخ.
+        المرأة قادت السيارة إلى المدينة، والرجل ركب القطار إلى المحطة.
+        الطبيبة عالجت المريض في المستشفى، والمعلمة شرحت الدرس في المدرسة.
+        الكلمة المركزية تحاول توقع جيرانها، والجيران الحقيقيون أزواج موجبة.
+        العينات العشوائية تصير أزواجا سالبة، ويتعلم النموذج التفريق بين السياق والضجيج.
+      `;
+
+      const people = [
+        ["الولد", "شرب", "أكل", "قاد", "ركب"],
+        ["البنت", "شربت", "أكلت", "قادت", "ركبت"],
+        ["الطفل", "شرب", "أكل", "قاد", "ركب"],
+        ["الطفلة", "شربت", "أكلت", "قادت", "ركبت"],
+        ["الرجل", "شرب", "أكل", "قاد", "ركب"],
+        ["المرأة", "شربت", "أكلت", "قادت", "ركبت"],
+      ];
+      const drinks = ["الحليب", "الماء", "العصير", "القهوة"];
+      const foods = ["الخبز", "التفاحة", "الأرز", "الحساء"];
+      const places = ["المطبخ", "البيت", "المطعم", "الحديقة"];
+      const vehicles = ["السيارة", "الحافلة", "القطار"];
+      const destinations = ["المدينة", "المدرسة", "المحطة", "الجامعة"];
+      const capitals = [
+        ["عمان", "الأردن"],
+        ["برلين", "ألمانيا"],
+        ["باريس", "فرنسا"],
+        ["القاهرة", "مصر"],
+        ["الرياض", "السعودية"],
+        ["روما", "إيطاليا"],
+      ];
+      const roles = [
+        ["الطبيب", "الطبيبة", "المستشفى", "المريض", "عالج", "عالجت"],
+        ["المعلم", "المعلمة", "المدرسة", "الطالب", "شرح", "شرحت"],
+        ["المهندس", "المهندسة", "المختبر", "النظام", "بنى", "بنت"],
+        ["الكاتب", "الكاتبة", "المكتبة", "الكتاب", "كتب", "كتبت"],
+      ];
+      const conceptSentences = [
+        "الكلمة تحمل معنى داخل سياق اللغة",
+        "المعنى يظهر من استعمال الكلمة في الجملة",
+        "اللغة نظام من الكلمات والعلاقات والفروق",
+        "السياق يغير معنى الكلمة ويحدد استعمالها",
+        "العلامة تأخذ قيمتها من شبكة الفروق",
+        "النموذج يتعلم العلاقة بين الكلمة والسياق",
+        "المتجه يضغط استعمال الكلمة في أرقام",
+        "الكلمات المتشابهة تظهر في سياقات متقاربة",
+      ];
+
+      function cleanToken(token) {
+        return token
+          .replace(/[ًٌٍَُِّْـ]/g, "")
+          .replace(/[^\u0621-\u064A]/g, "")
+          .trim();
       }
 
-      @media (max-width: 760px) {
-        .shell {
-          padding: 14px;
-        }
-        .pipeline {
-          grid-template-columns: 1fr;
-        }
-        .arrow {
-          transform: rotate(90deg);
-        }
-        .lower {
-          grid-template-columns: 1fr;
-        }
+      function tokenize(sentence) {
+        return sentence.split(/\s+/).map(cleanToken).filter(Boolean);
       }
 
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #111715;
-          --panel: rgba(23, 31, 29, 0.94);
-          --ink: #edf4f1;
-          --muted: #a6b2ae;
-          --line: #35413d;
-          --accent: #2dd4bf;
-          --accent-soft: #123f39;
-          --shadow: none;
+      function buildCorpus() {
+        const sentences = naturalText
+          .split(/[.،؛؟!\n]+/)
+          .map(tokenize)
+          .filter((s) => s.length > 2);
+
+        for (const [
+          person,
+          drinkVerb,
+          foodVerb,
+          driveVerb,
+          rideVerb,
+        ] of people) {
+          for (const drink of drinks) {
+            for (const place of places) {
+              sentences.push(
+                tokenize(`${drinkVerb} ${person} ${drink} في ${place}`),
+              );
+              sentences.push(
+                tokenize(`وضع ${person} ${drink} على مائدة ${place}`),
+              );
+            }
+          }
+          for (const food of foods) {
+            for (const place of places) {
+              sentences.push(
+                tokenize(`${foodVerb} ${person} ${food} في ${place}`),
+              );
+              sentences.push(tokenize(`طلب ${person} ${food} من ${place}`));
+            }
+          }
+          for (const vehicle of vehicles) {
+            for (const destination of destinations) {
+              sentences.push(
+                tokenize(
+                  `${driveVerb} ${person} ${vehicle} إلى ${destination}`,
+                ),
+              );
+              sentences.push(
+                tokenize(`${rideVerb} ${person} ${vehicle} نحو ${destination}`),
+              );
+            }
+          }
         }
-        select,
-        .button {
-          background: #1c2724;
+
+        for (let repeat = 0; repeat < 22; repeat++) {
+          for (const [city, country] of capitals) {
+            sentences.push(tokenize(`${city} عاصمة ${country}`));
+            sentences.push(tokenize(`${city} مدينة في ${country}`));
+            sentences.push(tokenize(`تقع عاصمة ${country} في مدينة ${city}`));
+          }
+          sentences.push(tokenize("الملك يحكم المملكة من القصر"));
+          sentences.push(tokenize("الملكة تحكم المملكة من القصر"));
+          sentences.push(tokenize("الرجل ملك والمرأة ملكة"));
+          for (const [
+            male,
+            female,
+            workplace,
+            object,
+            maleVerb,
+            femaleVerb,
+          ] of roles) {
+            sentences.push(tokenize(`${male} يعمل في ${workplace}`));
+            sentences.push(tokenize(`${female} تعمل في ${workplace}`));
+            sentences.push(
+              tokenize(`${maleVerb} ${male} ${object} في ${workplace}`),
+            );
+            sentences.push(
+              tokenize(`${femaleVerb} ${female} ${object} في ${workplace}`),
+            );
+          }
+          for (const sentence of conceptSentences)
+            sentences.push(tokenize(sentence));
         }
-        .token {
-          background: #28322f;
+
+        for (let repeat = 0; repeat < 20; repeat++) {
+          for (const drink of drinks) {
+            sentences.push(tokenize(`${drink} مشروب يوضع في الكأس`));
+            sentences.push(tokenize(`يشرب الناس ${drink} عند العطش`));
+          }
+          for (const food of foods) {
+            sentences.push(tokenize(`${food} طعام يوضع في الطبق`));
+            sentences.push(tokenize(`يأكل الناس ${food} على المائدة`));
+          }
+          for (const [person] of people) {
+            sentences.push(tokenize(`${person} شخص يعيش في المجتمع`));
+            sentences.push(tokenize(`${person} إنسان يتعلم ويتكلم ويعمل`));
+          }
+          for (const vehicle of vehicles) {
+            sentences.push(tokenize(`${vehicle} وسيلة نقل تسير على الطريق`));
+            sentences.push(tokenize(`ينتقل الناس في ${vehicle} بين المدن`));
+          }
         }
-        .token.context {
-          background: #4b3512;
-          color: #fde68a;
-        }
-        .vector span {
-          color: #99f6e4;
-        }
-        .metric {
-          background: #25302d;
-        }
-        .axis {
-          stroke: #35413d;
-        }
-        .bar {
-          background: #37413f;
-        }
+        return sentences;
       }
-    </style>
-  </head>
-  <body>
-    <main class="shell">
-      <div class="eyebrow">Word2vec · 2013</div>
-      <h1>الكلمة تتعلّم من الجيران</h1>
-      <p class="lede">
-        اختَر كلمة في الجملة، غيّر نافذة السياق، ثم درّب النموذج. تحت الغطاء في زوج موجب، عينات
-        سالبة، وضرب نقطي يحرّك vectorين حقيقيين.
-      </p>
 
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">1 · اصنع أمثلة skip-gram</div>
-            <div class="hint">الكلمة الخضراء مركز؛ الكلمات الذهبية سياق موجب.</div>
-          </div>
-          <div class="controls">
-            <select id="sentenceSelect" aria-label="اختر جملة"></select>
-            <label class="range-wrap"
-              >النافذة <input id="windowSize" type="range" min="1" max="3" value="2" /><b
-                id="windowValue"
-                >2</b
-              ></label
-            >
-          </div>
-        </div>
-        <div id="sentence" class="sentence"></div>
-        <div class="pipeline">
-          <div class="stage">
-            <div class="stage-label">input</div>
-            <strong id="centerName">الحليب</strong>
-            <div class="hint">one-hot: هوية بلا تشابه</div>
-            <div id="onehot" class="onehot" aria-hidden="true"></div>
-          </div>
-          <div class="arrow">→</div>
-          <div class="stage">
-            <div class="stage-label">W<sub>in</sub></div>
-            <strong>embedding</strong>
-            <div id="centerVector" class="vector"><span>0.00</span><span>0.00</span></div>
-            <div class="hint">صفّ واحد من matrix التمثيل</div>
-          </div>
-          <div class="arrow">→</div>
-          <div class="stage">
-            <div class="stage-label">dot products + σ</div>
-            <strong>حقيقي أم ضجيج؟</strong>
-            <div id="pairList"></div>
-          </div>
-        </div>
-      </section>
+      const corpus = buildCorpus();
+      const rawTokenCount = corpus.reduce(
+        (sum, sentence) => sum + sentence.length,
+        0,
+      );
+      const counts = new Map();
+      for (const word of corpus.flat())
+        counts.set(word, (counts.get(word) || 0) + 1);
+      const vocabulary = [...counts.entries()]
+        .filter(([, count]) => count >= 3)
+        .sort((a, b) => b[1] - a[1])
+        .map(([word]) => word);
+      const wordToIndex = new Map(
+        vocabulary.map((word, index) => [word, index]),
+      );
+      const totalCount = vocabulary.reduce(
+        (sum, word) => sum + counts.get(word),
+        0,
+      );
+      const stopWords = new Set(["في", "من", "إلى", "على", "نحو", "داخل"]);
+      const dimension = 24;
+      const negativeCount = 5;
+      const displayWords = [
+        "الولد",
+        "البنت",
+        "الرجل",
+        "المرأة",
+        "الملك",
+        "الملكة",
+        "الطبيب",
+        "الطبيبة",
+        "المعلم",
+        "المعلمة",
+        "الحليب",
+        "الماء",
+        "العصير",
+        "الخبز",
+        "التفاحة",
+        "السيارة",
+        "الحافلة",
+        "القطار",
+        "عمان",
+        "الأردن",
+        "برلين",
+        "ألمانيا",
+        "باريس",
+        "فرنسا",
+        "القاهرة",
+        "مصر",
+        "اللغة",
+        "الكلمة",
+        "المعنى",
+        "السياق",
+      ].filter((word) => wordToIndex.has(word));
 
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">2 · شاهد الهندسة تتكوّن</div>
-            <div class="hint">كل النقاط تبدأ عشوائية. التدريب يغيّر مواقعها، مش أسماءها.</div>
-          </div>
-          <div class="controls">
-            <button id="stepButton" class="button">خطوة واحدة</button>
-            <button id="trainButton" class="button primary">درّب 300 خطوة</button>
-            <button id="resetButton" class="button">إعادة</button>
-          </div>
-        </div>
-        <div class="lower">
-          <div class="plot-wrap">
-            <div class="plot-title">فضاء تعليمي ثنائي الأبعاد</div>
-            <svg id="plot" viewBox="0 0 650 360" role="img" aria-label="خريطة متجهات الكلمات">
-              <line class="axis" x1="325" y1="34" x2="325" y2="336"></line>
-              <line class="axis" x1="30" y1="185" x2="620" y2="185"></line>
-              <g id="points"></g>
-            </svg>
-          </div>
-          <aside class="side">
-            <div class="metric-grid">
-              <div class="metric"><b id="steps">0</b><span>training pairs</span></div>
-              <div class="metric"><b id="loss">—</b><span>آخر loss</span></div>
-            </div>
-            <div class="neighbors">
-              <b>أقرب كلمات لـ <span id="neighborCenter">الحليب</span></b>
-              <div id="neighborList"></div>
-            </div>
-          </aside>
-        </div>
-        <div class="foot">
-          هذا نموذج SGNS حقيقي، لكن corpus صغيرة والفضاء بُعدان فقط. في word2vec الفعلية قد يكون
-          عندك مئات الأبعاد ومليارات الأزواج. القرب هنا يشرح الآلية؛ لا تتعامل مع الخريطة كمعجم
-          عربي.
-        </div>
-      </section>
-    </main>
+      const categorySets = [
+        new Set([
+          "الولد",
+          "البنت",
+          "الطفل",
+          "الطفلة",
+          "الرجل",
+          "المرأة",
+          "الملك",
+          "الملكة",
+        ]),
+        new Set([...drinks, ...foods]),
+        new Set(capitals.flat().concat(places, destinations)),
+        new Set(roles.flatMap((role) => role.slice(0, 2))),
+        new Set(vehicles),
+        new Set([
+          "اللغة",
+          "الكلمة",
+          "المعنى",
+          "السياق",
+          "العلامة",
+          "المتجه",
+          "العلاقة",
+        ]),
+      ];
 
-    <script>
-      const corpus = [
-        'شرب الولد الحليب في المطبخ',
-        'شربت البنت العصير في المطبخ',
-        'أكل الولد الخبز في المطبخ',
-        'أكلت البنت التفاحة في المطبخ',
-        'شرب الطفل الماء قرب النافذة',
-        'شربت الطفلة الحليب قرب النافذة',
-        'أكل الطفل التفاحة قرب النافذة',
-        'أكلت الطفلة الخبز قرب النافذة',
-        'قاد الرجل السيارة في المدينة',
-        'قادت المرأة الحافلة في المدينة',
-        'ركب الولد السيارة إلى المدرسة',
-        'ركبت البنت الحافلة إلى المدرسة',
-      ].map((s) => s.split(' '))
-
-      const vocab = [...new Set(corpus.flat())]
-      const groups = {
-        people: new Set(['الولد', 'البنت', 'الطفل', 'الطفلة', 'الرجل', 'المرأة']),
-        food: new Set(['الحليب', 'العصير', 'الماء', 'الخبز', 'التفاحة']),
-        place: new Set(['المطبخ', 'النافذة', 'المدينة', 'المدرسة']),
-        transport: new Set(['السيارة', 'الحافلة']),
-      }
-      const colors = {
-        people: '#7c3aed',
-        food: '#d97706',
-        place: '#0891b2',
-        transport: '#e11d48',
-        other: '#64748b',
-      }
-      let vectors = {},
-        contextVectors = {},
-        steps = 0,
-        lastLoss = null,
-        lastPositive = null,
-        lastNegatives = []
-      let sentenceIndex = 0,
-        centerIndex = 2,
-        windowSize = 2,
-        random = mulberry32(73)
-
-      const sentenceSelect = document.getElementById('sentenceSelect')
-      corpus.forEach((tokens, i) => {
-        const option = document.createElement('option')
-        option.value = i
-        option.textContent = tokens.join(' ')
-        sentenceSelect.appendChild(option)
-      })
+      let random;
+      let inputVectors;
+      let outputVectors;
+      let positivePairs;
+      let negativeCdf;
+      let trainedPairs;
+      let movingLoss;
+      let centerPosition = 2;
+      let contextWindow = 2;
+      let lastNegatives = [];
+      let busy = false;
+      let analogyMode = true;
+      let analogyStage = 0;
+      let analogyTimers = [];
+      let corpusSampleOffset = 0;
+      let lessonStep = 0;
+      let pairsRevealed = false;
+      let mapMode = "pca";
+      let tsneCache = null;
+      let tsneCacheStep = -1;
+      let lastRenderedCompact = null;
 
       function mulberry32(seed) {
         return function () {
-          let t = (seed += 0x6d2b79f5)
-          t = Math.imul(t ^ (t >>> 15), t | 1)
-          t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-          return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+          let t = (seed += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function randomNormal() {
+        let u = 0;
+        let v = 0;
+        while (!u) u = random();
+        while (!v) v = random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+
+      function initialize() {
+        random = mulberry32(8137);
+        tsneCache = null;
+        tsneCacheStep = -1;
+        inputVectors = vocabulary.map(() =>
+          Float32Array.from({ length: dimension }, () => randomNormal() * 0.06),
+        );
+        outputVectors = vocabulary.map(() =>
+          Float32Array.from({ length: dimension }, () => randomNormal() * 0.06),
+        );
+        trainedPairs = 0;
+        movingLoss = null;
+        buildPairs();
+        buildNegativeDistribution();
+      }
+
+      function buildPairs() {
+        positivePairs = [];
+        for (const sentence of corpus) {
+          const retained = sentence.filter(
+            (word) => wordToIndex.has(word) && !stopWords.has(word),
+          );
+          for (let center = 0; center < retained.length; center++) {
+            for (
+              let offset = -contextWindow;
+              offset <= contextWindow;
+              offset++
+            ) {
+              if (!offset) continue;
+              const context = center + offset;
+              if (context < 0 || context >= retained.length) continue;
+              positivePairs.push([
+                wordToIndex.get(retained[center]),
+                wordToIndex.get(retained[context]),
+              ]);
+            }
+          }
         }
       }
 
-      function reset() {
-        random = mulberry32(73)
-        vectors = {}
-        contextVectors = {}
-        vocab.forEach((word) => {
-          vectors[word] = [(random() - 0.5) * 0.7, (random() - 0.5) * 0.7]
-          contextVectors[word] = [(random() - 0.5) * 0.7, (random() - 0.5) * 0.7]
-        })
-        steps = 0
-        lastLoss = null
-        lastPositive = null
-        lastNegatives = []
-        render()
+      function buildNegativeDistribution() {
+        let cumulative = 0;
+        const weights = vocabulary.map((word) =>
+          Math.pow(counts.get(word), 0.75),
+        );
+        const total = weights.reduce((sum, weight) => sum + weight, 0);
+        negativeCdf = weights.map((weight) => {
+          cumulative += weight / total;
+          return cumulative;
+        });
       }
 
-      function contextFor(tokens, index) {
-        return tokens.filter((_, i) => i !== index && Math.abs(i - index) <= windowSize)
+      function sampleNegative(excluded) {
+        let index = 0;
+        do {
+          const value = random();
+          let low = 0;
+          let high = negativeCdf.length - 1;
+          while (low < high) {
+            const middle = (low + high) >> 1;
+            if (negativeCdf[middle] < value) low = middle + 1;
+            else high = middle;
+          }
+          index = low;
+        } while (excluded.has(index));
+        return index;
       }
 
-      function allPairs() {
-        const pairs = []
-        corpus.forEach((tokens) =>
-          tokens.forEach((center, i) => {
-            contextFor(tokens, i).forEach((ctx) => pairs.push([center, ctx]))
-          })
-        )
-        return pairs
+      function sigmoid(value) {
+        return 1 / (1 + Math.exp(-Math.max(-12, Math.min(12, value))));
       }
 
-      function sigmoid(x) {
-        return 1 / (1 + Math.exp(-Math.max(-12, Math.min(12, x))))
-      }
       function dot(a, b) {
-        return a[0] * b[0] + a[1] * b[1]
+        let value = 0;
+        for (let i = 0; i < dimension; i++) value += a[i] * b[i];
+        return value;
       }
 
-      function trainOne(forcePair) {
-        const pairs = allPairs()
-        const pair = forcePair || pairs[Math.floor(random() * pairs.length)]
-        const [center, target] = pair
-        const excluded = new Set([center, target])
-        const negatives = []
-        while (negatives.length < 4) {
-          const candidate = vocab[Math.floor(random() * vocab.length)]
-          if (!excluded.has(candidate) && !negatives.includes(candidate)) negatives.push(candidate)
+      function trainOne() {
+        const [centerIndex, targetIndex] =
+          positivePairs[Math.floor(random() * positivePairs.length)];
+        const center = inputVectors[centerIndex];
+        const centerBefore = Float32Array.from(center);
+        const gradient = new Float32Array(dimension);
+        const learningRate = 0.035 * Math.max(0.22, 1 - trainedPairs / 240000);
+        const negatives = [];
+        let loss = 0;
+
+        function updateOutput(index, label) {
+          const output = outputVectors[index];
+          const probability = sigmoid(dot(centerBefore, output));
+          const scale = label - probability;
+          for (let d = 0; d < dimension; d++) {
+            gradient[d] += scale * output[d];
+            output[d] += learningRate * scale * centerBefore[d];
+          }
+          loss += -(
+            label * Math.log(probability + 1e-9) +
+            (1 - label) * Math.log(1 - probability + 1e-9)
+          );
         }
 
-        const vc = vectors[center].slice()
-        const gradCenter = [0, 0]
-        let loss = 0
-        const lr = 0.055
-
-        function updateOutput(word, label) {
-          const u = contextVectors[word]
-          const p = sigmoid(dot(vc, u))
-          const g = label - p
-          gradCenter[0] += g * u[0]
-          gradCenter[1] += g * u[1]
-          u[0] += lr * g * vc[0]
-          u[1] += lr * g * vc[1]
-          loss += -(label * Math.log(p + 1e-9) + (1 - label) * Math.log(1 - p + 1e-9))
-          return p
+        updateOutput(targetIndex, 1);
+        const excluded = new Set([centerIndex, targetIndex]);
+        for (let n = 0; n < negativeCount; n++) {
+          const index = sampleNegative(excluded);
+          negatives.push(index);
+          excluded.add(index);
+          updateOutput(index, 0);
         }
-
-        updateOutput(target, 1)
-        negatives.forEach((n) => updateOutput(n, 0))
-        vectors[center][0] += lr * gradCenter[0]
-        vectors[center][1] += lr * gradCenter[1]
-        lastPositive = [center, target]
-        lastNegatives = negatives
-        lastLoss = loss / 5
-        steps++
+        for (let d = 0; d < dimension; d++)
+          center[d] += learningRate * gradient[d];
+        trainedPairs += 1;
+        const batchLoss = loss / (negativeCount + 1);
+        movingLoss =
+          movingLoss == null
+            ? batchLoss
+            : movingLoss * 0.997 + batchLoss * 0.003;
+        lastNegatives = negatives;
       }
 
-      function trainMany(n) {
-        for (let i = 0; i < n; i++) trainOne()
-        render()
+      function trainSync(count) {
+        for (let i = 0; i < count; i++) trainOne();
       }
 
-      function category(word) {
-        for (const [name, set] of Object.entries(groups)) if (set.has(word)) return name
-        return 'other'
+      async function trainAnimated(count) {
+        if (busy) return;
+        busy = true;
+        root.querySelector("#wv-train").disabled = true;
+        root.querySelector("#wv-guide-action").disabled = true;
+        const status = root.querySelector("#wv-progress");
+        let completed = 0;
+        while (completed < count) {
+          const chunk = Math.min(500, count - completed);
+          trainSync(chunk);
+          completed += chunk;
+          status.textContent = `تدريب ${completed.toLocaleString("en-US")} / ${count.toLocaleString("en-US")}`;
+          if (completed % 2000 === 0 || completed === count) {
+            render();
+            await new Promise(requestAnimationFrame);
+          }
+        }
+        status.textContent = "جاهز";
+        root.querySelector("#wv-train").disabled = false;
+        root.querySelector("#wv-guide-action").disabled = false;
+        busy = false;
       }
 
       function cosine(a, b) {
-        const den = Math.hypot(...a) * Math.hypot(...b)
-        return den ? dot(a, b) / den : 0
+        let numerator = 0;
+        let normA = 0;
+        let normB = 0;
+        for (let d = 0; d < dimension; d++) {
+          numerator += a[d] * b[d];
+          normA += a[d] * a[d];
+          normB += b[d] * b[d];
+        }
+        return numerator / (Math.sqrt(normA * normB) + 1e-9);
+      }
+
+      function cosineToVector(vector, candidate) {
+        let numerator = 0;
+        let normVector = 0;
+        let normCandidate = 0;
+        for (let d = 0; d < dimension; d++) {
+          numerator += vector[d] * candidate[d];
+          normVector += vector[d] * vector[d];
+          normCandidate += candidate[d] * candidate[d];
+        }
+        return numerator / (Math.sqrt(normVector * normCandidate) + 1e-9);
+      }
+
+      function analogyResult() {
+        const king = inputVectors[wordToIndex.get("الملك")];
+        const man = inputVectors[wordToIndex.get("الرجل")];
+        const woman = inputVectors[wordToIndex.get("المرأة")];
+        const vector = Float64Array.from(
+          { length: dimension },
+          (_, d) => king[d] - man[d] + woman[d],
+        );
+        const excluded = new Set(["الملك", "الرجل", "المرأة"]);
+        const candidates = displayWords
+          .filter((word) => !excluded.has(word) && !stopWords.has(word))
+          .map((word) => [
+            word,
+            cosineToVector(vector, inputVectors[wordToIndex.get(word)]),
+          ])
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+        return { vector, candidates };
+      }
+
+      function powerIteration(matrix, blockedVector = null) {
+        let vector = Float64Array.from(
+          { length: dimension },
+          (_, index) => (index % 3) + 1,
+        );
+        for (let iteration = 0; iteration < 45; iteration++) {
+          const next = new Float64Array(dimension);
+          for (let row = 0; row < dimension; row++) {
+            for (let column = 0; column < dimension; column++)
+              next[row] += matrix[row][column] * vector[column];
+          }
+          if (blockedVector) {
+            let projection = 0;
+            for (let d = 0; d < dimension; d++)
+              projection += next[d] * blockedVector[d];
+            for (let d = 0; d < dimension; d++)
+              next[d] -= projection * blockedVector[d];
+          }
+          const norm =
+            Math.sqrt(next.reduce((sum, value) => sum + value * value, 0)) || 1;
+          vector = Float64Array.from(next, (value) => value / norm);
+        }
+        return vector;
+      }
+
+      function projectPca(words) {
+        const indices = words.map((word) => wordToIndex.get(word));
+        const mean = new Float64Array(dimension);
+        for (const index of indices)
+          for (let d = 0; d < dimension; d++)
+            mean[d] += inputVectors[index][d] / indices.length;
+        const centered = indices.map((index) =>
+          Float64Array.from(inputVectors[index], (value, d) => value - mean[d]),
+        );
+        const covariance = Array.from(
+          { length: dimension },
+          () => new Float64Array(dimension),
+        );
+        for (const vector of centered) {
+          for (let row = 0; row < dimension; row++) {
+            for (let column = 0; column < dimension; column++)
+              covariance[row][column] += vector[row] * vector[column];
+          }
+        }
+        const first = powerIteration(covariance);
+        const second = powerIteration(covariance, first);
+        function projectVector(vector) {
+          let x = 0;
+          let y = 0;
+          for (let d = 0; d < dimension; d++) {
+            const centeredValue = vector[d] - mean[d];
+            x += centeredValue * first[d];
+            y += centeredValue * second[d];
+          }
+          return { x, y };
+        }
+        return {
+          points: centered.map((vector, index) => {
+            let x = 0;
+            let y = 0;
+            for (let d = 0; d < dimension; d++) {
+              x += vector[d] * first[d];
+              y += vector[d] * second[d];
+            }
+            return { word: words[index], x, y };
+          }),
+          projectVector,
+        };
+      }
+
+      function projectTsne(words) {
+        if (tsneCache && tsneCacheStep === trainedPairs) return tsneCache;
+        const size = words.length;
+        const vectors = words.map(
+          (word) => inputVectors[wordToIndex.get(word)],
+        );
+        const distances = Array.from(
+          { length: size },
+          () => new Float64Array(size),
+        );
+        for (let i = 0; i < size; i++) {
+          for (let j = i + 1; j < size; j++) {
+            const distance = Math.max(0, 1 - cosine(vectors[i], vectors[j]));
+            distances[i][j] = distance * distance;
+            distances[j][i] = distances[i][j];
+          }
+        }
+
+        const conditional = Array.from(
+          { length: size },
+          () => new Float64Array(size),
+        );
+        const targetEntropy = Math.log(Math.min(7, size - 1));
+        for (let i = 0; i < size; i++) {
+          let beta = 1;
+          let betaMin = -Infinity;
+          let betaMax = Infinity;
+          for (let search = 0; search < 42; search++) {
+            let sum = 0;
+            let weighted = 0;
+            for (let j = 0; j < size; j++) {
+              if (i === j) continue;
+              const value = Math.exp(-distances[i][j] * beta);
+              conditional[i][j] = value;
+              sum += value;
+              weighted += distances[i][j] * value;
+            }
+            const entropy =
+              Math.log(sum + 1e-12) + (beta * weighted) / (sum + 1e-12);
+            if (Math.abs(entropy - targetEntropy) < 1e-5) break;
+            if (entropy > targetEntropy) {
+              betaMin = beta;
+              beta = Number.isFinite(betaMax) ? (beta + betaMax) / 2 : beta * 2;
+            } else {
+              betaMax = beta;
+              beta = Number.isFinite(betaMin) ? (beta + betaMin) / 2 : beta / 2;
+            }
+          }
+          const sum =
+            conditional[i].reduce((total, value) => total + value, 0) || 1;
+          for (let j = 0; j < size; j++) conditional[i][j] /= sum;
+        }
+
+        const probabilities = Array.from(
+          { length: size },
+          () => new Float64Array(size),
+        );
+        for (let i = 0; i < size; i++) {
+          for (let j = i + 1; j < size; j++) {
+            const value = (conditional[i][j] + conditional[j][i]) / (2 * size);
+            probabilities[i][j] = value;
+            probabilities[j][i] = value;
+          }
+        }
+
+        const pca = projectPca(words).points;
+        const pcaScale = Math.max(
+          1e-6,
+          ...pca.flatMap((point) => [Math.abs(point.x), Math.abs(point.y)]),
+        );
+        const positions = pca.map((point) => [
+          (point.x / pcaScale) * 0.0001,
+          (point.y / pcaScale) * 0.0001,
+        ]);
+        const velocity = Array.from({ length: size }, () => [0, 0]);
+
+        for (let iteration = 0; iteration < 360; iteration++) {
+          const numerator = Array.from(
+            { length: size },
+            () => new Float64Array(size),
+          );
+          let qSum = 0;
+          for (let i = 0; i < size; i++) {
+            for (let j = i + 1; j < size; j++) {
+              const dx = positions[i][0] - positions[j][0];
+              const dy = positions[i][1] - positions[j][1];
+              const value = 1 / (1 + dx * dx + dy * dy);
+              numerator[i][j] = value;
+              numerator[j][i] = value;
+              qSum += 2 * value;
+            }
+          }
+          const gradients = Array.from({ length: size }, () => [0, 0]);
+          const exaggeration = iteration < 90 ? 4 : 1;
+          for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+              if (i === j) continue;
+              const q = numerator[i][j] / (qSum + 1e-12);
+              const multiplier =
+                4 * (probabilities[i][j] * exaggeration - q) * numerator[i][j];
+              gradients[i][0] +=
+                multiplier * (positions[i][0] - positions[j][0]);
+              gradients[i][1] +=
+                multiplier * (positions[i][1] - positions[j][1]);
+            }
+          }
+          const momentum = iteration < 120 ? 0.5 : 0.82;
+          const learningRate = 72;
+          let meanX = 0;
+          let meanY = 0;
+          for (let i = 0; i < size; i++) {
+            velocity[i][0] =
+              momentum * velocity[i][0] - learningRate * gradients[i][0];
+            velocity[i][1] =
+              momentum * velocity[i][1] - learningRate * gradients[i][1];
+            positions[i][0] += velocity[i][0];
+            positions[i][1] += velocity[i][1];
+            meanX += positions[i][0] / size;
+            meanY += positions[i][1] / size;
+          }
+          for (const position of positions) {
+            position[0] -= meanX;
+            position[1] -= meanY;
+          }
+        }
+
+        tsneCache = words.map((word, index) => ({
+          word,
+          x: positions[index][0],
+          y: positions[index][1],
+        }));
+        tsneCacheStep = trainedPairs;
+        return tsneCache;
+      }
+
+      function colorFor(word) {
+        const category = categorySets.findIndex((set) => set.has(word));
+        return `var(--viz-series-${Math.max(1, category + 1)})`;
+      }
+
+      function nearestWords(word, count = 6) {
+        const index = wordToIndex.get(word);
+        return vocabulary
+          .filter(
+            (candidate) => candidate !== word && !stopWords.has(candidate),
+          )
+          .map((candidate) => [
+            candidate,
+            cosine(
+              inputVectors[index],
+              inputVectors[wordToIndex.get(candidate)],
+            ),
+          ])
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, count);
       }
 
       function renderSentence() {
-        const root = document.getElementById('sentence')
-        root.innerHTML = ''
-        const tokens = corpus[sentenceIndex]
-        tokens.forEach((word, i) => {
-          const button = document.createElement('button')
-          button.className =
-            'token' +
-            (i === centerIndex
-              ? ' center'
-              : Math.abs(i - centerIndex) <= windowSize
-                ? ' context'
-                : '')
-          button.textContent = word
-          button.onclick = () => {
-            centerIndex = i
-            render()
+        const sentence = ["شرب", "الولد", "الحليب", "في", "المطبخ"];
+        const sentenceRoot = root.querySelector("#wv-sentence");
+        sentenceRoot.innerHTML = "";
+        sentence.forEach((word, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn viz-tile";
+          button.textContent = word;
+          button.setAttribute(
+            "aria-pressed",
+            index === centerPosition ? "true" : "false",
+          );
+          button.addEventListener("click", () => {
+            centerPosition = index;
+            renderSentence();
+          });
+          sentenceRoot.appendChild(button);
+        });
+
+        const positive = sentence.filter(
+          (_, index) =>
+            index !== centerPosition &&
+            Math.abs(index - centerPosition) <= contextWindow,
+        );
+        root.querySelector("#wv-positive-pairs").innerHTML = positive
+          .map(
+            (word) =>
+              `<span class="wv-positive">${sentence[centerPosition]} → ${word}</span>`,
+          )
+          .join("");
+
+        const excluded = new Set(sentence);
+        const negatives = [];
+        if (lastNegatives.length) {
+          for (const index of lastNegatives) {
+            const word = vocabulary[index];
+            if (!excluded.has(word) && !negatives.includes(word))
+              negatives.push(word);
+            if (negatives.length === 4) break;
           }
-          root.appendChild(button)
-        })
-      }
-
-      function renderPipeline() {
-        const center = corpus[sentenceIndex][centerIndex]
-        document.getElementById('centerName').textContent = center
-        const hot = document.getElementById('onehot')
-        hot.innerHTML = ''
-        for (let i = 0; i < 9; i++) {
-          const cell = document.createElement('i')
-          if (i === 4) cell.className = 'on'
-          hot.appendChild(cell)
         }
-        document.getElementById('centerVector').innerHTML = vectors[center]
-          .map((v) => `<span>${v >= 0 ? '+' : ''}${v.toFixed(3)}</span>`)
-          .join('')
-
-        const contexts = contextFor(corpus[sentenceIndex], centerIndex)
-        const target = lastPositive && lastPositive[0] === center ? lastPositive[1] : contexts[0]
-        const negatives = lastNegatives.length
-          ? lastNegatives
-          : vocab.filter((w) => w !== center && !contexts.includes(w)).slice(0, 3)
-        const rows = []
-        if (target) {
-          const p = sigmoid(dot(vectors[center], contextVectors[target]))
-          rows.push(
-            `<div class="pair pos"><span>✓ ${target}</span><span class="score">p=${p.toFixed(2)}</span></div>`
-          )
+        for (const fallback of ["مجرة", "برلمان", "بركان", "محيط"]) {
+          if (negatives.length < 4 && wordToIndex.has(fallback))
+            negatives.push(fallback);
         }
-        negatives.slice(0, 3).forEach((n) => {
-          const p = sigmoid(dot(vectors[center], contextVectors[n]))
-          rows.push(
-            `<div class="pair neg"><span>× ${n}</span><span class="score">p=${p.toFixed(2)}</span></div>`
+        if (negatives.length < 4) {
+          for (const word of vocabulary) {
+            if (!excluded.has(word) && !negatives.includes(word))
+              negatives.push(word);
+            if (negatives.length === 4) break;
+          }
+        }
+        root.querySelector("#wv-negative-pairs").innerHTML = negatives
+          .map(
+            (word) =>
+              `<span class="wv-negative">${sentence[centerPosition]} × ${word}</span>`,
           )
-        })
-        document.getElementById('pairList').innerHTML = rows.join('')
+          .join("");
       }
 
       function renderPlot() {
-        const selected = corpus[sentenceIndex][centerIndex]
-        const xs = vocab.map((w) => vectors[w][0]),
-          ys = vocab.map((w) => vectors[w][1])
-        const maxX = Math.max(0.4, ...xs.map(Math.abs)),
-          maxY = Math.max(0.4, ...ys.map(Math.abs))
-        const root = document.getElementById('points')
-        root.innerHTML = ''
-        vocab.forEach((word) => {
-          const x = 325 + (vectors[word][0] / maxX) * 270,
-            y = 185 - (vectors[word][1] / maxY) * 135
-          const ns = 'http://www.w3.org/2000/svg'
-          const circle = document.createElementNS(ns, 'circle')
-          circle.setAttribute('cx', x)
-          circle.setAttribute('cy', y)
-          circle.setAttribute('r', word === selected ? '7' : '4.5')
-          circle.setAttribute('fill', colors[category(word)])
-          circle.setAttribute('opacity', word === selected ? '1' : '.78')
-          circle.setAttribute('class', 'word-dot')
-          const label = document.createElementNS(ns, 'text')
-          label.setAttribute('x', x + 7)
-          label.setAttribute('y', y - 7)
-          label.setAttribute('class', 'word-label')
-          label.textContent = word
-          root.append(circle, label)
-        })
+        const pca = projectPca(displayWords);
+        const projection =
+          mapMode === "tsne" && !analogyMode
+            ? projectTsne(displayWords)
+            : pca.points;
+        const measuredWidth = root.getBoundingClientRect().width || 760;
+        const compactPlot = measuredWidth <= 520;
+        lastRenderedCompact = compactPlot;
+        const geometry = {
+          width: compactPlot ? 400 : 760,
+          height: 450,
+          top: 30,
+          right: compactPlot ? 372 : 726,
+          bottom: 420,
+          left: compactPlot ? 28 : 34,
+          centerX: compactPlot ? 200 : 380,
+          centerY: 225,
+          rangeX: compactPlot ? 160 : 315,
+          rangeY: 175,
+        };
+        const svg = root.querySelector("#wv-svg");
+        svg.setAttribute(
+          "viewBox",
+          `0 0 ${geometry.width} ${geometry.height}`,
+        );
+        svg.style.aspectRatio = `${geometry.width} / ${geometry.height}`;
+        const axes = svg.querySelectorAll(":scope > .wv-axis");
+        axes[0].setAttribute("x1", geometry.centerX);
+        axes[0].setAttribute("x2", geometry.centerX);
+        axes[0].setAttribute("y1", geometry.top);
+        axes[0].setAttribute("y2", geometry.bottom);
+        axes[1].setAttribute("x1", geometry.left);
+        axes[1].setAttribute("x2", geometry.right);
+        axes[1].setAttribute("y1", geometry.centerY);
+        axes[1].setAttribute("y2", geometry.centerY);
+        const maxX = Math.max(
+          0.01,
+          ...projection.map((point) => Math.abs(point.x)),
+        );
+        const maxY = Math.max(
+          0.01,
+          ...projection.map((point) => Math.abs(point.y)),
+        );
+        const selectedWord = root.querySelector("#wv-anchor").value;
+        const analogy = analogyResult();
+        const analogyAnswer = analogy.candidates[0][0];
+        const labeledWords = analogyMode
+          ? new Set(["الرجل", "المرأة", "الملك", "الملكة", analogyAnswer])
+          : new Set([
+              selectedWord,
+              ...nearestWords(selectedWord).map(([word]) => word),
+            ]);
+        const pointsRoot = root.querySelector("#wv-points");
+        pointsRoot.innerHTML = "";
+        const svgNamespace = "http://www.w3.org/2000/svg";
 
-        document.getElementById('steps').textContent = steps.toLocaleString('en-US')
-        document.getElementById('loss').textContent = lastLoss == null ? '—' : lastLoss.toFixed(3)
-        document.getElementById('neighborCenter').textContent = selected
-        const neighbors = vocab
-          .filter((w) => w !== selected)
-          .map((w) => [w, cosine(vectors[selected], vectors[w])])
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-        document.getElementById('neighborList').innerHTML = neighbors
-          .map(
-            ([w, s]) =>
-              `<div class="neighbor"><span>${w}</span><div class="bar"><i style="width:${Math.max(2, (s + 1) * 50)}%"></i></div></div>`
-          )
-          .join('')
+        const plotted = projection.map((point) => ({
+          ...point,
+          screenX:
+            geometry.centerX + (point.x / maxX) * geometry.rangeX,
+          screenY:
+            geometry.centerY - (point.y / maxY) * geometry.rangeY,
+        }));
+
+        let analogyDrawing = null;
+        if (analogyMode) {
+          const pointByWord = new Map(
+            plotted.map((point) => [point.word, point]),
+          );
+          const man = pointByWord.get("الرجل");
+          const king = pointByWord.get("الملك");
+          const woman = pointByWord.get("المرأة");
+          const projectedTarget = pca.projectVector(analogy.vector);
+          const target = {
+            screenX: Math.max(
+              geometry.left,
+              Math.min(
+                geometry.right,
+                geometry.centerX +
+                  (projectedTarget.x / maxX) * geometry.rangeX,
+              ),
+            ),
+            screenY: Math.max(
+              geometry.top,
+              Math.min(
+                geometry.bottom,
+                geometry.centerY -
+                  (projectedTarget.y / maxY) * geometry.rangeY,
+              ),
+            ),
+          };
+          analogyDrawing = {
+            man,
+            king,
+            woman,
+            target,
+            answer: pointByWord.get(analogyAnswer),
+          };
+        }
+
+        for (const point of plotted) {
+          const circle = document.createElementNS(svgNamespace, "circle");
+          circle.setAttribute("class", "wv-point");
+          circle.setAttribute("cx", point.screenX.toFixed(2));
+          circle.setAttribute("cy", point.screenY.toFixed(2));
+          circle.setAttribute("r", point.word === selectedWord ? "8" : "5");
+          circle.setAttribute("fill", colorFor(point.word));
+          circle.setAttribute("data-tooltip", point.word);
+          pointsRoot.appendChild(circle);
+        }
+
+        if (analogyDrawing) {
+          const { man, king, woman, target, answer } = analogyDrawing;
+
+          function shortenedLine(from, to, startPadding = 9, endPadding = 15) {
+            const dx = to.screenX - from.screenX;
+            const dy = to.screenY - from.screenY;
+            const length = Math.max(1, Math.hypot(dx, dy));
+            const ux = dx / length;
+            const uy = dy / length;
+            return {
+              x1: from.screenX + ux * startPadding,
+              y1: from.screenY + uy * startPadding,
+              x2: to.screenX - ux * endPadding,
+              y2: to.screenY - uy * endPadding,
+            };
+          }
+
+          function appendLine(className, coordinates) {
+            const line = document.createElementNS(svgNamespace, "line");
+            line.setAttribute("class", className);
+            line.setAttribute("x1", coordinates.x1.toFixed(2));
+            line.setAttribute("y1", coordinates.y1.toFixed(2));
+            line.setAttribute("x2", coordinates.x2.toFixed(2));
+            line.setAttribute("y2", coordinates.y2.toFixed(2));
+            pointsRoot.appendChild(line);
+            return line;
+          }
+
+          function addArrow(from, to, className, labelText) {
+            const coordinates = shortenedLine(from, to);
+            appendLine("wv-analogy-halo", coordinates);
+            const arrow = appendLine(
+              `wv-analogy-line ${className}`,
+              coordinates,
+            );
+            arrow.setAttribute(
+              "marker-end",
+              className === "wv-analogy-source"
+                ? "url(#wv-arrowhead-source)"
+                : "url(#wv-arrowhead-copy)",
+            );
+            const label = document.createElementNS(svgNamespace, "text");
+            label.setAttribute("class", "wv-analogy-arrow-label");
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute(
+              "x",
+              ((coordinates.x1 + coordinates.x2) / 2).toFixed(2),
+            );
+            label.setAttribute(
+              "y",
+              ((coordinates.y1 + coordinates.y2) / 2 - 10).toFixed(2),
+            );
+            label.textContent = labelText;
+            pointsRoot.appendChild(label);
+          }
+
+          if (analogyStage >= 1) {
+            addArrow(man, king, "wv-analogy-source", "الملك − الرجل");
+          }
+          if (analogyStage >= 2) {
+            addArrow(woman, target, "wv-analogy-copy", "نفس الاتجاه");
+          }
+          if (analogyStage >= 3) {
+            const size = 8;
+            const diamond = document.createElementNS(svgNamespace, "polygon");
+            diamond.setAttribute("class", "wv-analogy-target");
+            diamond.setAttribute(
+              "points",
+              `${target.screenX},${target.screenY - size} ${target.screenX + size},${target.screenY} ${target.screenX},${target.screenY + size} ${target.screenX - size},${target.screenY}`,
+            );
+            diamond.setAttribute("data-tooltip", "الملك − الرجل + المرأة");
+            pointsRoot.appendChild(diamond);
+            if (answer) {
+              const distance = Math.hypot(
+                answer.screenX - target.screenX,
+                answer.screenY - target.screenY,
+              );
+              if (distance > 12) {
+                appendLine("wv-analogy-match", {
+                  x1: target.screenX,
+                  y1: target.screenY,
+                  x2: answer.screenX,
+                  y2: answer.screenY,
+                });
+              }
+              const ring = document.createElementNS(svgNamespace, "circle");
+              ring.setAttribute("class", "wv-analogy-ring");
+              ring.setAttribute("cx", answer.screenX.toFixed(2));
+              ring.setAttribute("cy", answer.screenY.toFixed(2));
+              ring.setAttribute("r", "12");
+              pointsRoot.appendChild(ring);
+            }
+          }
+        }
+
+        const placedLabels = [];
+        for (const point of plotted.filter((candidate) =>
+          labeledWords.has(candidate.word),
+        )) {
+          const width = Math.max(38, point.word.length * 8 + 8);
+          const height = 18;
+          const candidates = [
+            [point.screenX + 10, point.screenY - 22],
+            [point.screenX + 10, point.screenY + 9],
+            [point.screenX - width - 10, point.screenY - 22],
+            [point.screenX - width - 10, point.screenY + 9],
+            [point.screenX - width / 2, point.screenY - 30],
+            [point.screenX - width / 2, point.screenY + 20],
+          ];
+          let best = candidates[0];
+          let bestOverlap = Infinity;
+          for (const candidate of candidates) {
+            const box = {
+              x: Math.max(
+                8,
+                Math.min(geometry.width - 8 - width, candidate[0]),
+              ),
+              y: Math.max(18, Math.min(432 - height, candidate[1])),
+              width,
+              height,
+            };
+            const overlap = placedLabels.reduce((score, other) => {
+              const widthOverlap = Math.max(
+                0,
+                Math.min(box.x + box.width, other.x + other.width) -
+                  Math.max(box.x, other.x),
+              );
+              const heightOverlap = Math.max(
+                0,
+                Math.min(box.y + box.height, other.y + other.height) -
+                  Math.max(box.y, other.y),
+              );
+              return score + widthOverlap * heightOverlap;
+            }, 0);
+            if (overlap < bestOverlap) {
+              best = [box.x, box.y];
+              bestOverlap = overlap;
+            }
+            if (overlap === 0) break;
+          }
+          const labelBox = { x: best[0], y: best[1], width, height };
+          placedLabels.push(labelBox);
+          const link = document.createElementNS(svgNamespace, "line");
+          link.setAttribute("class", "wv-label-link");
+          link.setAttribute("x1", point.screenX.toFixed(2));
+          link.setAttribute("y1", point.screenY.toFixed(2));
+          link.setAttribute("x2", (labelBox.x + width / 2).toFixed(2));
+          link.setAttribute("y2", (labelBox.y + height / 2).toFixed(2));
+          pointsRoot.appendChild(link);
+          const label = document.createElementNS(svgNamespace, "text");
+          label.setAttribute("class", "wv-label");
+          label.setAttribute("x", (labelBox.x + 4).toFixed(2));
+          label.setAttribute("y", (labelBox.y + 13).toFixed(2));
+          label.textContent = point.word;
+          pointsRoot.appendChild(label);
+        }
+      }
+
+      function rankedRows(items) {
+        return items
+          .map(([word, similarity], index) => {
+            const scoreWidth = Math.max(
+              4,
+              Math.min(100, Math.round(Math.max(0, similarity) * 100)),
+            );
+            return `<li class="wv-ranked-row"><span class="wv-rank">${index + 1}</span><strong>${word}</strong><span class="wv-score-track" aria-hidden="true"><i class="wv-score-fill" style="width:${scoreWidth}%"></i></span><small>${similarity.toFixed(2)}</small></li>`;
+          })
+          .join("");
+      }
+
+      function renderNeighbors() {
+        const word = root.querySelector("#wv-anchor").value;
+        const neighbors = nearestWords(word, 10);
+        root.querySelector("#wv-neighbor-title").textContent =
+          `أقرب 10 كلمات إلى «${word}»:`;
+        root.querySelector("#wv-neighbor-list").innerHTML =
+          rankedRows(neighbors);
+      }
+
+      function renderAnalogy() {
+        const { candidates } = analogyResult();
+        const [answer, score] = candidates[0];
+        const stageText = [
+          ["جاهز", "اتبع المتجه من «الرجل» إلى «الملك»، ثم انسخه عند «المرأة»"],
+          ["1 / 3", "ارسم المتجه: الملك − الرجل"],
+          ["2 / 3", "انسخ المتجه نفسه ابتداءً من المرأة"],
+          ["3 / 3", "قارن رأس السهم بالكلمات القريبة"],
+        ][analogyStage];
+        root.querySelector("#wv-analogy-step").textContent = stageText[0];
+        root.querySelector("#wv-analogy-instruction").textContent =
+          stageText[1];
+        root.querySelector("#wv-analogy-answer").textContent =
+          analogyStage >= 3 ? answer : "؟";
+        root.querySelector("#wv-analogy-score").textContent =
+          analogyStage >= 3 ? `cosine ${score.toFixed(2)}` : "بانتظار النتيجة";
+        root.querySelector("#wv-analogy-candidate-row").hidden =
+          analogyStage < 3;
+        root.querySelector("#wv-analogy-candidates").innerHTML =
+          rankedRows(candidates);
+      }
+
+      function clearAnalogyTimers() {
+        for (const timer of analogyTimers) clearTimeout(timer);
+        analogyTimers = [];
+      }
+
+      function setAnalogyStage(stage) {
+        analogyStage = stage;
+        renderPlot();
+        renderAnalogy();
+      }
+
+      function playAnalogy() {
+        clearAnalogyTimers();
+        analogyMode = true;
+        analogyStage = 0;
+        root.querySelector("#wv-anchor").value = "الملكة";
+        renderNeighbors();
+        renderPlot();
+        renderAnalogy();
+        const reducedMotion =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reducedMotion) {
+          setAnalogyStage(3);
+          return;
+        }
+        setAnalogyStage(1);
+        analogyTimers.push(setTimeout(() => setAnalogyStage(2), 900));
+        analogyTimers.push(setTimeout(() => setAnalogyStage(3), 1900));
+      }
+
+      function renderTrainingText() {
+        const sampleSize = 7;
+        const list = root.querySelector("#wv-training-text");
+        list.innerHTML = "";
+        for (let i = 0; i < sampleSize; i++) {
+          const sentence = corpus[(corpusSampleOffset + i) % corpus.length];
+          const item = document.createElement("li");
+          item.textContent = sentence.join(" ");
+          list.appendChild(item);
+        }
+      }
+
+      const guideContent = [
+        {
+          title: "من النص إلى أمثلة التدريب",
+          copy: "اختَر كلمة مركزية. الكلمات داخل النافذة تصبح أزواجاً حقيقية؛ كلمات الضجيج تصبح أزواجاً سالبة.",
+          action: "▶ كوّن الأزواج",
+        },
+        {
+          title: "كل خطأ يحرّك المتجهات",
+          copy: "الزوج الحقيقي يجذب متجهي الكلمتين، والعينة السالبة تدفعهما بعيداً. كرر ذلك آلاف المرات وشاهد الخريطة تتحرك.",
+          action: "▶ درّب 10,000 خطوة",
+        },
+        {
+          title: "من 24 بُعداً إلى خريطة نفهمها",
+          copy: "PCA يحافظ على الاتجاهات الخطية. t-SNE يوضح الأحياء المحلية، لكنه يشوّه الاتجاه والمسافة العالمية.",
+          action: "جرّب t-SNE",
+        },
+        {
+          title: "انقل علاقة تعلّمها النموذج",
+          copy: "خذ اتجاه الرجل نحو الملك، وابدأ الاتجاه نفسه من المرأة. أقرب كلمة للمتجه الناتج هي الاختبار.",
+          action: "▶ شغّل العلاقة",
+        },
+      ];
+
+      function renderMapControls() {
+        const pcaButton = root.querySelector("#wv-map-pca");
+        const tsneButton = root.querySelector("#wv-map-tsne");
+        const pcaActive = mapMode === "pca";
+        pcaButton.classList.toggle("btn-primary", pcaActive);
+        tsneButton.classList.toggle("btn-primary", !pcaActive);
+        pcaButton.setAttribute("aria-pressed", pcaActive ? "true" : "false");
+        tsneButton.setAttribute("aria-pressed", pcaActive ? "false" : "true");
+        root.querySelector("#wv-map-note").textContent = pcaActive
+          ? "PCA ضغط خطي: يحافظ على اتجاهات المتجهات، لذلك يصلح للـ analogy."
+          : "t-SNE يبرز الجيران المحليين فقط: شكل العناقيد مفيد، لكن اتجاه الملك − الرجل لم يعد قابلاً للتفسير.";
+      }
+
+      function renderLesson() {
+        for (const element of root.querySelectorAll("[data-lesson-step]")) {
+          element.hidden = Number(element.dataset.lessonStep) !== lessonStep;
+        }
+        for (const element of root.querySelectorAll("[data-lesson-visible]")) {
+          element.hidden = !element.dataset.lessonVisible
+            .split(",")
+            .map(Number)
+            .includes(lessonStep);
+        }
+        root.querySelector("#wv-pairs").hidden =
+          lessonStep !== 0 || !pairsRevealed;
+        const content = guideContent[lessonStep];
+        root.querySelector("#wv-guide-count").textContent =
+          `${lessonStep + 1} / ${guideContent.length}`;
+        root.querySelector("#wv-guide-title").textContent = content.title;
+        root.querySelector("#wv-guide-copy").textContent = content.copy;
+        const action = root.querySelector("#wv-guide-action");
+        action.textContent =
+          lessonStep === 2 && mapMode === "tsne"
+            ? "ارجع إلى PCA"
+            : content.action;
+        root.querySelector("#wv-guide-back").disabled = lessonStep === 0;
+        root.querySelector("#wv-guide-next").textContent =
+          lessonStep === guideContent.length - 1 ? "ابدأ من الأول" : "التالي";
+        root.querySelectorAll(".wv-guide-dot").forEach((dot, index) => {
+          dot.classList.toggle("is-active", index === lessonStep);
+        });
+        renderMapControls();
+      }
+
+      function setLessonStep(step) {
+        clearAnalogyTimers();
+        lessonStep = (step + guideContent.length) % guideContent.length;
+        analogyStage = 0;
+        analogyMode = lessonStep === 3;
+        if (lessonStep === 0) {
+          pairsRevealed = false;
+        } else if (lessonStep === 1) {
+          mapMode = "pca";
+          root.querySelector("#wv-anchor").value = "الحليب";
+        } else if (lessonStep === 2) {
+          root.querySelector("#wv-anchor").value = "الحليب";
+        } else {
+          mapMode = "pca";
+          root.querySelector("#wv-anchor").value = "الملكة";
+        }
+        render();
+        renderLesson();
+      }
+
+      function setMapMode(mode) {
+        mapMode = mode;
+        analogyMode = false;
+        renderPlot();
+        renderMapControls();
+        renderLesson();
+      }
+
+      function runGuideAction() {
+        if (lessonStep === 0) {
+          const alreadyVisible = pairsRevealed;
+          pairsRevealed = true;
+          if (alreadyVisible) centerPosition = centerPosition === 2 ? 1 : 2;
+          renderSentence();
+          renderLesson();
+        } else if (lessonStep === 1) {
+          trainAnimated(10000);
+        } else if (lessonStep === 2) {
+          setMapMode(mapMode === "pca" ? "tsne" : "pca");
+        } else {
+          playAnalogy();
+        }
       }
 
       function render() {
-        renderSentence()
-        renderPipeline()
-        renderPlot()
-        requestHeight()
+        root.querySelector("#wv-steps").textContent =
+          trainedPairs.toLocaleString("en-US");
+        root.querySelector("#wv-loss").textContent =
+          movingLoss == null ? "—" : movingLoss.toFixed(3);
+        renderSentence();
+        renderPlot();
+        renderNeighbors();
+        renderAnalogy();
       }
-      function requestHeight() {
-        requestAnimationFrame(() =>
-          parent.postMessage(
-            { type: 'demo-height', height: document.documentElement.scrollHeight },
-            '*'
-          )
-        )
-      }
-      new ResizeObserver(requestHeight).observe(document.body)
 
-      sentenceSelect.onchange = (e) => {
-        sentenceIndex = Number(e.target.value)
-        centerIndex = Math.min(2, corpus[sentenceIndex].length - 1)
-        render()
+      root.querySelector("#wv-sentences").textContent =
+        corpus.length.toLocaleString("en-US");
+      root.querySelector("#wv-tokens").textContent =
+        rawTokenCount.toLocaleString("en-US");
+      const anchorSelect = root.querySelector("#wv-anchor");
+      for (const word of displayWords) {
+        const option = document.createElement("option");
+        option.value = word;
+        option.textContent = word;
+        anchorSelect.appendChild(option);
       }
-      document.getElementById('windowSize').oninput = (e) => {
-        windowSize = Number(e.target.value)
-        document.getElementById('windowValue').textContent = windowSize
-        render()
+      anchorSelect.value = "الملكة";
+      anchorSelect.addEventListener("change", () => {
+        clearAnalogyTimers();
+        analogyMode = false;
+        analogyStage = 0;
+        renderPlot();
+        renderNeighbors();
+        renderAnalogy();
+      });
+      root.querySelector("#wv-window").addEventListener("input", (event) => {
+        contextWindow = Number(event.target.value);
+        root.querySelector("#wv-window-value").textContent = contextWindow;
+        buildPairs();
+        renderSentence();
+      });
+      root
+        .querySelector("#wv-train")
+        .addEventListener("click", () => trainAnimated(10000));
+      root
+        .querySelector("#wv-guide-action")
+        .addEventListener("click", runGuideAction);
+      root.querySelector("#wv-guide-back").addEventListener("click", () => {
+        if (lessonStep > 0) setLessonStep(lessonStep - 1);
+      });
+      root.querySelector("#wv-guide-next").addEventListener("click", () => {
+        setLessonStep(
+          lessonStep === guideContent.length - 1 ? 0 : lessonStep + 1,
+        );
+      });
+      root
+        .querySelector("#wv-map-pca")
+        .addEventListener("click", () => setMapMode("pca"));
+      root
+        .querySelector("#wv-map-tsne")
+        .addEventListener("click", () => setMapMode("tsne"));
+      root.querySelector("#wv-more-text").addEventListener("click", () => {
+        corpusSampleOffset = (corpusSampleOffset + 7) % corpus.length;
+        renderTrainingText();
+      });
+      root.querySelector("#wv-reset").addEventListener("click", () => {
+        if (busy) return;
+        clearAnalogyTimers();
+        initialize();
+        trainSync(20000);
+        analogyMode = false;
+        analogyStage = 0;
+        root.querySelector("#wv-progress").textContent = "جاهز";
+        render();
+        renderLesson();
+      });
+
+      initialize();
+      trainSync(20000);
+      renderTrainingText();
+      setLessonStep(0);
+      if (typeof ResizeObserver === "function") {
+        const plotResizeObserver = new ResizeObserver(() => {
+          const width = root.getBoundingClientRect().width;
+          if (!width) return;
+          const nextCompact = width <= 520;
+          if (nextCompact !== lastRenderedCompact) renderPlot();
+        });
+        plotResizeObserver.observe(root);
       }
-      document.getElementById('stepButton').onclick = () => {
-        const c = corpus[sentenceIndex][centerIndex],
-          ctx = contextFor(corpus[sentenceIndex], centerIndex)
-        trainOne([c, ctx[Math.floor(random() * ctx.length)]])
-        render()
+    })();
+  </script>
+  <script>
+    (() => {
+      if (window.parent === window) return;
+      const reportHeight = () =>
+        requestAnimationFrame(() =>
+          window.parent.postMessage(
+            { type: "demo-height", height: document.documentElement.scrollHeight },
+            "*",
+          ),
+        );
+      if (typeof ResizeObserver === "function") {
+        new ResizeObserver(reportHeight).observe(document.body);
       }
-      document.getElementById('trainButton').onclick = () => trainMany(300)
-      document.getElementById('resetButton').onclick = reset
-      reset()
-    </script>
-  </body>
+      window.addEventListener("load", reportHeight, { once: true });
+      document.addEventListener("click", reportHeight);
+      document.addEventListener("input", reportHeight);
+      reportHeight();
+    })();
+  </script>
+</div>
+
+<script id="codex-visualization-floating-ui-core" src="https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js"></script>
+<script id="codex-visualization-floating-ui-dom" src="https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js"></script>
+<script id="codex-visualization-lucide" async src="https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js"></script>
+<script id="codex-visualization-tooltip">/* oxlint-disable typescript/no-unsafe-argument, typescript/no-unsafe-call, typescript/no-unsafe-return */
+// Runs inside the visualization sandbox, not the host webview.
+(() => {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set(["top", "right", "bottom", "left"]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =>
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest("[data-tooltip]")
+      : null;
+  const containsTarget = (trigger, target) =>
+    target?.nodeType != null && trigger.contains(target);
+  const getContent = (trigger) =>
+    trigger.getAttribute("data-tooltip")?.trim() ?? "";
+  const getPlacement = (trigger) => {
+    const placement = trigger.getAttribute("data-tooltip-placement");
+    return tooltipPlacements.has(placement) ? placement : "top";
+  };
+  const getTooltip = () => {
+    if (tooltip == null) {
+      tooltip = document.createElement("div");
+      tooltip.id = tooltipId;
+      tooltip.className = "tooltip";
+      tooltip.setAttribute("role", "tooltip");
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) => {
+    const ids = new Set(
+      (trigger.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute("aria-describedby");
+    } else {
+      trigger.setAttribute("aria-describedby", [...ids].join(" "));
+    }
+  };
+  const clearOpenTimeout = () => {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) => {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) => {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              "--tooltip-available-width",
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              "--tooltip-available-height",
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: "fixed",
+    })
+      .then(({ x, y }) => {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = "visible";
+      })
+      .catch(() => {
+        if (activeTrigger === trigger && request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) => {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = "hidden";
+    floating.style.transform = "translate(0, 0)";
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () => {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) => {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() < skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() => {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) => {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) => {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(":focus-visible")) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) => {
+    if (event.key === "Escape") {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) => {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () => {
+    closeTooltip(false);
+    document.removeEventListener("pointerover", handlePointerOpen);
+    document.removeEventListener("pointerout", handleLeave);
+    document.removeEventListener("focusin", handleFocusIn);
+    document.removeEventListener("focusout", handleLeave);
+    document.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("contextmenu", handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener("pointerover", handlePointerOpen);
+  document.addEventListener("pointerout", handleLeave);
+  document.addEventListener("focusin", handleFocusIn);
+  document.addEventListener("focusout", handleLeave);
+  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("contextmenu", handleContextMenu);
+  window.addEventListener("pagehide", destroy, { once: true });
+})();
+</script>
+<script id="codex-visualization-lucide-initialization">(() => {
+  const initialize = () => {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById("codex-visualization-lucide")
+    ?.addEventListener("load", initialize, { once: true });
+})();
+</script>
+</body>
 </html>
