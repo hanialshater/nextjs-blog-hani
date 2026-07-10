@@ -996,9 +996,10 @@ svg {
     </div>
 
     <details class="card ng-corpus-preview">
-      <summary>اعرض نص التدريب</summary>
+      <summary>اعرض عيّنة حقيقية من نص التدريب</summary>
+      <p class="text-small text-muted">النص فيه 26 صيغة مختلفة. بعض الجمل تتكرر أكثر من غيرها، وهذا التكرار هو ما يتحول إلى أعداد واحتمالات في الجدول.</p>
       <ol class="text-small" id="ng-training-text"></ol>
-      <button class="btn" id="ng-more-text" type="button">جمل أخرى</button>
+      <button class="btn" id="ng-more-text" type="button">اعرض 12 جملة أخرى</button>
     </details>
 
     <div class="ng-section-head">
@@ -1092,10 +1093,9 @@ svg {
       }
 
       function buildCorpus() {
-        const sentences = [];
+        const patterns = [];
         const add = (sentence, count) => {
-          const tokens = tokenize(sentence);
-          for (let index = 0; index < count; index++) sentences.push(tokens);
+          patterns.push({ tokens: tokenize(sentence), count, score: 0 });
         };
         add("شرب الولد الحليب في المطبخ", 50);
         add("شرب الولد الماء في المطبخ", 30);
@@ -1123,6 +1123,17 @@ svg {
         add("الكلمة تأخذ معناها من السياق", 15);
         add("النموذج يتوقع الكلمة التالية", 15);
         add("اللغة شبكة من العلاقات", 15);
+
+        // Smooth weighted round-robin keeps the real repetitions but spreads
+        // them through the corpus instead of displaying one 50-line block.
+        const sentences = [];
+        const total = patterns.reduce((sum, pattern) => sum + pattern.count, 0);
+        for (let position = 0; position < total; position++) {
+          for (const pattern of patterns) pattern.score += pattern.count;
+          const selected = patterns.reduce((best, pattern) => pattern.score > best.score ? pattern : best);
+          selected.score -= total;
+          sentences.push(selected.tokens);
+        }
         return sentences;
       }
 
