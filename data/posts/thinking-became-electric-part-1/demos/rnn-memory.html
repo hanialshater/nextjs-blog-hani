@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RNN صغيرة تتعلم الحروف</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f2fa;
+        --panel: rgba(255, 255, 255, 0.9);
+        --ink: #171525;
+        --muted: #6f6b7e;
+        --line: #d9d5e5;
+        --violet: #6d28d9;
+        --violet2: #8b5cf6;
+        --cyan: #0891b2;
+        --rose: #e11d48;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 85% 0, rgba(139, 92, 246, 0.14), transparent 30rem),
+          radial-gradient(circle at 5% 60%, rgba(6, 182, 212, 0.1), transparent 24rem), var(--bg);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      .shell {
+        max-width: 1040px;
+        margin: auto;
+        padding: 22px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--violet);
+      }
+      h1 {
+        margin: 7px 0 8px;
+        font-size: clamp(24px, 4vw, 39px);
+        line-height: 1.2;
+      }
+      .lede {
+        margin: 0;
+        max-width: 780px;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+      .flow {
+        direction: ltr;
+        display: grid;
+        grid-template-columns: 1fr 42px 1.2fr 42px 1fr;
+        margin: 20px 0;
+        align-items: center;
+      }
+      .box {
+        direction: rtl;
+        min-height: 104px;
+        padding: 15px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--panel);
+      }
+      .box small {
+        color: var(--muted);
+      }
+      .box b {
+        display: block;
+        margin-top: 7px;
+        font-size: 17px;
+      }
+      .arrow {
+        text-align: center;
+        color: var(--violet);
+        font-size: 28px;
+      }
+      .state-mini {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 3px;
+        margin-top: 10px;
+      }
+      .state-mini i {
+        height: 8px;
+        border-radius: 3px;
+        background: var(--violet2);
+        opacity: 0.25;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--panel);
+        overflow: hidden;
+        box-shadow: 0 18px 55px rgba(45, 31, 80, 0.09);
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 15px 17px;
+        border-bottom: 1px solid var(--line);
+      }
+      .buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .button {
+        cursor: pointer;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 9px 14px;
+        background: #fff;
+        color: var(--ink);
+        font-weight: 760;
+      }
+      .button:hover {
+        border-color: var(--violet);
+      }
+      .button.primary {
+        background: var(--violet);
+        color: #fff;
+        border-color: var(--violet);
+      }
+      .button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .stats {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .stat b {
+        display: block;
+        direction: ltr;
+        font:
+          800 18px ui-monospace,
+          monospace;
+      }
+      .stat span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .progress {
+        height: 3px;
+        background: #ece8f4;
+      }
+      .progress i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, var(--violet), var(--cyan));
+        transition: width 0.15s;
+      }
+      .workbench {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.7fr);
+        gap: 16px;
+        padding: 17px;
+      }
+      .output-panel {
+        min-width: 0;
+      }
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 9px;
+        font-weight: 850;
+      }
+      .badge {
+        font-size: 11px;
+        color: var(--violet);
+        background: rgba(109, 40, 217, 0.1);
+        border-radius: 99px;
+        padding: 4px 8px;
+      }
+      #sample {
+        min-height: 230px;
+        margin: 0;
+        border: 1px solid #242035;
+        border-radius: 15px;
+        background: #171525;
+        color: #f3efff;
+        padding: 17px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font:
+          500 16px/2 ui-monospace,
+          'SFMono-Regular',
+          Consolas,
+          monospace;
+        direction: rtl;
+        text-align: right;
+      }
+      .temp {
+        display: grid;
+        grid-template-columns: auto 1fr 38px;
+        gap: 9px;
+        align-items: center;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .temp input {
+        width: 100%;
+        accent-color: var(--violet);
+      }
+      .temp b {
+        direction: ltr;
+        color: var(--ink);
+      }
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .subcard {
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        padding: 13px;
+        background: rgba(248, 247, 252, 0.72);
+      }
+      .subcard h3 {
+        font-size: 14px;
+        margin: 0 0 10px;
+      }
+      .hidden-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+      }
+      .hidden-grid i {
+        aspect-ratio: 1;
+        border-radius: 7px;
+        background: var(--violet);
+        transition:
+          background 0.2s,
+          opacity 0.2s;
+      }
+      .legend {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 10px;
+        margin-top: 7px;
+      }
+      #lossPlot {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .axis {
+        stroke: var(--line);
+        stroke-width: 1;
+      }
+      .loss-line {
+        fill: none;
+        stroke: var(--violet);
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .explain {
+        padding: 0 17px 18px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.75;
+      }
+      .explain code {
+        direction: ltr;
+        display: inline-block;
+        color: var(--ink);
+      }
+      @media (max-width: 760px) {
+        .shell {
+          padding: 14px;
+        }
+        .flow {
+          grid-template-columns: 1fr;
+        }
+        .arrow {
+          transform: rotate(90deg);
+        }
+        .workbench {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121018;
+          --panel: rgba(27, 24, 36, 0.94);
+          --ink: #f2eff8;
+          --muted: #aaa4b8;
+          --line: #3e394b;
+          --violet: #a78bfa;
+          --violet2: #8b5cf6;
+        }
+        .button {
+          background: #25212f;
+        }
+        .subcard {
+          background: #211e2a;
+        }
+        .progress {
+          background: #312d3b;
+        }
+        .temp b {
+          color: var(--ink);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="eyebrow">Character RNN · BPTT</div>
+      <h1>ذاكرة صغيرة، حرف وراء حرف</h1>
+      <p class="lede">
+        هاي مش عيّنة محفوظة. الشبكة تحت بتبدأ بأوزان عشوائية، تقرأ corpus قصيرة، وتتعلم بتوقع الحرف
+        التالي. كل التدريب بصير هون في المتصفح.
+      </p>
+
+      <section class="flow" aria-label="رسم تدفق الشبكة المتكررة">
+        <div class="box">
+          <small>الحرف الحالي</small><b id="inputChar">ا</b>
+          <div class="state-mini"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box">
+          <small>الحالة المخفية</small><b>hₜ = tanh(Wₕₕhₜ₋₁ + Wₓₕxₜ)</b>
+          <div class="state-mini" id="miniState"></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box">
+          <small>التوقع</small><b id="nextGuess">؟</b>
+          <div class="state-mini"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="buttons">
+            <button class="button primary train" data-steps="300">درّب 300 خطوة</button>
+            <button class="button train" data-steps="1000">درّب 1,000 خطوة</button>
+            <button id="generate" class="button">ولّد نصاً</button>
+            <button id="reset" class="button">ابدأ من الصفر</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><b id="iteration">0</b><span>iteration</span></div>
+            <div class="stat"><b id="loss">—</b><span>smooth loss</span></div>
+            <div class="stat"><b id="vocabSize">—</b><span>حرفاً مختلفاً</span></div>
+          </div>
+        </div>
+        <div class="progress"><i id="progress"></i></div>
+
+        <div class="workbench">
+          <div class="output-panel">
+            <div class="panel-title">
+              <span>النص المولّد</span><span class="badge" id="qualityLabel">أوزان عشوائية</span>
+            </div>
+            <pre id="sample"></pre>
+            <label class="temp"
+              ><span>temperature</span
+              ><input id="temperature" type="range" min="35" max="150" value="80" /><b
+                id="temperatureValue"
+                >0.80</b
+              ></label
+            >
+          </div>
+          <aside class="side">
+            <div class="subcard">
+              <h3>20 رقماً في الـ hidden state</h3>
+              <div id="hiddenGrid" class="hidden-grid"></div>
+              <div class="legend"><span>−1</span><span>0</span><span>+1</span></div>
+            </div>
+            <div class="subcard">
+              <h3>الـ loss أثناء التدريب</h3>
+              <svg id="lossPlot" viewBox="0 0 280 130" aria-label="منحنى خسارة التدريب">
+                <line class="axis" x1="12" y1="112" x2="270" y2="112"></line>
+                <path id="lossLine" class="loss-line" d=""></path>
+              </svg>
+            </div>
+          </aside>
+        </div>
+        <div class="explain">
+          النموذج vanilla RNN متعمداً، مش LSTM، وفيه 20 hidden units فقط. التدريب يستخدم
+          cross-entropy وAdagrad وtruncated backpropagation through time بطول 36 حرفاً. الـ corpus
+          الصغيرة بتخليه يحفظ الإيقاع بسرعة؛ هذا عرض للآلية، مش benchmark لنماذج اللغة.
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const source = `اللغة شبكة من الفروق، والكلمة تتعلم مكانها من الكلمات حولها.
+النموذج يقرأ حرفا، يحمل ذاكرة صغيرة، ثم يحاول توقع الحرف التالي.
+إذا أخطأ تحركت الأوزان قليلا. وإذا كرر المحاولة ظهر إيقاع النص من غير قاموس سري.
+الولد شرب الحليب في المطبخ، والبنت شربت العصير قرب النافذة.
+المعنى لا يسكن في الرمز وحده؛ يظهر في الاستعمال، والسياق، وما يحدث بعد الكلام.
+الماضي يعلم النموذج، لكنه لا يضمن أن يشبهه الغد.
+هذه آلة صغيرة تتعلم من التكرار. هذه آلة صغيرة تنسى أيضا.`
+      const data = Array.from((source + '\n').repeat(3))
+      const chars = [...new Set(data)].sort()
+      const ix = new Map(chars.map((c, i) => [c, i]))
+      const V = chars.length,
+        H = 20,
+        T = 36,
+        lr = 0.08
+      let Wxh,
+        Whh,
+        Why,
+        bh,
+        by,
+        mem,
+        hprev,
+        pointer,
+        iteration,
+        smoothLoss,
+        lossHistory,
+        busy = false,
+        rng
+
+      const mat = (r, c, fn = () => 0) =>
+        Array.from({ length: r }, (_, i) => Array.from({ length: c }, (_, j) => fn(i, j)))
+      const vec = (n, fn = () => 0) => Array.from({ length: n }, (_, i) => fn(i))
+      function randn() {
+        let u = 0,
+          v = 0
+        while (!u) u = rng()
+        while (!v) v = rng()
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+      }
+      function mulberry32(seed) {
+        return function () {
+          let t = (seed += 0x6d2b79f5)
+          t = Math.imul(t ^ (t >>> 15), t | 1)
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+        }
+      }
+
+      function init() {
+        rng = mulberry32(9157)
+        Wxh = mat(H, V, () => randn() * 0.045)
+        Whh = mat(H, H, () => randn() * 0.045)
+        Why = mat(V, H, () => randn() * 0.045)
+        bh = vec(H)
+        by = vec(V)
+        mem = { Wxh: mat(H, V), Whh: mat(H, H), Why: mat(V, H), bh: vec(H), by: vec(V) }
+        hprev = vec(H)
+        pointer = 0
+        iteration = 0
+        smoothLoss = -Math.log(1 / V) * T
+        lossHistory = []
+        document.getElementById('vocabSize').textContent = V
+        sampleText()
+        render()
+      }
+
+      function softmax(logits, temp = 1) {
+        const m = Math.max(...logits.map((x) => x / temp))
+        const ex = logits.map((x) => Math.exp(x / temp - m))
+        const sum = ex.reduce((a, b) => a + b, 0)
+        return ex.map((x) => x / sum)
+      }
+
+      function forwardChar(charIndex, h) {
+        const next = vec(H, (i) => {
+          let z = bh[i] + Wxh[i][charIndex]
+          for (let j = 0; j < H; j++) z += Whh[i][j] * h[j]
+          return Math.tanh(z)
+        })
+        const logits = vec(V, (i) => {
+          let z = by[i]
+          for (let j = 0; j < H; j++) z += Why[i][j] * next[j]
+          return z
+        })
+        return [next, logits]
+      }
+
+      function trainStep() {
+        if (pointer + T + 1 >= data.length) {
+          pointer = 0
+          hprev = vec(H)
+        }
+        const inputs = data.slice(pointer, pointer + T).map((c) => ix.get(c))
+        const targets = data.slice(pointer + 1, pointer + T + 1).map((c) => ix.get(c))
+        const hs = [hprev.slice()],
+          ps = [],
+          logits = []
+        let loss = 0
+        for (let t = 0; t < T; t++) {
+          const [h, y] = forwardChar(inputs[t], hs[t])
+          hs.push(h)
+          logits.push(y)
+          const p = softmax(y)
+          ps.push(p)
+          loss += -Math.log(p[targets[t]] + 1e-12)
+        }
+
+        const g = { Wxh: mat(H, V), Whh: mat(H, H), Why: mat(V, H), bh: vec(H), by: vec(V) }
+        let dhnext = vec(H)
+        for (let t = T - 1; t >= 0; t--) {
+          const dy = ps[t].slice()
+          dy[targets[t]] -= 1
+          for (let i = 0; i < V; i++) {
+            g.by[i] += dy[i]
+            for (let j = 0; j < H; j++) g.Why[i][j] += dy[i] * hs[t + 1][j]
+          }
+          const dh = vec(H, (j) => dhnext[j] + Why.reduce((s, row, i) => s + row[j] * dy[i], 0))
+          const raw = dh.map((v, j) => (1 - hs[t + 1][j] * hs[t + 1][j]) * v)
+          for (let i = 0; i < H; i++) {
+            g.bh[i] += raw[i]
+            g.Wxh[i][inputs[t]] += raw[i]
+            for (let j = 0; j < H; j++) g.Whh[i][j] += raw[i] * hs[t][j]
+          }
+          dhnext = vec(H, (j) => Whh.reduce((s, row, i) => s + row[j] * raw[i], 0))
+        }
+
+        function updateMatrix(p, grad, acc) {
+          for (let i = 0; i < p.length; i++)
+            for (let j = 0; j < p[i].length; j++) {
+              const v = Math.max(-5, Math.min(5, grad[i][j]))
+              acc[i][j] += v * v
+              p[i][j] += (-lr * v) / Math.sqrt(acc[i][j] + 1e-8)
+            }
+        }
+        function updateVector(p, grad, acc) {
+          for (let i = 0; i < p.length; i++) {
+            const v = Math.max(-5, Math.min(5, grad[i]))
+            acc[i] += v * v
+            p[i] += (-lr * v) / Math.sqrt(acc[i] + 1e-8)
+          }
+        }
+        updateMatrix(Wxh, g.Wxh, mem.Wxh)
+        updateMatrix(Whh, g.Whh, mem.Whh)
+        updateMatrix(Why, g.Why, mem.Why)
+        updateVector(bh, g.bh, mem.bh)
+        updateVector(by, g.by, mem.by)
+        hprev = hs[T].slice()
+        pointer += T
+        iteration++
+        smoothLoss = smoothLoss * 0.995 + loss * 0.005
+        if (iteration % 10 === 0) lossHistory.push(smoothLoss / T)
+        if (lossHistory.length > 90) lossHistory.shift()
+      }
+
+      function drawSample(temp) {
+        let h = hprev.slice(),
+          current = ix.get('ا') ?? 0,
+          out = 'ا'
+        for (let n = 0; n < 300; n++) {
+          const result = forwardChar(current, h)
+          h = result[0]
+          const p = softmax(result[1], temp)
+          let r = rng(),
+            next = 0
+          while (next < V - 1 && r > p[next]) {
+            r -= p[next]
+            next++
+          }
+          out += chars[next]
+          current = next
+        }
+        return { text: out, state: h, current }
+      }
+
+      function sampleText() {
+        const temp = Number(document.getElementById('temperature').value) / 100
+        const result = drawSample(temp)
+        document.getElementById('sample').textContent = result.text
+        renderState(result.state)
+        document.getElementById('inputChar').textContent = chars[result.current] || '؟'
+        const [, y] = forwardChar(result.current, result.state)
+        document.getElementById('nextGuess').textContent = chars[y.indexOf(Math.max(...y))] || '؟'
+      }
+
+      function renderState(state) {
+        const root = document.getElementById('hiddenGrid')
+        root.innerHTML = ''
+        const mini = document.getElementById('miniState')
+        mini.innerHTML = ''
+        state.forEach((value, i) => {
+          const cell = document.createElement('i')
+          const pos = (value + 1) / 2
+          cell.style.background =
+            value >= 0
+              ? `rgba(109,40,217,${0.18 + 0.82 * pos})`
+              : `rgba(8,145,178,${0.18 + 0.82 * (1 - pos)})`
+          root.appendChild(cell)
+          if (i < 8) {
+            const m = document.createElement('i')
+            m.style.opacity = 0.18 + 0.82 * Math.abs(value)
+            m.style.background = value >= 0 ? 'var(--violet2)' : 'var(--cyan)'
+            mini.appendChild(m)
+          }
+        })
+      }
+
+      function renderPlot() {
+        if (lossHistory.length < 2) {
+          document.getElementById('lossLine').setAttribute('d', '')
+          return
+        }
+        const min = Math.min(...lossHistory),
+          max = Math.max(...lossHistory),
+          span = Math.max(0.001, max - min)
+        const pts = lossHistory.map((v, i) => [
+          14 + (i / (lossHistory.length - 1)) * 254,
+          108 - ((v - min) / span) * 88,
+        ])
+        document
+          .getElementById('lossLine')
+          .setAttribute(
+            'd',
+            pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')
+          )
+      }
+
+      function render() {
+        document.getElementById('iteration').textContent = iteration.toLocaleString('en-US')
+        document.getElementById('loss').textContent = (smoothLoss / T).toFixed(3)
+        document.getElementById('qualityLabel').textContent =
+          iteration === 0
+            ? 'أوزان عشوائية'
+            : iteration < 300
+              ? 'بدأ يلتقط الإيقاع'
+              : iteration < 1000
+                ? 'نص محلي يتكوّن'
+                : 'حفظ corpus صغيرة'
+        renderPlot()
+        requestHeight()
+      }
+
+      async function train(count) {
+        if (busy) return
+        busy = true
+        document.querySelectorAll('.train').forEach((b) => (b.disabled = true))
+        const progress = document.getElementById('progress')
+        for (let done = 0; done < count; ) {
+          const chunk = Math.min(12, count - done)
+          for (let i = 0; i < chunk; i++) trainStep()
+          done += chunk
+          progress.style.width = (done / count) * 100 + '%'
+          if (done % 60 === 0 || done === count) {
+            render()
+            await new Promise(requestAnimationFrame)
+          }
+        }
+        sampleText()
+        render()
+        progress.style.width = '0'
+        busy = false
+        document.querySelectorAll('.train').forEach((b) => (b.disabled = false))
+      }
+
+      document
+        .querySelectorAll('.train')
+        .forEach((b) => (b.onclick = () => train(Number(b.dataset.steps))))
+      document.getElementById('generate').onclick = () => {
+        sampleText()
+        render()
+      }
+      document.getElementById('reset').onclick = init
+      document.getElementById('temperature').oninput = (e) => {
+        document.getElementById('temperatureValue').textContent = (
+          Number(e.target.value) / 100
+        ).toFixed(2)
+        sampleText()
+        render()
+      }
+      function requestHeight() {
+        requestAnimationFrame(() =>
+          parent.postMessage(
+            { type: 'demo-height', height: document.documentElement.scrollHeight },
+            '*'
+          )
+        )
+      }
+      new ResizeObserver(requestHeight).observe(document.body)
+      init()
+    </script>
+  </body>
+</html>

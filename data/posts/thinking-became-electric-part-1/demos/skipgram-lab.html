@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>مختبر skip-gram</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f4ee;
+        --panel: rgba(255, 255, 255, 0.88);
+        --ink: #18201f;
+        --muted: #69716e;
+        --line: #d8d4ca;
+        --accent: #0f766e;
+        --accent-soft: #ccfbf1;
+        --positive: #15803d;
+        --negative: #be123c;
+        --amber: #b45309;
+        --shadow: 0 18px 55px rgba(60, 50, 30, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 10% 5%, rgba(20, 184, 166, 0.12), transparent 28rem),
+          radial-gradient(circle at 95% 35%, rgba(245, 158, 11, 0.09), transparent 24rem), var(--bg);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+      .shell {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 22px;
+      }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 7px 0 8px;
+        font-size: clamp(24px, 4vw, 40px);
+        line-height: 1.15;
+      }
+      .lede {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .card {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .card-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .card-title {
+        font-weight: 850;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .controls {
+        display: flex;
+        gap: 9px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      select,
+      .button {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 13px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+      }
+      .button {
+        cursor: pointer;
+        font-weight: 750;
+        transition:
+          transform 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .button:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
+      }
+      .button.primary {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+      .range-wrap {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      input[type='range'] {
+        accent-color: var(--accent);
+        width: 92px;
+      }
+
+      .sentence {
+        min-height: 76px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        padding: 18px;
+      }
+      .token {
+        border: 1px solid transparent;
+        background: #ece9e1;
+        color: var(--ink);
+        border-radius: 11px;
+        padding: 8px 11px;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+      .token:hover {
+        border-color: var(--accent);
+      }
+      .token.context {
+        background: #fef3c7;
+        color: #78350f;
+      }
+      .token.center {
+        background: var(--accent);
+        color: white;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 18px rgba(15, 118, 110, 0.24);
+      }
+
+      .pipeline {
+        direction: ltr;
+        display: grid;
+        grid-template-columns: 1fr 42px 1fr 42px 1.35fr;
+        gap: 8px;
+        align-items: stretch;
+        padding: 0 18px 18px;
+      }
+      .stage {
+        direction: rtl;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.58);
+        min-height: 150px;
+      }
+      .stage-label {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .stage strong {
+        display: block;
+        margin: 7px 0;
+        font-size: 18px;
+      }
+      .arrow {
+        align-self: center;
+        color: var(--accent);
+        font-size: 28px;
+        text-align: center;
+      }
+      .onehot {
+        display: flex;
+        direction: ltr;
+        gap: 3px;
+        margin-top: 15px;
+      }
+      .onehot i {
+        width: 18px;
+        height: 34px;
+        border-radius: 5px;
+        background: #e5e7eb;
+        border: 1px solid #d1d5db;
+      }
+      .onehot i.on {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .vector {
+        direction: ltr;
+        display: flex;
+        gap: 5px;
+        margin: 14px 0 8px;
+      }
+      .vector span {
+        flex: 1;
+        min-width: 58px;
+        border-radius: 9px;
+        padding: 10px 6px;
+        background: var(--accent-soft);
+        color: #115e59;
+        text-align: center;
+        font:
+          750 13px ui-monospace,
+          monospace;
+      }
+      .pair {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border-radius: 9px;
+        padding: 6px 8px;
+        margin-top: 5px;
+        font-size: 12px;
+      }
+      .pair.pos {
+        background: rgba(34, 197, 94, 0.12);
+        color: var(--positive);
+      }
+      .pair.neg {
+        background: rgba(244, 63, 94, 0.1);
+        color: var(--negative);
+      }
+      .score {
+        direction: ltr;
+        font:
+          700 11px ui-monospace,
+          monospace;
+      }
+
+      .lower {
+        display: grid;
+        grid-template-columns: minmax(0, 1.75fr) minmax(210px, 0.75fr);
+        gap: 14px;
+        padding: 0 18px 18px;
+      }
+      .plot-wrap {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.58);
+        overflow: hidden;
+      }
+      .plot-title {
+        position: absolute;
+        z-index: 2;
+        top: 12px;
+        right: 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 330px;
+      }
+      .axis {
+        stroke: #d8d4ca;
+        stroke-width: 1;
+        stroke-dasharray: 4 6;
+      }
+      .word-dot {
+        transition:
+          cx 0.25s ease,
+          cy 0.25s ease;
+      }
+      .word-label {
+        font-size: 11px;
+        fill: var(--ink);
+        paint-order: stroke;
+        stroke: var(--panel);
+        stroke-width: 4px;
+        stroke-linejoin: round;
+      }
+      .side {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.58);
+        padding: 14px;
+      }
+      .metric-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .metric {
+        border-radius: 11px;
+        background: #eeece6;
+        padding: 9px;
+      }
+      .metric b {
+        display: block;
+        direction: ltr;
+        font:
+          800 18px ui-monospace,
+          monospace;
+      }
+      .metric span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .neighbors {
+        margin-top: 14px;
+      }
+      .neighbor {
+        display: grid;
+        grid-template-columns: 1fr 70px;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+      }
+      .bar {
+        height: 7px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+        direction: ltr;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+        border-radius: inherit;
+      }
+      .foot {
+        padding: 0 18px 20px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      @media (max-width: 760px) {
+        .shell {
+          padding: 14px;
+        }
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+        .arrow {
+          transform: rotate(90deg);
+        }
+        .lower {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111715;
+          --panel: rgba(23, 31, 29, 0.94);
+          --ink: #edf4f1;
+          --muted: #a6b2ae;
+          --line: #35413d;
+          --accent: #2dd4bf;
+          --accent-soft: #123f39;
+          --shadow: none;
+        }
+        select,
+        .button {
+          background: #1c2724;
+        }
+        .token {
+          background: #28322f;
+        }
+        .token.context {
+          background: #4b3512;
+          color: #fde68a;
+        }
+        .vector span {
+          color: #99f6e4;
+        }
+        .metric {
+          background: #25302d;
+        }
+        .axis {
+          stroke: #35413d;
+        }
+        .bar {
+          background: #37413f;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="eyebrow">Word2vec · 2013</div>
+      <h1>الكلمة تتعلّم من الجيران</h1>
+      <p class="lede">
+        اختَر كلمة في الجملة، غيّر نافذة السياق، ثم درّب النموذج. تحت الغطاء في زوج موجب، عينات
+        سالبة، وضرب نقطي يحرّك vectorين حقيقيين.
+      </p>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">1 · اصنع أمثلة skip-gram</div>
+            <div class="hint">الكلمة الخضراء مركز؛ الكلمات الذهبية سياق موجب.</div>
+          </div>
+          <div class="controls">
+            <select id="sentenceSelect" aria-label="اختر جملة"></select>
+            <label class="range-wrap"
+              >النافذة <input id="windowSize" type="range" min="1" max="3" value="2" /><b
+                id="windowValue"
+                >2</b
+              ></label
+            >
+          </div>
+        </div>
+        <div id="sentence" class="sentence"></div>
+        <div class="pipeline">
+          <div class="stage">
+            <div class="stage-label">input</div>
+            <strong id="centerName">الحليب</strong>
+            <div class="hint">one-hot: هوية بلا تشابه</div>
+            <div id="onehot" class="onehot" aria-hidden="true"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="stage">
+            <div class="stage-label">W<sub>in</sub></div>
+            <strong>embedding</strong>
+            <div id="centerVector" class="vector"><span>0.00</span><span>0.00</span></div>
+            <div class="hint">صفّ واحد من matrix التمثيل</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="stage">
+            <div class="stage-label">dot products + σ</div>
+            <strong>حقيقي أم ضجيج؟</strong>
+            <div id="pairList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">2 · شاهد الهندسة تتكوّن</div>
+            <div class="hint">كل النقاط تبدأ عشوائية. التدريب يغيّر مواقعها، مش أسماءها.</div>
+          </div>
+          <div class="controls">
+            <button id="stepButton" class="button">خطوة واحدة</button>
+            <button id="trainButton" class="button primary">درّب 300 خطوة</button>
+            <button id="resetButton" class="button">إعادة</button>
+          </div>
+        </div>
+        <div class="lower">
+          <div class="plot-wrap">
+            <div class="plot-title">فضاء تعليمي ثنائي الأبعاد</div>
+            <svg id="plot" viewBox="0 0 650 360" role="img" aria-label="خريطة متجهات الكلمات">
+              <line class="axis" x1="325" y1="34" x2="325" y2="336"></line>
+              <line class="axis" x1="30" y1="185" x2="620" y2="185"></line>
+              <g id="points"></g>
+            </svg>
+          </div>
+          <aside class="side">
+            <div class="metric-grid">
+              <div class="metric"><b id="steps">0</b><span>training pairs</span></div>
+              <div class="metric"><b id="loss">—</b><span>آخر loss</span></div>
+            </div>
+            <div class="neighbors">
+              <b>أقرب كلمات لـ <span id="neighborCenter">الحليب</span></b>
+              <div id="neighborList"></div>
+            </div>
+          </aside>
+        </div>
+        <div class="foot">
+          هذا نموذج SGNS حقيقي، لكن corpus صغيرة والفضاء بُعدان فقط. في word2vec الفعلية قد يكون
+          عندك مئات الأبعاد ومليارات الأزواج. القرب هنا يشرح الآلية؛ لا تتعامل مع الخريطة كمعجم
+          عربي.
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const corpus = [
+        'شرب الولد الحليب في المطبخ',
+        'شربت البنت العصير في المطبخ',
+        'أكل الولد الخبز في المطبخ',
+        'أكلت البنت التفاحة في المطبخ',
+        'شرب الطفل الماء قرب النافذة',
+        'شربت الطفلة الحليب قرب النافذة',
+        'أكل الطفل التفاحة قرب النافذة',
+        'أكلت الطفلة الخبز قرب النافذة',
+        'قاد الرجل السيارة في المدينة',
+        'قادت المرأة الحافلة في المدينة',
+        'ركب الولد السيارة إلى المدرسة',
+        'ركبت البنت الحافلة إلى المدرسة',
+      ].map((s) => s.split(' '))
+
+      const vocab = [...new Set(corpus.flat())]
+      const groups = {
+        people: new Set(['الولد', 'البنت', 'الطفل', 'الطفلة', 'الرجل', 'المرأة']),
+        food: new Set(['الحليب', 'العصير', 'الماء', 'الخبز', 'التفاحة']),
+        place: new Set(['المطبخ', 'النافذة', 'المدينة', 'المدرسة']),
+        transport: new Set(['السيارة', 'الحافلة']),
+      }
+      const colors = {
+        people: '#7c3aed',
+        food: '#d97706',
+        place: '#0891b2',
+        transport: '#e11d48',
+        other: '#64748b',
+      }
+      let vectors = {},
+        contextVectors = {},
+        steps = 0,
+        lastLoss = null,
+        lastPositive = null,
+        lastNegatives = []
+      let sentenceIndex = 0,
+        centerIndex = 2,
+        windowSize = 2,
+        random = mulberry32(73)
+
+      const sentenceSelect = document.getElementById('sentenceSelect')
+      corpus.forEach((tokens, i) => {
+        const option = document.createElement('option')
+        option.value = i
+        option.textContent = tokens.join(' ')
+        sentenceSelect.appendChild(option)
+      })
+
+      function mulberry32(seed) {
+        return function () {
+          let t = (seed += 0x6d2b79f5)
+          t = Math.imul(t ^ (t >>> 15), t | 1)
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+        }
+      }
+
+      function reset() {
+        random = mulberry32(73)
+        vectors = {}
+        contextVectors = {}
+        vocab.forEach((word) => {
+          vectors[word] = [(random() - 0.5) * 0.7, (random() - 0.5) * 0.7]
+          contextVectors[word] = [(random() - 0.5) * 0.7, (random() - 0.5) * 0.7]
+        })
+        steps = 0
+        lastLoss = null
+        lastPositive = null
+        lastNegatives = []
+        render()
+      }
+
+      function contextFor(tokens, index) {
+        return tokens.filter((_, i) => i !== index && Math.abs(i - index) <= windowSize)
+      }
+
+      function allPairs() {
+        const pairs = []
+        corpus.forEach((tokens) =>
+          tokens.forEach((center, i) => {
+            contextFor(tokens, i).forEach((ctx) => pairs.push([center, ctx]))
+          })
+        )
+        return pairs
+      }
+
+      function sigmoid(x) {
+        return 1 / (1 + Math.exp(-Math.max(-12, Math.min(12, x))))
+      }
+      function dot(a, b) {
+        return a[0] * b[0] + a[1] * b[1]
+      }
+
+      function trainOne(forcePair) {
+        const pairs = allPairs()
+        const pair = forcePair || pairs[Math.floor(random() * pairs.length)]
+        const [center, target] = pair
+        const excluded = new Set([center, target])
+        const negatives = []
+        while (negatives.length < 4) {
+          const candidate = vocab[Math.floor(random() * vocab.length)]
+          if (!excluded.has(candidate) && !negatives.includes(candidate)) negatives.push(candidate)
+        }
+
+        const vc = vectors[center].slice()
+        const gradCenter = [0, 0]
+        let loss = 0
+        const lr = 0.055
+
+        function updateOutput(word, label) {
+          const u = contextVectors[word]
+          const p = sigmoid(dot(vc, u))
+          const g = label - p
+          gradCenter[0] += g * u[0]
+          gradCenter[1] += g * u[1]
+          u[0] += lr * g * vc[0]
+          u[1] += lr * g * vc[1]
+          loss += -(label * Math.log(p + 1e-9) + (1 - label) * Math.log(1 - p + 1e-9))
+          return p
+        }
+
+        updateOutput(target, 1)
+        negatives.forEach((n) => updateOutput(n, 0))
+        vectors[center][0] += lr * gradCenter[0]
+        vectors[center][1] += lr * gradCenter[1]
+        lastPositive = [center, target]
+        lastNegatives = negatives
+        lastLoss = loss / 5
+        steps++
+      }
+
+      function trainMany(n) {
+        for (let i = 0; i < n; i++) trainOne()
+        render()
+      }
+
+      function category(word) {
+        for (const [name, set] of Object.entries(groups)) if (set.has(word)) return name
+        return 'other'
+      }
+
+      function cosine(a, b) {
+        const den = Math.hypot(...a) * Math.hypot(...b)
+        return den ? dot(a, b) / den : 0
+      }
+
+      function renderSentence() {
+        const root = document.getElementById('sentence')
+        root.innerHTML = ''
+        const tokens = corpus[sentenceIndex]
+        tokens.forEach((word, i) => {
+          const button = document.createElement('button')
+          button.className =
+            'token' +
+            (i === centerIndex
+              ? ' center'
+              : Math.abs(i - centerIndex) <= windowSize
+                ? ' context'
+                : '')
+          button.textContent = word
+          button.onclick = () => {
+            centerIndex = i
+            render()
+          }
+          root.appendChild(button)
+        })
+      }
+
+      function renderPipeline() {
+        const center = corpus[sentenceIndex][centerIndex]
+        document.getElementById('centerName').textContent = center
+        const hot = document.getElementById('onehot')
+        hot.innerHTML = ''
+        for (let i = 0; i < 9; i++) {
+          const cell = document.createElement('i')
+          if (i === 4) cell.className = 'on'
+          hot.appendChild(cell)
+        }
+        document.getElementById('centerVector').innerHTML = vectors[center]
+          .map((v) => `<span>${v >= 0 ? '+' : ''}${v.toFixed(3)}</span>`)
+          .join('')
+
+        const contexts = contextFor(corpus[sentenceIndex], centerIndex)
+        const target = lastPositive && lastPositive[0] === center ? lastPositive[1] : contexts[0]
+        const negatives = lastNegatives.length
+          ? lastNegatives
+          : vocab.filter((w) => w !== center && !contexts.includes(w)).slice(0, 3)
+        const rows = []
+        if (target) {
+          const p = sigmoid(dot(vectors[center], contextVectors[target]))
+          rows.push(
+            `<div class="pair pos"><span>✓ ${target}</span><span class="score">p=${p.toFixed(2)}</span></div>`
+          )
+        }
+        negatives.slice(0, 3).forEach((n) => {
+          const p = sigmoid(dot(vectors[center], contextVectors[n]))
+          rows.push(
+            `<div class="pair neg"><span>× ${n}</span><span class="score">p=${p.toFixed(2)}</span></div>`
+          )
+        })
+        document.getElementById('pairList').innerHTML = rows.join('')
+      }
+
+      function renderPlot() {
+        const selected = corpus[sentenceIndex][centerIndex]
+        const xs = vocab.map((w) => vectors[w][0]),
+          ys = vocab.map((w) => vectors[w][1])
+        const maxX = Math.max(0.4, ...xs.map(Math.abs)),
+          maxY = Math.max(0.4, ...ys.map(Math.abs))
+        const root = document.getElementById('points')
+        root.innerHTML = ''
+        vocab.forEach((word) => {
+          const x = 325 + (vectors[word][0] / maxX) * 270,
+            y = 185 - (vectors[word][1] / maxY) * 135
+          const ns = 'http://www.w3.org/2000/svg'
+          const circle = document.createElementNS(ns, 'circle')
+          circle.setAttribute('cx', x)
+          circle.setAttribute('cy', y)
+          circle.setAttribute('r', word === selected ? '7' : '4.5')
+          circle.setAttribute('fill', colors[category(word)])
+          circle.setAttribute('opacity', word === selected ? '1' : '.78')
+          circle.setAttribute('class', 'word-dot')
+          const label = document.createElementNS(ns, 'text')
+          label.setAttribute('x', x + 7)
+          label.setAttribute('y', y - 7)
+          label.setAttribute('class', 'word-label')
+          label.textContent = word
+          root.append(circle, label)
+        })
+
+        document.getElementById('steps').textContent = steps.toLocaleString('en-US')
+        document.getElementById('loss').textContent = lastLoss == null ? '—' : lastLoss.toFixed(3)
+        document.getElementById('neighborCenter').textContent = selected
+        const neighbors = vocab
+          .filter((w) => w !== selected)
+          .map((w) => [w, cosine(vectors[selected], vectors[w])])
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+        document.getElementById('neighborList').innerHTML = neighbors
+          .map(
+            ([w, s]) =>
+              `<div class="neighbor"><span>${w}</span><div class="bar"><i style="width:${Math.max(2, (s + 1) * 50)}%"></i></div></div>`
+          )
+          .join('')
+      }
+
+      function render() {
+        renderSentence()
+        renderPipeline()
+        renderPlot()
+        requestHeight()
+      }
+      function requestHeight() {
+        requestAnimationFrame(() =>
+          parent.postMessage(
+            { type: 'demo-height', height: document.documentElement.scrollHeight },
+            '*'
+          )
+        )
+      }
+      new ResizeObserver(requestHeight).observe(document.body)
+
+      sentenceSelect.onchange = (e) => {
+        sentenceIndex = Number(e.target.value)
+        centerIndex = Math.min(2, corpus[sentenceIndex].length - 1)
+        render()
+      }
+      document.getElementById('windowSize').oninput = (e) => {
+        windowSize = Number(e.target.value)
+        document.getElementById('windowValue').textContent = windowSize
+        render()
+      }
+      document.getElementById('stepButton').onclick = () => {
+        const c = corpus[sentenceIndex][centerIndex],
+          ctx = contextFor(corpus[sentenceIndex], centerIndex)
+        trainOne([c, ctx[Math.floor(random() * ctx.length)]])
+        render()
+      }
+      document.getElementById('trainButton').onclick = () => trainMany(300)
+      document.getElementById('resetButton').onclick = reset
+      reset()
+    </script>
+  </body>
+</html>
