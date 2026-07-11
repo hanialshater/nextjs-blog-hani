@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hume's wager: the same past, more than one rule</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fafaf9;
+        --panel: #ffffff;
+        --ink: #1c1917;
+        --muted: #6b7280;
+        --soft: #e7e5e4;
+        --line: #d6d3d1;
+        --future: #fef3c7;
+        --future-ink: #78350f;
+        --simple: #2563eb;
+        --other: #d97706;
+        --button: #1c1917;
+        --button-ink: #fafaf9;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+
+      button, input { font: inherit; }
+
+      .shell {
+        max-width: 980px;
+        margin: auto;
+        padding: 18px;
+      }
+
+      .guide {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        padding: 14px 16px;
+      }
+
+      .guide-head,
+      .actions,
+      .legend,
+      .control-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .guide-head {
+        justify-content: space-between;
+      }
+
+      .step {
+        display: inline-flex;
+        border-radius: 999px;
+        background: var(--future);
+        color: var(--future-ink);
+        padding: 4px 9px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .guide strong { font-size: 16px; }
+
+      .guide p,
+      .insight {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.75;
+        font-size: 13px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .stat {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 10px 12px;
+      }
+
+      .stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .stat b {
+        display: block;
+        margin-top: 4px;
+        direction: ltr;
+        font: 700 17px ui-monospace, monospace;
+      }
+
+      .plot-shell {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      #plot {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 250px;
+      }
+
+      .grid,
+      .axis {
+        stroke: var(--line);
+        vector-effect: non-scaling-stroke;
+      }
+
+      .grid { stroke-width: 1; }
+      .axis { stroke-width: 1.5; }
+      .training-zone { fill: var(--soft); opacity: 0.3; }
+      .future-zone { fill: var(--future); opacity: 0.55; }
+
+      .simple-line,
+      .other-line {
+        fill: none;
+        vector-effect: non-scaling-stroke;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .simple-line { stroke: var(--simple); stroke-width: 3; }
+      .other-line { stroke: var(--other); stroke-width: 3; stroke-dasharray: 8 6; }
+
+      .observation {
+        fill: var(--ink);
+        stroke: var(--panel);
+        stroke-width: 3;
+        vector-effect: non-scaling-stroke;
+      }
+
+      .simple-prediction { fill: var(--simple); }
+      .other-prediction { fill: var(--other); }
+      .tick { fill: var(--muted); font-size: 12px; }
+      .question { fill: var(--muted); font-size: 34px; font-weight: 700; }
+
+      .below {
+        padding: 12px 14px 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .legend { direction: ltr; }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .swatch {
+        width: 26px;
+        height: 0;
+        border-top: 3px solid var(--simple);
+      }
+
+      .swatch.other {
+        border-color: var(--other);
+        border-style: dashed;
+      }
+
+      .formulas {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 11px;
+      }
+
+      .formula {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 9px 10px;
+      }
+
+      .formula span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .formula code {
+        display: block;
+        margin-top: 5px;
+        direction: ltr;
+        overflow-wrap: anywhere;
+        font-size: 12px;
+      }
+
+      .alpha-control { margin-top: 12px; }
+
+      .control-head {
+        justify-content: space-between;
+        font-size: 12px;
+      }
+
+      .control-head code { direction: ltr; }
+
+      #alpha {
+        width: 100%;
+        margin-top: 7px;
+        accent-color: var(--other);
+      }
+
+      .actions { margin-top: 12px; }
+
+      .btn {
+        cursor: pointer;
+        flex: 1 1 180px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--ink);
+        padding: 10px 13px;
+        font-weight: 700;
+      }
+
+      .btn.primary {
+        border-color: var(--button);
+        background: var(--button);
+        color: var(--button-ink);
+      }
+
+      .insight {
+        padding-inline-start: 10px;
+        border-inline-start: 3px solid var(--other);
+      }
+
+      [hidden] { display: none !important; }
+
+      @media (max-width: 560px) {
+        .shell { padding: 10px; }
+        .stats { grid-template-columns: 1fr; }
+        .formulas { grid-template-columns: 1fr; }
+        #plot { min-height: 205px; }
+        .guide-head { align-items: flex-start; }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111827;
+          --panel: #1f2937;
+          --ink: #f3f4f6;
+          --muted: #cbd5e1;
+          --soft: #374151;
+          --line: #4b5563;
+          --future: #422006;
+          --future-ink: #fde68a;
+          --simple: #60a5fa;
+          --other: #fbbf24;
+          --button: #f3f4f6;
+          --button-ink: #111827;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="guide" aria-label="Hume's wager tour">
+        <div class="guide-head">
+          <div><span class="step" id="step">1 / 3</span> <strong id="title">Begin with the evidence</strong></div>
+          <span id="caption">Six points from the past, nothing from tomorrow</span>
+        </div>
+        <p id="guide-copy">These points are everything the model has seen. We have not yet chosen the rule that produced them.</p>
+      </section>
+
+      <section class="stats" aria-label="Metrics for both rules">
+        <div class="stat"><span>training loss · simple rule</span><b id="loss-simple">—</b></div>
+        <div class="stat"><span>training loss · alternative rule</span><b id="loss-other">—</b></div>
+        <div class="stat"><span>prediction at x = 7</span><b id="tomorrow">hidden</b></div>
+      </section>
+
+      <section class="plot-shell">
+        <svg id="plot" viewBox="0 0 760 390" role="img" aria-labelledby="svg-title svg-description"></svg>
+        <div class="below">
+          <div class="legend" id="legend" hidden>
+            <span><i class="swatch"></i>simple rule</span>
+            <span><i class="swatch other"></i>another rule matching the same past</span>
+          </div>
+
+          <div class="formulas" id="formulas" hidden>
+            <div class="formula"><span>first hypothesis</span><code>h₁(x) = 2x + 1</code></div>
+            <div class="formula"><span>second hypothesis</span><code>h₂(x) = 2x + 1 + α∏⁶ᵢ₌₁(x − i)</code></div>
+          </div>
+
+          <label class="alpha-control" id="alpha-control" for="alpha" hidden>
+            <span class="control-head">
+              <span>Change the assumption that did not come from the training points</span>
+              <code>α = <span id="alpha-value">0.0125</span></code>
+            </span>
+            <input id="alpha" type="range" min="-0.02" max="0.02" step="0.0025" value="0.0125" />
+          </label>
+
+          <div class="actions">
+            <button class="btn primary" id="action" type="button">Show two rules that fit the past</button>
+            <button class="btn" id="reset" type="button" hidden>Start again</button>
+          </div>
+
+          <p class="insight" id="insight" aria-live="polite">The past gave you points. Calling them a pattern still adds an assumption.</p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const svg = document.getElementById("plot");
+        const NS = "http://www.w3.org/2000/svg";
+        const width = 760;
+        const height = 390;
+        const margin = { top: 22, right: 28, bottom: 48, left: 56 };
+        const xMin = 0.5;
+        const xMax = 7.4;
+        const yMin = -2;
+        const yMax = 32;
+        const observations = [1, 2, 3, 4, 5, 6].map((x) => ({ x, y: 2 * x + 1 }));
+        let phase = 0;
+        let alpha = 0.0125;
+
+        const xScale = (x) => margin.left + ((x - xMin) / (xMax - xMin)) * (width - margin.left - margin.right);
+        const yScale = (y) => height - margin.bottom - ((y - yMin) / (yMax - yMin)) * (height - margin.top - margin.bottom);
+        const simple = (x) => 2 * x + 1;
+
+        function other(x) {
+          let product = 1;
+          for (let i = 1; i <= 6; i++) product *= x - i;
+          return simple(x) + alpha * product;
+        }
+
+        function make(name, attributes = {}) {
+          const element = document.createElementNS(NS, name);
+          for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+          return element;
+        }
+
+        function addText(x, y, content, className, anchor = "middle") {
+          const label = make("text", { x, y, class: className, "text-anchor": anchor });
+          label.textContent = content;
+          svg.appendChild(label);
+        }
+
+        function curvePath(fn, endX) {
+          const parts = [];
+          const steps = 220;
+          for (let index = 0; index <= steps; index++) {
+            const x = xMin + ((endX - xMin) * index) / steps;
+            const y = Math.max(yMin - 2, Math.min(yMax + 2, fn(x)));
+            parts.push(`${index ? "L" : "M"}${xScale(x).toFixed(2)},${yScale(y).toFixed(2)}`);
+          }
+          return parts.join(" ");
+        }
+
+        function draw() {
+          svg.innerHTML = "";
+          const title = make("title", { id: "svg-title" });
+          title.textContent = "Two rules agree on the training data and disagree on the next example";
+          svg.appendChild(title);
+          const description = make("desc", { id: "svg-description" });
+          description.textContent = "Six training points, a simple line, and an alternative curve that pass through all six before predicting different values at seven.";
+          svg.appendChild(description);
+
+          svg.appendChild(make("rect", {
+            x: xScale(xMin), y: margin.top, width: xScale(6.35) - xScale(xMin),
+            height: height - margin.top - margin.bottom, class: "training-zone"
+          }));
+          svg.appendChild(make("rect", {
+            x: xScale(6.35), y: margin.top, width: xScale(xMax) - xScale(6.35),
+            height: height - margin.top - margin.bottom, class: "future-zone"
+          }));
+
+          for (let y = 0; y <= 30; y += 5) {
+            svg.appendChild(make("line", { x1: margin.left, y1: yScale(y), x2: width - margin.right, y2: yScale(y), class: "grid" }));
+            addText(margin.left - 10, yScale(y) + 4, String(y), "tick", "end");
+          }
+          for (let x = 1; x <= 7; x++) {
+            svg.appendChild(make("line", { x1: xScale(x), y1: margin.top, x2: xScale(x), y2: height - margin.bottom, class: "grid" }));
+            addText(xScale(x), height - margin.bottom + 24, String(x), "tick");
+          }
+          svg.appendChild(make("line", { x1: margin.left, y1: height - margin.bottom, x2: width - margin.right, y2: height - margin.bottom, class: "axis" }));
+          svg.appendChild(make("line", { x1: margin.left, y1: margin.top, x2: margin.left, y2: height - margin.bottom, class: "axis" }));
+          addText((margin.left + xScale(6.25)) / 2, margin.top + 18, "observed past", "tick");
+          addText((xScale(6.35) + width - margin.right) / 2, margin.top + 18, "next example", "tick");
+
+          if (phase >= 1) {
+            const endX = phase >= 2 ? 7 : 6.08;
+            svg.appendChild(make("path", { d: curvePath(simple, endX), class: "simple-line" }));
+            svg.appendChild(make("path", { d: curvePath(other, endX), class: "other-line" }));
+          }
+
+          for (const point of observations) {
+            svg.appendChild(make("circle", { cx: xScale(point.x), cy: yScale(point.y), r: 6, class: "observation" }));
+          }
+
+          if (phase < 2) {
+            addText(xScale(7), yScale(15), "?", "question");
+          } else {
+            const otherTomorrow = other(7);
+            svg.appendChild(make("circle", { cx: xScale(7), cy: yScale(simple(7)), r: 7, class: "simple-prediction" }));
+            svg.appendChild(make("circle", { cx: xScale(7), cy: yScale(otherTomorrow), r: 7, class: "other-prediction" }));
+            addText(xScale(7) - 10, yScale(simple(7)) + 4, "15", "tick", "end");
+            addText(xScale(7) - 10, yScale(otherTomorrow) + 4, otherTomorrow.toFixed(1), "tick", "end");
+          }
+        }
+
+        function requestHeight() {
+          if (window.parent === window) return;
+          requestAnimationFrame(() => window.parent.postMessage({ type: "demo-height", height: document.documentElement.scrollHeight }, "*"));
+        }
+
+        function render() {
+          const titles = ["Begin with the evidence", "The same past accepts more than one rule", "Reveal the example neither model saw"];
+          const captions = ["Six points from the past, nothing from tomorrow", "Both rules pass through every training point", "Same training loss; different predictions"];
+          const copies = [
+            "These points are everything the model has seen. We have not yet chosen the rule that produced them.",
+            "The line and curve differ, but both pass through every point. On the training set, there is no winner.",
+            "Now the disagreement appears: success on the past did not force the rules to give the same answer tomorrow."
+          ];
+          document.getElementById("step").textContent = `${phase + 1} / 3`;
+          document.getElementById("title").textContent = titles[phase];
+          document.getElementById("caption").textContent = captions[phase];
+          document.getElementById("guide-copy").textContent = copies[phase];
+          document.getElementById("loss-simple").textContent = phase >= 1 ? "0.000" : "—";
+          document.getElementById("loss-other").textContent = phase >= 1 ? "0.000" : "—";
+          document.getElementById("legend").hidden = phase < 1;
+          document.getElementById("formulas").hidden = phase < 1;
+          document.getElementById("alpha-control").hidden = phase < 2;
+          document.getElementById("reset").hidden = phase < 2;
+          document.getElementById("alpha-value").textContent = alpha.toFixed(4);
+
+          const action = document.getElementById("action");
+          const insight = document.getElementById("insight");
+          if (phase === 0) {
+            action.hidden = false;
+            action.textContent = "Show two rules that fit the past";
+            document.getElementById("tomorrow").textContent = "hidden";
+            insight.textContent = "The past gave you points. Calling them a pattern still adds an assumption.";
+          } else if (phase === 1) {
+            action.hidden = false;
+            action.textContent = "Reveal the next example";
+            document.getElementById("tomorrow").textContent = "hidden";
+            insight.textContent = "The past data alone did not choose between the rules: both have zero error.";
+          } else {
+            action.hidden = true;
+            document.getElementById("tomorrow").textContent = `15 versus ${other(7).toFixed(1)}`;
+            insight.textContent = "This is Hume's collision: learning is a leap from the observed to the unobserved. Preferring the simpler rule is a useful inductive bias — but it is an extra assumption, not information hidden in the points.";
+          }
+          draw();
+          requestHeight();
+        }
+
+        document.getElementById("action").addEventListener("click", () => {
+          phase = Math.min(2, phase + 1);
+          render();
+        });
+        document.getElementById("reset").addEventListener("click", () => {
+          phase = 0;
+          alpha = 0.0125;
+          document.getElementById("alpha").value = String(alpha);
+          render();
+        });
+        document.getElementById("alpha").addEventListener("input", (event) => {
+          alpha = Number(event.target.value);
+          render();
+        });
+        if (typeof ResizeObserver === "function") new ResizeObserver(requestHeight).observe(document.body);
+        window.addEventListener("load", requestHeight, { once: true });
+        render();
+      })();
+    </script>
+  </body>
+</html>

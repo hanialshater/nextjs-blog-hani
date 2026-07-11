@@ -1,0 +1,503 @@
+---
+title: 'When Thought Became Electric — Part I: The Question'
+date: '2026-07-10'
+lastmod: '2026-07-11'
+draft: false
+section: 'free-writing'
+summary: 'Before the computer was built, there was an older dream: to write down reason itself. Three collisions between that dream and the modern machine — from Saussure and word2vec, to Wittgenstein and hallucination, to Hume and generalization.'
+authors: ['default']
+layout: 'PostLayout'
+tags: ['philosophy', 'computing', 'machine-learning', 'word2vec', 'rnn', 'llm', 'interactive']
+language: en
+translationOf: thinking-became-electric-part-1
+originalLanguage: ar
+featured: true
+images: ['/static/images/posts/thinking-became-electric-part-1/why-machine.webp']
+---
+
+This is a story.
+
+Not just any story.
+
+This is the story of thought becoming electric.
+
+It is the story of the greatest technical achievement in human history: the computer. The machine that began as an idea about symbols and rules, then became your desk, your bank, your phone, your mother's voice on WhatsApp, the system deciding which news you read and which ad follows you, and the AI model writing you a gracious apology for a mistake it does not actually understand.
+
+Historical stories are entertaining, of course. They contain geniuses, wars, short letters that destroy enormous projects, and people who died without knowing they were building the future. But we do not tell the great stories merely for entertainment. Great stories are the memory of the species. We tell them because we want to know how we arrived here, what the people before us saw, and what they failed to see.
+
+My aim in this book is simple and difficult: I want you to become more than a builder.
+
+I want you to become a philosopher-builder.
+
+Not a philosopher instead of a builder. We do not need someone halting the project because the login button has developed an identity crisis. Build. Write the code. Train the model. Ship the product. But while you build, ask: what did I assume about the human being? What did I call success? What did I throw outside the definition and label noise? Every architecture carries a theory of the world, even when its owner calls it an implementation detail.
+
+Because great machines do not appear from nowhere. Every great machine carries a dream. Sometimes the dream is explicit, written above the door. Sometimes it is buried in the foundations, quiet, waiting for the moment it cracks the floor and rises through it.
+
+<BookIllustration
+  src="/static/images/posts/thinking-became-electric-part-1/why-machine.webp"
+  alt="A cathedral of books and geometry cracks open, revealing a small symbolic machine as Alan Turing watches"
+  caption="The dream was a complete cathedral of reason. The machine emerged from the crack that exposed its limits."
+  direction="ltr"
+  priority
+/>
+
+## Chapter One — The Question
+
+Usually, we begin with a gentler story.
+
+The story begins with Alan Turing. A brilliant young Englishman sitting in a meadow in the 1930s, his hair neatly combed to the right because civilization apparently cannot begin until the genius has sorted out his hair. He imagines a machine. The machine reads symbols from a tape. A symbol becomes a rule. A rule becomes a calculation. The calculation becomes a computer. Then come the war, Enigma, Manchester, the first real machines, and eventually your phone shouting that you have been sitting still for two hours.
+
+It is a beautiful story. A solitary genius. A clean idea. War. Tragedy. Soft piano music and grass moving in the wind. It makes history feel like a straight line: humanity rose from ignorance to reason, from reason to mathematics, from mathematics to the machine, from the machine to programming, and from programming to artificial intelligence. Progress is working. Anyone confused should hurry up and catch us.
+
+But let us step back.
+
+That story hides a more important question: why did we need the machine in the first place?
+
+<CollisionBoard
+  chapter="Prelude — before the three collisions"
+  question="Why did we need the machine at all?"
+  collision="The comfortable story says philosophy talked and engineering eventually built. The real story is that the dream of writing down reason collided with its own limits; the attempt to define exactly what a procedure could do produced the image of the machine."
+  epistemology="What counts as calculation or guaranteed knowledge, and on what grounds? Where does proof stop, even when every rule is precise?"
+  direction="ltr"
+/>
+
+The story is not that philosophers kept giving humanity a headache until a practical person finally stood up and said: enough talk, let us build something. Engineers like that version because it makes engineering the moment civilization grew up, while philosophy becomes the long adolescence before humanity came to its senses and opened VS Code.
+
+The real story is older and more dangerous. Long before the computer, there was a profound desire to write down the mind itself.
+
+The dream began with a language so precise that disagreement could be calculated. Two people disagree? No need to shout. No need for “you do not understand me” or “you have always had an issue with my success.” Sit down, write the symbols, and calculate who is right. In the seventeenth century, Leibniz — a man who helped invent calculus between one diplomatic mission and the next — compressed the promise into a single famous word: _Calculemus_. Let us calculate.
+
+An equation instead of an argument. Imagine the temptation. This was not merely a way to solve mathematical problems. It promised to solve the ancient curse of human beings: each person sees the world from inside one head and quietly assumes that head is the universe. Politics? Calculate it. Ethics? Calculate it. Truth? Calculate it. Even your uncle who insists he has a special feeling for the market gets the same answer: excellent, sir; show us the equation.
+
+Two and a half centuries later, the dream entered mathematics itself and became a formal construction project. Rules, axioms, derivations: a foundation through which “it just felt right” could not sneak in through the window at the last minute. By the beginning of the twentieth century, the project had become a program of work: formalize mathematics, prove the consistency of its foundations, and ask whether a mechanical procedure could decide what was provable. Conferences, students, decades of work — each generation convinced it was closer to the clean house: reason written down, disagreement settled, truth emerging from the system like a receipt from a cash register.
+
+At the end of the road they hit a limit that was not a bug in the notation, a shortage of genius, or a badly placed stone. The problem was in the demand itself.
+
+I will not spoil the fire yet. It is enough to know that the dream, as it broke, forced someone in the next generation to ask a smaller and more intelligent question: if we cannot turn all truth into a procedure, what exactly can a procedure do? What is a calculation? What is a machine?
+
+From that question came the image of the machine that would become one of the theoretical roots of the computer.
+
+That is this book's wager: the computer is not only the child of reason's triumph. It is also the child of the moment reason discovered that perfect cleanliness was not available. The dream failed to deliver what it promised; it left us something else that none of its owners had intended to build.
+
+This version of the story changes our relationship with the machine. We are not the heirs of geniuses who abandoned philosophy and went off to build. We are the heirs of a philosophical dream that tried to construct the world as a system. The system cracked, and the device on which we build today emerged from the fracture.
+
+I did not see this for years.
+
+I built machine-learning systems with the ordinary engineer's mindset: give me data, give me a metric, give me a dashboard. If the model fails, we need better labels. If we do not understand the result, add monitoring. If users are unhappy, calibrate it.
+
+Then production entered the room, and production has no respect for your dreams.
+
+At Amazon, I led an applied-science team working on gift recommendations. On paper, the task was obvious: recommend a gift. In production, it stopped at a question nobody had put in a ticket: what is a gift?
+
+Try answering it. Is a gift a product category? Some products are bought as gifts more often than others, but the same kettle can be a gift for your aunt today and an ordinary purchase for your own kitchen tomorrow. Is a gift an intention? Intention is not a column in the database. Is it gift wrap? Half the people do not wrap. Every definition broke on edge cases; every edge case opened a discussion; every discussion returned us to the same point. The team was stuck. I, the person expected to untie the knot, was more stuck than anyone. Complete mind freeze.
+
+<BookIllustration
+  src="/static/images/posts/thinking-became-electric-part-1/gift-definition-team.webp"
+  alt="A modern applied-science team debates whether the same kettle is an ordinary purchase or a gift"
+  caption="The same kettle: an ordinary purchase today, a gift tomorrow. The problem was not the model. It was the definition."
+  direction="ltr"
+/>
+
+One evening, more for amusement than anything else, I opened ChatGPT and typed: choose a philosopher and tell me what he would do in my place.
+
+It chose Jacques Derrida.
+
+(The actual Derrida is more complicated than any chat summary, and specialists will pull their hair out over what follows. They are right. But I was not writing a PhD in French philosophy; I was trying to unblock a feature.)
+
+The answer, radically compressed, was: stop searching for the true meaning of “gift” as if it were buried treasure hiding beneath the data. There is no final definition waiting out there. Meaning is not discovered; meaning is constructed.
+
+Fine, I wrote back. What do I do?
+
+The second answer overturned the table: you are not a discoverer. You are an inventor. Do not ask “what is a gift?” Build a definition of gift that improves the customer experience.
+
+I stared at the screen.
+
+The question that had frozen us for weeks — “what is a gift?” — had no answer because it assumed that one correct answer was hidden somewhere. The new question — “which definition of gift makes the experience better?” — had iterations, experiments, metrics, and decisions that could be made and reversed. It was an engineering question. The freeze broke. The team moved. And I began carrying a new tool in my pocket called a dead philosopher.
+
+The funny thing is that I asked a machine, and the machine sent me to a dead philosopher to solve a production problem. Since then, I have stopped treating questions of meaning, context, and value as footnotes to machine learning. They enter the backlog whether we call them philosophy or not.
+
+So the question is not: must engineers read philosophy to become cultured?
+
+No, my friend. The question is: how many times do you want to hit the same wall before asking who drew the map?
+
+Engineering asks: does the system work?
+
+Philosophy asks: what does “work” mean? For whom? Under which definition? Who was excluded from the definition? And why are you confident that what you excluded will not return and break down the door?
+
+Philosophy is not a substitute for engineering. It is how we examine the definition of success before optimizing it.
+
+There is a large name for this family of questions: **epistemology**, the theory of knowledge. Forget the intimidating name. Its everyday question is simple: **how do you know?** What is the evidence? What lets you call a result knowledge, understanding, or learning? Where does the evidence run out and the leap begin?
+
+What follows are three small collisions between old questions and modern systems: Saussure and word2vec on how significance emerges from relations; Wittgenstein and LLMs on the gap between language that works inside language and language that must survive contact with the world; and Hume beside every model from which we ask tomorrow to remain sufficiently similar to yesterday.
+
+Here we will name the questions and watch them take shape inside the machine. We will not solve the history of philosophy in forty pages. Meaning, understanding, and learning will return later, each with its full equipment, objections, and details.
+
+Then we will go back to the beginning and follow the dream from its first spark: watch it rise, crack, and leave behind something none of its owners intended to build.
+
+## Chapter Two — First Collision
+
+I promised three collisions between old questions and modern systems. The first begins at the older end.
+
+<CollisionBoard
+  chapter="First collision — meaning"
+  question="Where does a word's meaning come from: the thing it points to, or its position among other words?"
+  collision="From the n-gram table to the strongest LLM, relations among signs produced a far richer semantic structure than we expected. But the success of relations does not prove that relations are all of meaning."
+  epistemology="What evidence is enough to say a system knows a word's meaning? Proximity to appropriate words is strong evidence — but is it the whole of the evidence?"
+  direction="ltr"
+/>
+
+In 1913, a Swiss linguist named Ferdinand de Saussure died. He left no finished book. After his death, two colleagues assembled one from students' lecture notes and published it in 1916 as _Course in General Linguistics_. Saussure never heard of a computer and was not trying to invent anything. He wanted to understand one question: how does language work?
+
+It sounds innocent — the kind of question whose answer you assume you know because you have spoken a language since you woke into the world and it has never crashed on you.
+
+The intuitive theory says words are labels. The world is full of objects; we attached a name to each one; end of story. It is a comfortable theory. Language becomes a large dictionary, and the dictionary a mirror of the world.
+
+Saussure turned the picture around. A sign, for him, joins a signifier — the sound-image of the word — to a signified, the concept it evokes. No natural bond forces a tree to be called “tree”; another language uses another sound and functions perfectly well. Then came the more important move: the value of a sign does not come from the sign alone. It comes from its position inside a system of differences.
+
+English distinguishes _sheep_, the animal, from _mutton_, its meat. French uses _mouton_ across both. The animal did not change while crossing the Channel; the network of differences changed. Meaning is not merely a direct thread between word and object. It is also a position inside a network. Think of money: a fifty-pound note does not derive its value from the paper alone, but from its place among the ten and the hundred.
+
+Saussure also distinguished _langue_ from _parole_: the shared social system of language on one side and the individual act of speaking on the other. You did not invent the language you speak; you inherited it like a family name. _Parole_ is what actually leaves your mouth. _Langue_ is the prior system of rules and differences that makes your speech intelligible to someone else.
+
+This does not mean that Saussure believed language was a prison determining everything you could think; others would make that leap later. The narrower, stronger claim is that when you speak, you move inside a social system that precedes you. That idea will keep returning.
+
+### From a counting table to the problem of emptiness
+
+Before word2vec, let us build the simplest language model imaginable. Take a large corpus. Every time you find a sentence containing “the boy drank,” count the word that follows. You might obtain a table like this:
+
+| After “the boy drank…” | Count | Probability |
+| ---------------------- | ----: | ----------: |
+| milk                   |    50 |        0.50 |
+| water                  |    30 |        0.30 |
+| juice                  |    15 |        0.15 |
+| gasoline               |     5 |        0.05 |
+
+Ask the model to continue and it throws a die weighted by the table. Usually milk, sometimes water, and on rare occasions we produce a small domestic incident involving gasoline.
+
+The n-gram model knows something real: earlier usage. Nobody taught it the concept of drinking, the chemical composition of milk, or why gasoline is a poor choice for children. It saw symbol sequences and counted them. A reasonable prediction emerged anyway.
+
+But the table has a brutal problem. It may have seen “the child drank milk” thousands of times, then behave as if the universe has just been created when you ask about “the youngster sipped milk.” Every cell is an island. “Boy” and “child” have no bridge unless we build the bridge by hand.
+
+With a vocabulary of one hundred thousand words, ten consecutive positions have, in theory, $100{,}000^{10}$ possibilities. Real language does not distribute itself evenly, and smoothing rescues a great deal, but the disease is clear: if you store language as a table, most possible sentences are empty cells.
+
+The next demo builds the table from a corpus visible in front of you. Open the row for “the boy drank” and watch the counts `50 / 30 / 15 / 5` become probabilities; then let the model write by opening one row after another. Finally replace “boy” with “child”: the meanings are close to you, but the trigram cell is empty. Backoff can retreat to a shorter context and continue. It cannot invent the bridge between the words.
+
+<Demo
+  src="/demos/posts/thinking-became-electric-part-1/ngram-table.en.html?v=1"
+  title="An n-gram model: from counting table to generated text"
+  height={820}
+/>
+
+### The first leap: a word becomes coordinates
+
+The neural move was this: instead of representing every word as an isolated cell, give it a small vector of numbers and learn those numbers with the task. “Boy” is no longer merely column 81,442; it becomes a point in a continuous space. Move slightly away from “boy” and you may find “child.” Evidence about one becomes useful to the other.
+
+This idea predates word2vec. In 2003, for example, Yoshua Bengio and colleagues introduced a neural probabilistic language model that learned word representations and sequence probabilities together, specifically to fight the curse of dimensionality that breaks tables. The real history is not a tidy classroom staircase: embeddings, neural language models, and RNNs all have roots before 2013.
+
+So why does everyone return to word2vec? Because it removed much of the machinery and left the move itself exposed.
+
+### Mikolov and skip-gram: teach a word through its neighbors
+
+In 2013, Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean published a paper introducing two fast architectures for learning word vectors from enormous corpora: CBOW and skip-gram.
+
+The difference is simple if you stand in the middle of a sentence:
+
+```text
+the  boy  drank  milk  by  the  window
+          ↑
+      center word
+```
+
+**CBOW** takes the words around a blank and predicts the word in the middle. **Skip-gram** reverses the direction: it takes the center word and predicts its neighbors.
+
+If the center word is “milk” and the window size is 2, training produces positive pairs such as:
+
+```text
+(milk → boy)
+(milk → drank)
+(milk → by)
+(milk → window)
+```
+
+The arrow is not a philosophical claim about meaning. It is a small computational question: given `milk`, increase the probability of `boy`, `drank`, `by`, and `window` appearing in its context.
+
+During training, every word actually has two vectors: one when it plays the **center-word** role, another when it plays the **context-word** role. We take their dot product; the larger it is, the more appropriate the model considers the pair:
+
+$$
+p(o\mid c)=\frac{\exp(u_o^\top v_c)}{\sum_{w\in V}\exp(u_w^\top v_c)}
+$$
+
+$v_c$ is the center-word vector, $u_o$ the context-word vector, and the denominator visits every word in the vocabulary. Here lies the problem: with millions of words, we cannot sum millions of terms for every training pair.
+
+The solution that became part of word2vec's fame is **negative sampling**. Instead of asking about the entire vocabulary, give the model the real pair and a handful of fake pairs:
+
+```text
+real:  (milk, boy)
+fake:  (milk, galaxy)
+fake:  (milk, parliament)
+fake:  (milk, volcano)
+```
+
+Instead of a full softmax, train it as a classification problem: raise the score of the real pair and lower the scores of pairs drawn from the noise distribution:
+
+$$
+\log\sigma(u_o^\top v_c)+\sum_{i=1}^{k}\log\sigma(-u_{n_i}^\top v_c)
+$$
+
+That equation is the heart of the next demo. This is not an animation pretending to train. The model genuinely runs skip-gram with negative sampling on a corpus of 2,240 sentences and learns 24-dimensional vectors. Only then do we compress them for display: PCA when we want to preserve directions, t-SNE when we want to see local neighborhoods. The training button adds ten thousand real updates, and `king − man + woman` is calculated from the learned weights themselves.
+
+<Demo
+  src="/demos/posts/thinking-became-electric-part-1/skipgram-lab.en.html?v=1"
+  title="From corpus to skip-gram to the geometry of words"
+  height={1050}
+/>
+
+Notice what happened. Nobody told the model that milk and juice were drinks, or that boy and girl were people. Words useful for predicting similar neighbors experienced similar training forces and moved closer together. Geometry also carried regular differences — number, gender, tense, capital and country — wherever the corpus contained them.
+
+That is where the analogies for which word2vec became famous came from:
+
+$$
+v(king)-v(man)+v(woman)\approx v(queen)
+$$
+
+This is not a linguistic law, a guaranteed equality, or proof that every meaning is a straight line. The result is sensitive to the corpus, the training method, the bias in the text, and even the measurement method. But its appearance was striking: a relationship nobody wrote down as a rule emerged from the positions and uses of words.
+
+Word2vec is not itself a language model that writes paragraphs. It isolated one important move and made it visible: linguistic relations can be compressed into geometry.
+
+### From a point to a sequence: the RNN remembers
+
+A vector alone is not enough for text. Word order matters. “The dog bit the man” is not a styling variation of “the man bit the dog.”
+
+N-gram models handled order with a short, fixed memory: the last two, three, or five words. The RNN went further. It reads words — or characters — one at a time and carries a hidden state, a moving summary of everything read so far:
+
+$$
+h_t=\tanh(W_{hh}h_{t-1}+W_{xh}x_t+b_h)
+$$
+
+The new state produces logits; after softmax, we obtain a probability distribution over the next symbol:
+
+$$
+p(x_{t+1}\mid x_{\le t})=\operatorname{softmax}(W_{hy}h_t+b_y)
+$$
+
+Almost the entire idea lives in the returning arrow: $h_{t-1}$ enters the calculation of $h_t$. The same network executes step after step, while the memory changes with every symbol.
+
+In May 2015, Andrej Karpathy published _The Unreasonable Effectiveness of Recurrent Neural Networks_. It was a cultural breakout more than a scientific invention. Suddenly any engineer could open a page and watch an LSTM learn character by character from Shakespeare, Wikipedia, LaTeX, and even the Linux source code. The text held together locally, imitated formatting, opened and closed brackets, and invented names and references with confidence — years before the industry settled on the word “hallucination.”
+
+Karpathy also published an educational character RNN in roughly one hundred lines of Python and NumPy. The ratio between the loop's simplicity and the output's strangeness was the shock. No written grammar. No Shakespeare parser. Only this: give the network the previous character, retain a state, predict the next character, punish the error, repeat millions of times.
+
+The next demo runs the same basic loop at word level: a vanilla RNN with a hidden state of 24 values and a corpus of 2,509 sentences. You can advance word by word, inspect the hidden state and next-token probabilities, and compare random weights with checkpoints after 250 and 8,000 training sentences. The “train” button performs 250 real BPTT and AdaGrad updates in the browser; it does not switch animations. The final stage exposes a complete LSTM cell on the same wires, showing how forget, write, and output gates relieve the memory bottleneck.
+
+<Demo
+  src="/demos/posts/thinking-became-electric-part-1/rnn-memory.en.html?v=1"
+  title="A small RNN learns text one word at a time"
+  height={1050}
+/>
+
+Early RNNs could write well enough to make you stop. The sentence moved; after some distance, the story forgot where it was going. The entire past had to be compressed into one state, while gradients travelling back across many steps weakened or exploded. LSTMs and GRUs reduced the problem. They did not erase it.
+
+We should be precise about the word **scale**. Size was a missing ingredient, but not a magic button that engineers could simply have pressed in 1995. The equipment that made scale usable had to mature: data, GPUs, optimization, software, and an architecture that tolerated parallel training.
+
+The transformer, in 2017, broke the compulsory sequential dependency during training. Through self-attention, each token could directly reach the relevant parts of its context, while computation across positions became parallelizable. It then became possible to test a new wager seriously: what happens if we increase model size, data, and compute together? Later measurements revealed disturbingly regular power laws: within the measured regime, more resources lowered the loss in a predictable way.
+
+Scale did not invent the principle. It lifted it from a small toy imitating Shakespeare into a structure able to capture an astonishing quantity of regularities about language and the world sedimented in text.
+
+### A conceptual staircase — not a timeline
+
+We can now see the sequence, provided we do not lie about history and pretend each step was invented after the previous one:
+
+```text
+n-gram table       counts a context exactly as it appeared
+        ↓
+embedding          turns similarity into a learnable distance
+        ↓
+skip-gram          isolates learning from neighbors: a word predicts its context
+        ↓
+RNN / LSTM         carries a moving summary across the sequence
+        ↓
+Transformer        opens direct access to context and parallelizes training
+        ↓
+Scale              compresses more regularity than we expected into the same simple objective
+```
+
+This is an **explanatory** staircase, not a timeline. Papers and ideas overlapped, returned, and borrowed from one another. Epistemically, however, a clear thread runs through them: instead of a secret dictionary connecting each word to an object, signs learn from other signs.
+
+From the counting table to the strongest LLM, the fundamental training question remained in the same family:
+
+$$
+P(x_{t+1}\mid x_1,\ldots,x_t)
+$$
+
+Which symbol is likely after what has already been written? The table answers with direct counts. The RNN answers from a hidden state. The transformer answers from an attention network with billions of parameters. Their capacities differ enormously; during pretraining, the channel of knowledge remains text leading to text.
+
+Here the Saussurean rhyme is deeper than word2vec. Not because Saussure invented the algorithm, or because LLM engineers implemented his theory. The direct scientific lineage passes through distributional linguistics, language modeling, and neural networks. But the epistemology, in the broad sense, is Saussurean: the system learns a sign from its position among other signs, from the differences and regularities around it. From the simplest table to the strongest LLM, uses explain uses.
+
+That is the first collision: relations alone produced far more than we expected.
+
+But that success opens the next question. The word “cow” may land close to “milk” and “farm,” and far from “nuclear reactor.” This tells you a great deal about its position in language. Does it tell you everything about its meaning in the world?
+
+<BookIllustration
+  src="/static/images/posts/thinking-became-electric-part-1/meaning-map-cow.webp"
+  alt="A machine constructs a network among images of cows, milk, grass, and barns beside an enormous living cow"
+  caption="The map captured the network: cow, milk, grass, farm. The cow itself remained larger than the map."
+  direction="ltr"
+/>
+
+Enter Wittgenstein.
+
+## Chapter Three — Second Collision
+
+In 1929, Ludwig Wittgenstein returned to Cambridge after sixteen years away.
+
+<CollisionBoard
+  chapter="Second collision — understanding and truth"
+  question="When do we call the use of language understanding? Does speech that fits correctly inside language thereby become true of the world?"
+  collision="An LLM can use language brilliantly, and with equal brilliance invent a book that does not exist. Fluency, appropriate use, and truth are not three names for the same thing."
+  epistemology="What behavior is enough for us to say 'understanding,' and what channel of verification connects speech to a reality capable of confirming or falsifying it?"
+  direction="ltr"
+/>
+
+Academic returns are usually the quietest events on Earth: a welcome lecture, modest applause, cold tea. This one was different. During his absence, Wittgenstein had carried his book project into war and written much of it while serving at the front. The book — the _Tractatus_ — claimed to have solved philosophy. Not contributed to it. Solved it.
+
+Its method deserves a pause because it carries a familiar resonance. For the young Wittgenstein, language was a mirror: a sentence was a logical picture of a fact in the world, and the limits of my language meant the limits of my world. Whatever fell outside the mirror — ethics, beauty, the meaning of life — could not properly be said, only lived. The book closes with its most famous line: “Whereof one cannot speak, thereof one must be silent.”
+
+This was not Leibniz's project, but it carried an echo of the old dream: confidence that a clean logical form could draw the boundaries of what may be said.
+
+Wittgenstein then left philosophy — logically, what was left to do? — and became a schoolteacher in rural Austria. In 1929 he returned with one intention: begin again.
+
+Over the next two decades, he rebuilt his philosophy and wrote a second book attacking much of the foundation on which the first had stood. The same mind, the same subject, and a book saying “no” to a large part of its predecessor. That is a rare movement in intellectual history. Usually your enemies demolish your system; you do not personally arrive with the hammer. Two of his students and literary executors edited the manuscript after his death and published it in 1953 as _Philosophical Investigations_.
+
+The demolition began with the mirror itself. For the later Wittgenstein, language was not a picture of the world. Language was a toolbox. One of his most famous moves was that “the meaning of a word is its use in the language” — or, more precisely, this is how we explain what we call “meaning” in many cases, though not all.
+
+The word “water” is a tool. You request with it, warn with it, baptize with it, and complain with it when the water has been cut off since morning.
+
+Wittgenstein called such activities **language-games**. Not because they were jokes, but because a word, like a chess piece, has no role outside the game in which it is used. A knight is not a knight because it resembles a horse. It is a knight because it moves in an L under rules shared by two people seated across a board.
+
+Language-games work inside the shared background of actions, concerns, and consequences that Wittgenstein called a **form of life**. “It is hot in here” may be a complaint, a request to open the window, or simply a way to begin a conversation with the person beside you on the bus. Same words; the game determines what they mean here.
+
+He offers a thought experiment that hurts the head in a useful way: the **beetle in the box**. Imagine that each of us carries a box containing something we call a beetle. Nobody can look inside anyone else's box; each person knows a beetle only through their own.
+
+Now ask: what does the word “beetle” mean in the language we share? Wittgenstein's answer is that the word can function perfectly well whatever lies inside the boxes — even if they are empty, even if every box contains something entirely different. What is inside “drops out of consideration.” Meaning does not live in the privately hidden object; it lives in the public game we play with the word.
+
+The ordinary AI debate asks: “But does the model understand on the inside?” In other words, what is in its box? The beetle experiment does not prove that a model understands, and it does not settle consciousness. It prevents us from defining understanding as an internal jewel that no test could possibly inspect.
+
+We judge that a child understands division when they divide in new situations, correct errors, and recognize when the question itself is broken. The engineering question becomes: which game is the model playing, and what must it be able to do within that game before we use the word “understanding”?
+
+But criteria of use do not erase the difference between reading text and participating in the world. A text model knows that “cow” is close to “milk,” “farm,” and “buffalo.” For you, the word is also connected to smell, weight, and sound. Up close, a cow is a warm breathing wall, and you abruptly feel smaller than planned.
+
+This does not prove that the model understands nothing. It identifies the difference between the kind of evidence on which it was trained and the kind of practice that gave the word its weight.
+
+Seventy years later, a generation of engineers built large language models. They trained their base versions on enormous portions of humanity's written trace: books, websites, forums, code, and questions asked at three in the morning that nobody admits to in daylight.
+
+The models produced fluent text, answered questions, passed exams, and wrote code. They also did something nobody had requested: they began to fabricate. In exquisite detail. References bearing the names of real authors attached to books never written. All with complete confidence, in precisely the same persuasive tone used when they were correct. The industry settled on a polite name for this phenomenon: hallucination. The polite term works in slides. “The model is making things up to your face without blinking” does not.
+
+It is tempting to say that Wittgenstein diagnosed hallucination before the first GPU. We should lower the enthusiasm by half a degree. Hallucination is not the absence of meaning; the fabricated reference is perfectly intelligible. Its problem is that it does not exist. Wittgenstein did not write a bug report for language models.
+
+His lens nevertheless reveals something important. A system learning from language can pick up many signals of reliability and often distinguish them successfully. But textual pretraining alone does not guarantee that the most likely continuation in language is the most accurate claim about the world. The loss punishes a token different from the one in the text. It does not directly punish a nonexistent book when the invented citation fits the sentence beautifully. Truth and fluency correlate in the data. They are not the same thing.
+
+<BookIllustration
+  src="/static/images/posts/thinking-became-electric-part-1/fluent-citation-empty-shelf.webp"
+  alt="A mechanical librarian presents a convincing citation while a researcher points to the book's empty place on the shelf"
+  caption="Inside language the reference is complete: author, title, publisher, year. On the shelf of the world, its place is empty."
+  direction="ltr"
+/>
+
+Here the old dream echoes again: it is easy to confuse a system ordered on the inside with a system truthful about the outside. Leibniz, the _Tractatus_, and LLMs are not identical projects, and there is no direct historical line connecting them. But the temptation returns: when internal relations work with sufficient precision, we forget to ask what connects them to the world.
+
+That is the gap: no form of life waits on the other side of the loss function. Text reaches the model carrying traces of life, not its direct consequences.
+
+A limited engineering compass follows. If textual training gives a model no channel through which to check its speech, add channels of verification. Retrieval, tools, verifiers, and feedback from an actual environment give the system something to return to besides the probability of the next token.
+
+This does not solve consciousness or transform a sensor into “experience.” Even a world model can hallucinate physics. But it narrows the distance between speech and consequence, and that distance is an engineering object we can work on.
+
+Wittgenstein's movement from the _Tractatus_ to the _Investigations_ is the moral spine of the second part of this story: the man who built the purest palace of the old dream, then walked out and demolished it with his own hands. We will follow that movement step by step when we reach it.
+
+For now, an older question remains: even if we reconnect language to life, by what right do we expect tomorrow to resemble yesterday?
+
+## Chapter Four — Third Collision
+
+The third collision is the oldest by almost two centuries, and perhaps the deepest. It does not seize one phenomenon such as meaning or hallucination. It seizes the question underneath learning itself: by what right do we give the past authority over the next example?
+
+<CollisionBoard
+  chapter="Third collision — learning"
+  question="What does it mean for a model to have learned, rather than merely found a rule that fits the examples it saw?"
+  collision="Finite data can agree with more than one rule. Rules may be equal on the past and diverge on the next example. Generalization needs an additional wager that the data alone do not impose."
+  epistemology="When does success on the past become evidence about a case we have not seen? What assumption allowed the model to carry knowledge beyond its training sample?"
+  direction="ltr"
+/>
+
+Between 1739 and 1740, a Scotsman in his late twenties named David Hume published _A Treatise of Human Nature_. He released it anonymously and waited for the storm. He had every reason to expect one: the book was digging beneath certainties on which European philosophy slept.
+
+Hardly a storm arrived. The book received a few reviews, but the market greeted it more like a washing-machine manual than a philosophical bomb. That, at least, is how Hume later told the story when he wrote that it had “fallen dead-born from the press.”
+
+He spent years rewriting its ideas into shorter, sharper books — books people actually read. The first complete refactor in history of a codebase nobody had bothered to open. Quietly, the argument buried in the first release began working beneath the foundations of European philosophy.
+
+The argument concerned induction. We are convinced the sun will rise tomorrow. Why? Because it has risen every morning from the beginning of recorded history until today. Hume asked one question: what licenses the leap from “it has risen every day so far” to “it will rise tomorrow”?
+
+The past does not logically entail the future. If you answer that nature is generally uniform, you have used induction to justify induction: nature was uniform, therefore it will remain uniform. You walked in a circle and returned to the beginning.
+
+And still we make the leap. Every day. You made it this morning when you put water over heat, already confident it would boil as before. We must make it: anyone waiting for proof before eating will die of hunger. But let us call it by its name. Habit. Habit polished by repetition and dressed in the suit of inference.
+
+Hume did not think this made science nonsense. On the contrary, he thought it finally made science honest with itself. Empirical knowledge runs on a wager. A good wager, one that wins most of the time, but a wager. Pretending it rests on something firmer has always been reason's ready temptation.
+
+Hume preceded the formal project Frege and Hilbert would construct by more than a century and was not one of its members. But the question he left behind follows every system that learns from the world: what guarantees that the pattern which worked so far will continue on the next example?
+
+Three centuries later, much of machine learning lives on a wager close to Hume's. During training, we treat examples as if they came from a process stable enough to learn. In production, we wager that tomorrow remains sufficiently close to yesterday.
+
+In machine learning, the problem begins even **before** the world changes. Assume the distribution is fixed, measurement is clean, and we have six noiseless training points. More than one rule still passes through the same points and differs afterward. For example:
+
+$$
+h_1(x)=2x+1
+$$
+
+and
+
+$$
+h_2(x)=2x+1+\alpha\prod_{i=1}^{6}(x-i)
+$$
+
+Between $x=1$ and $x=6$, the added term in the second rule is zero at every training point. Both rules have the same training loss: zero. At $x=7$, the term wakes up and each rule tells a different story about the next example. The data did not choose between them. The choice entered through an additional assumption about the kinds of rule we prefer.
+
+<BookIllustration
+  src="/static/images/posts/thinking-became-electric-part-1/hume-two-futures.webp"
+  alt="Six survey markers are followed by blue and orange paths that match across the past and separate in the fog"
+  caption="Six observations, two readings equally faithful to them. The disagreement appears only at the point we have not yet seen."
+  direction="ltr"
+/>
+
+The demo lets you watch the leap itself. Reveal the past, fit it with two rules, then uncover the example neither model has seen. Move $\alpha$: the past remains fixed while the prediction changes.
+
+<Demo
+  src="/demos/posts/thinking-became-electric-part-1/hume-induction.en.html?v=1"
+  title="Hume's wager: the same past, more than one rule"
+  height={780}
+/>
+
+When the wager holds, the model generalizes and everyone celebrates the benchmark. When the data change, it may fail while preserving the same confidence and the same ordering of outputs. Mathematics gives us powerful guarantees, but every guarantee begins with “if”: if the distribution is stable, if the sample is representative, if the assumptions hold.
+
+Mathematics helps us measure and monitor the wager. It does not oblige the future to honor it. Every time production data cease to resemble the training data, Hume is knocking at the door. The training set is yesterday's sunrise. Deployment is tomorrow.
+
+Without naming Hume's problem, the craft has built an entire toolkit around it: priors, smoothness assumptions, train/test splits, cross-validation in all its ritual repetitions, and drift monitoring. They are engineering methods for managing Hume's wager.
+
+We test the model on pieces of the past withheld from training and watch for the moment the world begins to change. We do not turn the past into a warranty on the future. That is exactly where the problem of generalization lives.
+
+<BookIllustration
+  src="/static/images/posts/thinking-became-electric-part-1/three-collisions.webp"
+  alt="One scene joins the network of meaning and the cow, the citation before the empty shelf, and two roads leaving the same past"
+  caption="Three collisions, one question beneath them: what evidence lets us call what the machine produced meaning, understanding, or learning?"
+  direction="ltr"
+/>
+
+The optimization thread — how the machine moves through a landscape of error — returns in Part III.
+
+Now we go back to the beginning of the story, to the first spark of the dream: the man who decided that human disagreement itself ought to become calculation.
+
+---
+
+### Primary readings behind the technical chapter
+
+- Yoshua Bengio, Réjean Ducharme, Pascal Vincent, Christian Jauvin, [A Neural Probabilistic Language Model](https://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf), 2003.
+- Tomas Mikolov et al., [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781), 2013.
+- Tomas Mikolov et al., [Distributed Representations of Words and Phrases and their Compositionality](https://arxiv.org/abs/1310.4546), 2013 — the paper that introduced negative sampling.
+- Andrej Karpathy, [The Unreasonable Effectiveness of Recurrent Neural Networks](https://karpathy.github.io/2015/05/21/rnn-effectiveness/), 2015.
+- Ashish Vaswani et al., [Attention Is All You Need](https://arxiv.org/abs/1706.03762), 2017.
+- Jared Kaplan et al., [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361), 2020.

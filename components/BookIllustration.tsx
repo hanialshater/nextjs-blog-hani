@@ -5,6 +5,7 @@ interface BookIllustrationProps {
   alt: string
   caption?: string
   priority?: boolean
+  direction?: 'ltr' | 'rtl'
 }
 
 export default function BookIllustration({
@@ -12,9 +13,10 @@ export default function BookIllustration({
   alt,
   caption,
   priority = false,
+  direction = 'rtl',
 }: BookIllustrationProps) {
   return (
-    <figure className="not-prose my-10 sm:my-14" dir="rtl">
+    <figure className="not-prose my-10 sm:my-14" dir={direction}>
       <div className="overflow-hidden rounded-xl border border-stone-200/80 bg-[#f4ecd9] shadow-sm dark:border-gray-700 dark:bg-gray-900">
         <Image
           src={src}
