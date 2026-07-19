@@ -433,13 +433,33 @@ He spent years rewriting its ideas into shorter, sharper books — books people 
 
 The argument concerned induction. We are convinced the sun will rise tomorrow. Why? Because it has risen every morning from the beginning of recorded history until today. Hume asked one question: what licenses the leap from “it has risen every day so far” to “it will rise tomorrow”?
 
-The past does not logically entail the future. If you answer that nature is generally uniform, you have used induction to justify induction: nature was uniform, therefore it will remain uniform. You walked in a circle and returned to the beginning.
+The past does not logically entail the future. There is no logical law that says “patterns repeat.” Yet every day we bet on repetition. You did this morning when you put water over heat, confident it would boil as before. You did it when you opened your email, expecting the same icons in the same places.
 
-And still we make the leap. Every day. You made it this morning when you put water over heat, already confident it would boil as before. We must make it: anyone waiting for proof before eating will die of hunger. But let us call it by its name. Habit. Habit polished by repetition and dressed in the suit of inference.
+What Hume noticed was this: we learn by **habit and repetition**, not by logical proof. See something a hundred times, and you become convinced it will happen again. No theorem required. No formal demonstration. Only: frequency, memory, and expectation.
 
-Hume did not think this made science nonsense. On the contrary, he thought it finally made science honest with itself. Empirical knowledge runs on a wager. A good wager, one that wins most of the time, but a wager. Pretending it rests on something firmer has always been reason's ready temptation.
+This is not a defect of human reasoning. It is the actual mechanism by which knowledge works when evidence is finite. And it is, with astonishing precision, the mechanism by which neural networks learn.
 
-Hume preceded the formal project Frege and Hilbert would construct by more than a century and was not one of its members. But the question he left behind follows every system that learns from the world: what guarantees that the pattern which worked so far will continue on the next example?
+The framework is simple:
+- **Observations** (data points, sensory impressions)
+- **Repetition** (seeing the same pattern across examples)
+- **Habit** (the pattern becomes embedded; the model “expects” it to continue)
+- **Probability, not certainty** (stronger patterns are more trusted, but none are guaranteed)
+
+Hume did not use the word “generalization.” He described something deeper: that learning is not the discovery of hidden laws. Learning is the accumulation of repeated patterns into a disposition to predict their recurrence. For a text model, it is encountering “the boy drank” followed by “milk” thousands of times, then—without any instruction—developing the expectation that milk will follow again.
+
+Hume preceded the formal project Frege and Hilbert would construct by more than a century and was not one of its members. But what Hume described was not a philosophical problem awaiting a solution. It was an **accurate description of how learning actually works**.
+
+Take what he said and remove the skeptical frame. What remains?
+
+- Knowledge comes from **sensory impressions**, not from reason alone. → ML: knowledge comes from **data**, not from hardcoded rules.
+- Understanding is built from **repeated observations** of the same pattern. → ML: a model learns by seeing the same pattern across thousands of examples.
+- Meaning emerges from **associations among elements**, strengthened by frequency. → ML: representations learn by **co-occurrence** and repetition; "boy" and "girl" cluster together not because of a definition, but because they appear in similar contexts.
+- We are **not discovering hidden laws**; we are accumulating patterns. → ML: a model is not "finding the truth." It is building a probability distribution over observed regularities.
+- There is **no certainty, only degrees of confidence**. The pattern that held across a thousand examples may break on the next. → ML: softmax outputs probabilities; the model is a system of betting odds, not a system of truth.
+
+Hume did not invent this framework to describe artificial intelligence. He described it because it is how human minds actually learn when evidence is finite. He noticed that knowledge at its foundation is not logical proof, but accumulated frequency. Habit.
+
+Three centuries later, we built machines that learn exactly this way.
 
 Three centuries later, much of machine learning lives on a wager close to Hume's. During training, we treat examples as if they came from a process stable enough to learn. In production, we wager that tomorrow remains sufficiently close to yesterday.
 
@@ -476,9 +496,11 @@ When the wager holds, the model generalizes and everyone celebrates the benchmar
 
 Mathematics helps us measure and monitor the wager. It does not oblige the future to honor it. Every time production data cease to resemble the training data, Hume is knocking at the door. The training set is yesterday's sunrise. Deployment is tomorrow.
 
-Without naming Hume's problem, the craft has built an entire toolkit around it: priors, smoothness assumptions, train/test splits, cross-validation in all its ritual repetitions, and drift monitoring. They are engineering methods for managing Hume's wager.
+The craft has built an entire toolkit around this observation: priors (assumptions about which patterns are more likely), smoothness assumptions (nearby points should have similar values), train/test splits (test on data the model never saw), cross-validation (test repeatedly on different held-out pieces), and drift monitoring (watch when the world changes). 
 
-We test the model on pieces of the past withheld from training and watch for the moment the world begins to change. We do not turn the past into a warranty on the future. That is exactly where the problem of generalization lives.
+These are not solutions to Hume's problem. They are **operationalizations of what he described**. They say: *this is how to measure whether the wager is holding.* They do not prove that the future will resemble the past. They measure whether it has, so far, and alert us to the moment it stops.
+
+We test the model on pieces of the past withheld from training—a clean repetition of Hume's insight that frequency in one sample may not predict frequency in another. We watch for the moment the world begins to change. We do not turn the past into a warranty on the future. We treat it as evidence, provisional and revocable, pending the arrival of new examples.
 
 <BookIllustration
   src="/static/images/posts/thinking-became-electric-part-1/three-collisions.webp"
