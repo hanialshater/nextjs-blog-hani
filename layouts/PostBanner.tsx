@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode } from 'react'
 import Image from '@/components/Image'
 import Bleed from 'pliny/ui/Bleed'
@@ -8,17 +10,20 @@ import Link from '@/components/Link'
 import PageTitle from '@/components/PageTitle'
 import SectionContainer from '@/components/SectionContainer'
 import siteMetadata from '@/data/siteMetadata'
+import { useLocale } from '@/i18n/LocaleContext'
+import { getPostRoutePath } from '@/lib/content/postRoutes'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 
 interface LayoutProps {
   content: CoreContent<Blog>
   children: ReactNode
-  next?: { path: string; title: string }
-  prev?: { path: string; title: string }
+  next?: CoreContent<Blog>
+  prev?: CoreContent<Blog>
   translation?: { locale: 'en' | 'ar'; path: string }
 }
 
 export default function PostMinimal({ content, next, prev, children }: LayoutProps) {
+  const { locale } = useLocale()
   const { slug, title, images } = content
   const displayImage =
     images && images.length > 0 ? images[0] : 'https://picsum.photos/seed/picsum/800/400'
@@ -51,7 +56,7 @@ export default function PostMinimal({ content, next, prev, children }: LayoutPro
               {prev && prev.path && (
                 <div className="pt-4 xl:pt-8">
                   <Link
-                    href={`/${prev.path}`}
+                    href={getPostRoutePath(prev, locale)}
                     className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
                     aria-label={`Previous post: ${prev.title}`}
                   >
@@ -62,7 +67,7 @@ export default function PostMinimal({ content, next, prev, children }: LayoutPro
               {next && next.path && (
                 <div className="pt-4 xl:pt-8">
                   <Link
-                    href={`/${next.path}`}
+                    href={getPostRoutePath(next, locale)}
                     className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
                     aria-label={`Next post: ${next.title}`}
                   >

@@ -1,46 +1,36 @@
-import { genPageMetadata } from 'app/seo'
+import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
-import { Locale, locales, getTranslation } from '@/i18n/config'
-import { notFound } from 'next/navigation'
+import { type Locale, locales, getTranslation } from '@/i18n/config'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getPaginatedPosts, getPaginatedStaticParams } from '@/lib/content/posts'
 
-export const metadata = genPageMetadata({ title: 'Free Writing' })
+type Props = { params: Promise<{ locale: string; num: string }> }
 
-export async function generateStaticParams() {
+export async function generateMetadata({ params }: Props) {
+  const { locale, num } = await params
+  return genLocalizedPageMetadata({
+    title: getTranslation(locale as Locale, 'nav.freeWriting'),
+    locale,
+    path: num === '1' ? 'free-writing' : `free-writing/page/${num}`,
+  })
+}
+
+export function generateStaticParams() {
   return getPaginatedStaticParams('free-writing', locales)
 }
 
-export default async function FreeWritingPageNum({
-  params,
-}: {
-  params: Promise<{ locale: string; num: string }>
-}) {
+export default async function Page({ params }: Props) {
   const { locale, num } = await params
-  const pageNumber = parseInt(num)
-
-  if (isNaN(pageNumber) || pageNumber < 1) {
-    return notFound()
-  }
-
-  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts(
-    'free-writing',
-    locale,
-    pageNumber
-  )
-  const { totalPages } = pagination
-
-  if (pageNumber > totalPages) {
-    return notFound()
-  }
-
-  const t = (key: string) => getTranslation(locale as Locale, key)
-
+  if (!/^[1-9]\d*$/.test(num)) notFound()
+  const pageNumber = Number(num)
+  if (!Number.isSafeInteger(pageNumber)) notFound()
+  if (pageNumber === 1) permanentRedirect(`/${locale}/free-writing`)
+  const result = getPaginatedPosts('free-writing', locale, pageNumber)
+  if (pageNumber > result.pagination.totalPages) notFound()
   return (
     <ListLayout
-      posts={posts}
-      initialDisplayPosts={initialDisplayPosts}
-      pagination={pagination}
-      title={t('nav.freeWriting')}
+      {...result}
+      title={getTranslation(locale as Locale, 'nav.freeWriting')}
       basePath="free-writing"
     />
   )

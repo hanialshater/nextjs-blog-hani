@@ -14,6 +14,8 @@ import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
 import { useLocale } from '@/i18n/LocaleContext'
 import type { Locale } from '@/i18n/config'
+import { getPostSection, getPostRoutePath, getPostCanonicalUrl } from '@/lib/content/postRoutes'
+import TableOfContents from '@/components/TableOfContents'
 import { getProjectBySlug, getLocalizedProject } from '@/data/projectsData'
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
@@ -26,8 +28,8 @@ const postDateTemplate: Intl.DateTimeFormatOptions = {
 interface LayoutProps {
   content: CoreContent<Blog>
   authorDetails: CoreContent<Authors>[]
-  next?: { path: string; title: string; slug: string }
-  prev?: { path: string; title: string; slug: string }
+  next?: CoreContent<Blog>
+  prev?: CoreContent<Blog>
   // The counterpart of this post in the other locale, if one exists.
   translation?: { locale: Locale; path: string }
   children: ReactNode
@@ -49,10 +51,8 @@ export default function PostLayout({
   // Get project data if post belongs to a project
   const projectData = project ? getProjectBySlug(project) : undefined
   const localizedProject = projectData ? getLocalizedProject(projectData, locale) : undefined
-  // Map content path to URL path
-  const contentPath = path.split('/')[0]
-  const basePath = contentPath === 'free-writing-blog' ? 'free-writing' : 'blog'
-  const postUrl = `${siteMetadata.siteUrl}/${locale}/${basePath}/${slug}`
+  const basePath = getPostSection(content)
+  const postUrl = getPostCanonicalUrl(content, locale)
 
   // Get locale for date formatting
   const dateLocale = locale === 'ar' ? 'ar-SA' : 'en-US'
@@ -191,7 +191,7 @@ export default function PostLayout({
             <dl
               className={`pt-6 pb-10 xl:border-b xl:border-gray-200 xl:pt-11 xl:dark:border-gray-700 ${isRTL ? 'xl:col-start-4' : ''}`}
             >
-              <dt className="sr-only">Authors</dt>
+              <dt className="sr-only">{t('blog.authors')}</dt>
               <dd>
                 <ul
                   className={`flex flex-wrap justify-center gap-4 sm:gap-x-12 xl:block xl:space-y-8 ${isRTL ? 'xl:text-right' : ''}`}
@@ -213,7 +213,7 @@ export default function PostLayout({
                       <dl
                         className={`text-sm leading-5 font-medium whitespace-nowrap ${isRTL ? 'text-right' : ''}`}
                       >
-                        <dt className="sr-only">Name</dt>
+                        <dt className="sr-only">{t('common.name')}</dt>
                         <dd className="text-gray-900 dark:text-gray-100">{author.name}</dd>
                         <dt className="sr-only">Twitter</dt>
                         <dd>
@@ -232,12 +232,15 @@ export default function PostLayout({
                     </li>
                   ))}
                 </ul>
+                <TableOfContents toc={content.toc} />
               </dd>
             </dl>
             <div
               className={`divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700 ${isRTL ? 'xl:col-start-1 xl:col-end-4' : ''}`}
             >
-              <div className="prose dark:prose-invert max-w-none pt-10 pb-8">{children}</div>
+              <div id="article-content" className="prose dark:prose-invert max-w-none pt-10 pb-8">
+                {children}
+              </div>
               <div className={`flex pt-6 pb-6 ${isRTL ? 'justify-start' : 'justify-end'}`}>
                 <ShareButtons url={postUrl} title={title} />
               </div>
@@ -279,7 +282,7 @@ export default function PostLayout({
                           {t('blog.previousArticle')}
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={localizeHref(`/${basePath}/${prev.slug}`)}>{prev.title}</Link>
+                          <Link href={getPostRoutePath(prev, locale)}>{prev.title}</Link>
                         </div>
                       </div>
                     )}
@@ -289,7 +292,7 @@ export default function PostLayout({
                           {t('blog.nextArticle')}
                         </h2>
                         <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={localizeHref(`/${basePath}/${next.slug}`)}>{next.title}</Link>
+                          <Link href={getPostRoutePath(next, locale)}>{next.title}</Link>
                         </div>
                       </div>
                     )}
@@ -300,9 +303,25 @@ export default function PostLayout({
                 <Link
                   href={localizeHref(`/${basePath}`)}
                   className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                  aria-label={t('blog.backToBlog')}
+                  aria-label={t(
+                    basePath === 'free-writing' ? 'blog.backToFreeWriting' : 'blog.backToBlog'
+                  )}
                 >
-                  {isRTL ? <>{t('blog.backToBlog')} &rarr;</> : <>&larr; {t('blog.backToBlog')}</>}
+                  {isRTL ? (
+                    <>
+                      {t(
+                        basePath === 'free-writing' ? 'blog.backToFreeWriting' : 'blog.backToBlog'
+                      )}{' '}
+                      &rarr;
+                    </>
+                  ) : (
+                    <>
+                      &larr;{' '}
+                      {t(
+                        basePath === 'free-writing' ? 'blog.backToFreeWriting' : 'blog.backToBlog'
+                      )}
+                    </>
+                  )}
                 </Link>
               </div>
             </footer>

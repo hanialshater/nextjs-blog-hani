@@ -13,7 +13,7 @@ and [Contentlayer](https://www.contentlayer.dev/) for MDX content. It started fr
   RTL support, and cross-links between a post and its translation.
 - **Content sections**: Blog, Free Writing, Projects, and standalone Demos.
 - MDX posts with math (KaTeX), code highlighting, citations, and a table of contents.
-- Full-text search, tags, RSS feed, and SEO metadata (canonical + `hreflang` alternates).
+- Article search, tags, RSS feed, and SEO metadata (canonical + `hreflang` alternates).
 
 ## Content structure
 
@@ -37,9 +37,14 @@ in frontmatter. A translation declares its origin in frontmatter:
 ```yaml
 section: 'free-writing'
 language: ar
-translationOf: my-post   # slug of the original post
+translationOf: my-post # slug of the original post
 originalLanguage: en
 ```
+
+`/en/blog` and `/ar/blog` are complete archives of published articles from both
+sections. Article links keep their section-specific URLs. Old `/blog/<slug>`
+links redirect to the corresponding Free Writing article when applicable;
+invalid pagination returns a 404 instead of an empty archive.
 
 Translation cross-links are resolved in `lib/content/postRoutes.ts` and rendered by
 `layouts/PostLayout.tsx`. See `data/posts/README.md` for the full bundle reference.
@@ -47,7 +52,7 @@ Translation cross-links are resolved in `lib/content/postRoutes.ts` and rendered
 ## Development
 
 ```bash
-yarn          # install dependencies (Yarn 4 / Berry)
+yarn          # install dependencies (Yarn 3.6.1 / Berry)
 yarn dev      # start the dev server at http://localhost:3000
 yarn build    # production build (+ RSS generation)
 yarn start    # serve the production build

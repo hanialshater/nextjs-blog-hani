@@ -5,7 +5,11 @@ import { getPaginatedPosts } from '@/lib/content/posts'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return genLocalizedPageMetadata({ title: 'Free Writing', locale, path: 'free-writing' })
+  return genLocalizedPageMetadata({
+    title: getTranslation(locale as Locale, 'nav.freeWriting'),
+    locale,
+    path: 'free-writing',
+  })
 }
 
 export async function generateStaticParams() {

@@ -1,42 +1,36 @@
-import { genPageMetadata } from 'app/seo'
+import { genLocalizedPageMetadata } from 'app/seo'
 import ListLayout from '@/layouts/ListLayout'
-import { Locale, locales, getTranslation } from '@/i18n/config'
-import { notFound } from 'next/navigation'
+import { type Locale, locales, getTranslation } from '@/i18n/config'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getPaginatedPosts, getPaginatedStaticParams } from '@/lib/content/posts'
 
-export const metadata = genPageMetadata({ title: 'Blog' })
+type Props = { params: Promise<{ locale: string; num: string }> }
 
-export async function generateStaticParams() {
-  return getPaginatedStaticParams('blog', locales)
+export async function generateMetadata({ params }: Props) {
+  const { locale, num } = await params
+  return genLocalizedPageMetadata({
+    title: getTranslation(locale as Locale, 'blog.allPosts'),
+    locale,
+    path: num === '1' ? 'blog' : `blog/page/${num}`,
+  })
 }
 
-export default async function BlogPageNum({
-  params,
-}: {
-  params: Promise<{ locale: string; num: string }>
-}) {
+export function generateStaticParams() {
+  return getPaginatedStaticParams('all', locales)
+}
+
+export default async function Page({ params }: Props) {
   const { locale, num } = await params
-  const pageNumber = parseInt(num)
-
-  if (isNaN(pageNumber) || pageNumber < 1) {
-    return notFound()
-  }
-
-  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts('blog', locale, pageNumber)
-  const { totalPages } = pagination
-
-  if (pageNumber > totalPages) {
-    return notFound()
-  }
-
-  const t = (key: string) => getTranslation(locale as Locale, key)
-
+  if (!/^[1-9]\d*$/.test(num)) notFound()
+  const pageNumber = Number(num)
+  if (!Number.isSafeInteger(pageNumber)) notFound()
+  if (pageNumber === 1) permanentRedirect(`/${locale}/blog`)
+  const result = getPaginatedPosts('all', locale, pageNumber)
+  if (pageNumber > result.pagination.totalPages) notFound()
   return (
     <ListLayout
-      posts={posts}
-      initialDisplayPosts={initialDisplayPosts}
-      pagination={pagination}
-      title={t('blog.allPosts')}
+      {...result}
+      title={getTranslation(locale as Locale, 'blog.allPosts')}
       basePath="blog"
     />
   )

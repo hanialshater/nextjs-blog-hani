@@ -188,3 +188,23 @@ input:-webkit-autofill:focus {
   display: inline-block;
   vertical-align: middle;
 }
+
+/* Keep Arabic typography and inline code intentional in RTL articles. */
+html[lang='ar'] body {
+  font-family: var(--font-noto-arabic);
+}
+html[dir='rtl'] .prose :where(h1, h2, h3, h4) {
+  letter-spacing: normal;
+}
+.prose pre {
+  direction: ltr;
+  text-align: left;
+}
+.prose :where(h2, h3) {
+  scroll-margin-top: 2rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}

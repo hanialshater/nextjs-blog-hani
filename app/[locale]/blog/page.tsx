@@ -5,7 +5,11 @@ import { getPaginatedPosts } from '@/lib/content/posts'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return genLocalizedPageMetadata({ title: 'Blog', locale, path: 'blog' })
+  return genLocalizedPageMetadata({
+    title: getTranslation(locale as Locale, 'blog.allPosts'),
+    locale,
+    path: 'blog',
+  })
 }
 
 export async function generateStaticParams() {
@@ -19,7 +23,7 @@ export default async function BlogPage({
   searchParams: Promise<{ page: string }>
 }) {
   const { locale } = await params
-  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts('blog', locale)
+  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts('all', locale)
 
   const t = (key: string) => getTranslation(locale as Locale, key)
 

@@ -7,6 +7,7 @@ import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
 import { useLocale } from '@/i18n/LocaleContext'
 import { getTagConfig, getTagLabel } from '@/data/tagIcons'
+import { getPostRoutePath } from '@/lib/content/postRoutes'
 
 interface PaginationProps {
   totalPages: number
@@ -33,7 +34,7 @@ function Pagination({ totalPages, currentPage, t, locale, basePath }: Pagination
 
   return (
     <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-      <nav className="flex justify-between">
+      <nav aria-label={t('blog.pagination')} className="flex justify-between">
         {!prevPage && (
           <button className="cursor-auto disabled:opacity-50" disabled={!prevPage}>
             {t('common.previous')}
@@ -127,6 +128,7 @@ export default function ListLayout({
           <div className={`flex flex-wrap gap-2 py-4 ${isRTL ? 'justify-end' : 'justify-start'}`}>
             <button
               onClick={() => setSelectedTag(null)}
+              aria-pressed={selectedTag === null}
               className={`rounded-md px-3 py-1 text-sm transition-colors ${
                 selectedTag === null
                   ? 'bg-primary-500 text-white'
@@ -142,6 +144,7 @@ export default function ListLayout({
                 <button
                   key={tag}
                   onClick={() => setSelectedTag(isSelected ? null : tag)}
+                  aria-pressed={isSelected}
                   className={`rounded-md px-3 py-1 text-sm transition-colors ${
                     isSelected
                       ? 'bg-primary-500 text-white'
@@ -200,7 +203,7 @@ export default function ListLayout({
                     <div>
                       <h3 className="text-2xl leading-8 font-bold tracking-tight">
                         <Link
-                          href={`/${locale}/${basePath}/${slug}`}
+                          href={getPostRoutePath(post, locale)}
                           className="text-gray-900 dark:text-gray-100"
                         >
                           {title}

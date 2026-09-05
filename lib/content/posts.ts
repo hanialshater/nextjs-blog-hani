@@ -11,6 +11,7 @@ import {
 } from './postRoutes'
 
 export const POSTS_PER_PAGE = 5
+export type PostCollection = PostSection | 'all'
 
 export interface PaginationResult {
   currentPage: number
@@ -33,14 +34,14 @@ export function shouldIncludeDrafts() {
 }
 
 export function getPublishedPostsBySection(
-  section: PostSection,
+  section: PostCollection,
   locale: string,
   includeDrafts = shouldIncludeDrafts()
 ) {
   return sortPosts(
     allBlogs.filter(
       (post) =>
-        sectionFilters[section](post) &&
+        (section === 'all' || sectionFilters[section](post)) &&
         isPostInLocale(post, locale) &&
         isPublishedPost(post, includeDrafts)
     )
@@ -48,7 +49,7 @@ export function getPublishedPostsBySection(
 }
 
 export function getCorePostsBySection(
-  section: PostSection,
+  section: PostCollection,
   locale: string,
   includeDrafts = shouldIncludeDrafts()
 ) {
@@ -56,7 +57,7 @@ export function getCorePostsBySection(
 }
 
 export function getPaginatedPosts(
-  section: PostSection,
+  section: PostCollection,
   locale: string,
   pageNumber = 1,
   perPage = POSTS_PER_PAGE,
@@ -78,7 +79,7 @@ export function getPaginatedPosts(
 }
 
 export function getPaginatedStaticParams(
-  section: PostSection,
+  section: PostCollection,
   locales: readonly string[],
   perPage = POSTS_PER_PAGE
 ) {

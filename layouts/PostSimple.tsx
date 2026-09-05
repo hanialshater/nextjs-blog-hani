@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode } from 'react'
 import { formatDate } from 'pliny/utils/formatDate'
 import { CoreContent } from 'pliny/utils/contentlayer'
@@ -7,17 +9,20 @@ import Link from '@/components/Link'
 import PageTitle from '@/components/PageTitle'
 import SectionContainer from '@/components/SectionContainer'
 import siteMetadata from '@/data/siteMetadata'
+import { useLocale } from '@/i18n/LocaleContext'
+import { getPostRoutePath } from '@/lib/content/postRoutes'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 
 interface LayoutProps {
   content: CoreContent<Blog>
   children: ReactNode
-  next?: { path: string; title: string }
-  prev?: { path: string; title: string }
+  next?: CoreContent<Blog>
+  prev?: CoreContent<Blog>
   translation?: { locale: 'en' | 'ar'; path: string }
 }
 
 export default function PostLayout({ content, next, prev, children }: LayoutProps) {
+  const { locale } = useLocale()
   const { path, slug, date, title } = content
 
   return (
@@ -54,7 +59,7 @@ export default function PostLayout({ content, next, prev, children }: LayoutProp
                 {prev && prev.path && (
                   <div className="pt-4 xl:pt-8">
                     <Link
-                      href={`/${prev.path}`}
+                      href={getPostRoutePath(prev, locale)}
                       className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
                       aria-label={`Previous post: ${prev.title}`}
                     >
@@ -65,7 +70,7 @@ export default function PostLayout({ content, next, prev, children }: LayoutProp
                 {next && next.path && (
                   <div className="pt-4 xl:pt-8">
                     <Link
-                      href={`/${next.path}`}
+                      href={getPostRoutePath(next, locale)}
                       className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
                       aria-label={`Next post: ${next.title}`}
                     >

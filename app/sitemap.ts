@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { allBlogs } from 'contentlayer/generated'
 import miniDemosData from '@/data/miniDemosData'
+import projectsData from '@/data/projectsData'
 import siteMetadata from '@/data/siteMetadata'
 import { locales } from '@/i18n/config'
 import { getPostRoutePath, getPostSection, isPublishedPost } from '@/lib/content/postRoutes'
@@ -49,5 +50,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   )
 
-  return [...routes, ...demoRoutes, ...blogRoutes]
+  const projectRoutes = projectsData.flatMap((project) =>
+    locales.map((locale) => ({
+      url: `${siteUrl}/${locale}/projects/${project.slug}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }))
+  )
+  return [...routes, ...demoRoutes, ...projectRoutes, ...blogRoutes]
 }
