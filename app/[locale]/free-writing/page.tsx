@@ -1,39 +1,11 @@
-import { genLocalizedPageMetadata } from 'app/seo'
-import ListLayout from '@/layouts/ListLayout'
-import { Locale, locales, getTranslation } from '@/i18n/config'
-import { getPaginatedPosts } from '@/lib/content/posts'
+import { permanentRedirect } from 'next/navigation'
+import { locales } from '@/i18n/config'
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  return genLocalizedPageMetadata({
-    title: getTranslation(locale as Locale, 'nav.freeWriting'),
-    locale,
-    path: 'free-writing',
-  })
-}
-
-export async function generateStaticParams() {
+export function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
 }
 
-export default async function FreeWritingPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>
-  searchParams: Promise<{ page: string }>
-}) {
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const { posts, initialDisplayPosts, pagination } = getPaginatedPosts('free-writing', locale)
-
-  const t = (key: string) => getTranslation(locale as Locale, key)
-
-  return (
-    <ListLayout
-      posts={posts}
-      initialDisplayPosts={initialDisplayPosts}
-      pagination={pagination}
-      title={t('nav.freeWriting')}
-      basePath="free-writing"
-    />
-  )
+  permanentRedirect(`/${locale}/blog`)
 }

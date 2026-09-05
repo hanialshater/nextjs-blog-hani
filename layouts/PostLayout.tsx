@@ -14,7 +14,7 @@ import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
 import { useLocale } from '@/i18n/LocaleContext'
 import type { Locale } from '@/i18n/config'
-import { getPostSection, getPostRoutePath, getPostCanonicalUrl } from '@/lib/content/postRoutes'
+import { getPostRoutePath, getPostCanonicalUrl } from '@/lib/content/postRoutes'
 import TableOfContents from '@/components/TableOfContents'
 import { getProjectBySlug, getLocalizedProject } from '@/data/projectsData'
 
@@ -51,7 +51,6 @@ export default function PostLayout({
   // Get project data if post belongs to a project
   const projectData = project ? getProjectBySlug(project) : undefined
   const localizedProject = projectData ? getLocalizedProject(projectData, locale) : undefined
-  const basePath = getPostSection(content)
   const postUrl = getPostCanonicalUrl(content, locale)
 
   // Get locale for date formatting
@@ -301,27 +300,11 @@ export default function PostLayout({
               </div>
               <div className={`pt-4 xl:pt-8 ${isRTL ? 'text-right' : ''}`}>
                 <Link
-                  href={localizeHref(`/${basePath}`)}
+                  href={localizeHref('/blog')}
                   className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                  aria-label={t(
-                    basePath === 'free-writing' ? 'blog.backToFreeWriting' : 'blog.backToBlog'
-                  )}
+                  aria-label={t('blog.backToBlog')}
                 >
-                  {isRTL ? (
-                    <>
-                      {t(
-                        basePath === 'free-writing' ? 'blog.backToFreeWriting' : 'blog.backToBlog'
-                      )}{' '}
-                      &rarr;
-                    </>
-                  ) : (
-                    <>
-                      &larr;{' '}
-                      {t(
-                        basePath === 'free-writing' ? 'blog.backToFreeWriting' : 'blog.backToBlog'
-                      )}
-                    </>
-                  )}
+                  {isRTL ? <>{t('blog.backToBlog')} &rarr;</> : <>&larr; {t('blog.backToBlog')}</>}
                 </Link>
               </div>
             </footer>

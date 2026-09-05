@@ -5,24 +5,23 @@ test.describe('Navigation and localized content pages', () => {
     await page.goto('/en')
 
     const header = page.locator('header')
-    await expect(header.getByRole('link', { name: 'Free Writing' })).toHaveAttribute(
+    await expect(header.getByRole('link', { name: 'Blog', exact: true })).toHaveAttribute(
       'href',
-      '/en/free-writing'
+      '/en/blog'
     )
     await expect(header.getByRole('link', { name: 'Projects' })).toHaveAttribute(
       'href',
       '/en/projects'
     )
     await expect(header.getByRole('link', { name: 'Demos' })).toHaveAttribute('href', '/en/demos')
+    await expect(header.getByRole('link', { name: 'Free Writing' })).toHaveCount(0)
   })
 
-  test('should load the localized free-writing page and display current posts', async ({
-    page,
-  }) => {
+  test('should redirect the former free-writing archive to Blog', async ({ page }) => {
     await page.goto('/en/free-writing')
 
-    await expect(page).toHaveTitle(/Free Writing/)
-    await expect(page.getByRole('heading', { name: 'Free Writing' })).toBeVisible()
+    await expect(page).toHaveURL('/en/blog')
+    await expect(page.getByRole('heading', { name: 'All Posts' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Agent Autonomy - Part 2/ })).toBeVisible()
     await expect(page.getByRole('link', { name: 'The Time Machine' })).not.toBeVisible()
   })

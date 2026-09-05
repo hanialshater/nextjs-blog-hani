@@ -21,7 +21,7 @@ for (const locale of ['en', 'ar']) {
     for (const section of ['blog', 'free-writing']) {
       const first = await request.get(`/${locale}/${section}/page/1`, { maxRedirects: 0 })
       expect(first.status()).toBe(308)
-      expect(first.headers().location).toBe(`/${locale}/${section}`)
+      expect(first.headers().location).toBe(`/${locale}/blog`)
       for (const page of ['0', '999', '2junk', '1.5']) {
         expect((await request.get(`/${locale}/${section}/page/${page}`)).status()).toBe(404)
       }

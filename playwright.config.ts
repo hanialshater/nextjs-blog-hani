@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
+import { randomBytes } from 'node:crypto'
+
+// An ephemeral test-only password, inherited by workers and the local web server.
+process.env.DRAFT_PREVIEW_PASSWORD ||= randomBytes(32).toString('hex')
 
 export default defineConfig({
   testDir: './tests',

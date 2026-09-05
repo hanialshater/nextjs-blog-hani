@@ -69,7 +69,20 @@ module.exports = () => {
     basePath,
     reactStrictMode: true,
     trailingSlash: false,
-    pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+    // Authenticated previews require a server. Never emit them in the public
+    // GitHub Pages export, which cannot enforce authentication.
+    pageExtensions: [
+      ...(output === 'export' ? [] : ['private.ts', 'private.tsx']),
+      'ts',
+      'tsx',
+      'js',
+      'jsx',
+      'md',
+      'mdx',
+    ],
+    outputFileTracingIncludes: {
+      '/drafts/assets/*': ['./data/posts/*/images/**/*', './data/posts/*/demos/**/*'],
+    },
     eslint: {
       dirs: ['app', 'components', 'layouts', 'scripts'],
     },
@@ -92,7 +105,7 @@ module.exports = () => {
           // Allow iframes for demos folder - this overrides the catch-all above
           source: '/demos/:path*',
           headers: [
-            ...securityHeaders.filter(h => h.key !== 'X-Frame-Options'),
+            ...securityHeaders.filter((h) => h.key !== 'X-Frame-Options'),
             {
               key: 'X-Frame-Options',
               value: 'SAMEORIGIN',
