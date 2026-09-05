@@ -68,6 +68,7 @@ test('draft assets require access and are absent from public asset paths', async
     const response = await request.get(`/drafts/assets/hello-bundle/${asset}`, { headers })
     expect(response.status()).toBe(200)
     expect(response.headers()['cache-control']).toContain('no-store')
+    expect(response.headers()['x-frame-options']).toBe('SAMEORIGIN')
     expect((await response.body()).length).toBeGreaterThan(0)
   }
   for (const url of [

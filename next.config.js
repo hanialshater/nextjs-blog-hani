@@ -83,6 +83,11 @@ module.exports = () => {
     outputFileTracingIncludes: {
       '/drafts/assets/*': ['./data/posts/*/images/**/*', './data/posts/*/demos/**/*'],
     },
+    // Next 15 traces a nonexistent client manifest for route handlers with a
+    // custom extension: https://github.com/vercel/next.js/issues/76955
+    outputFileTracingExcludes: {
+      '/drafts/assets/*': ['./.next/server/app/drafts/assets/**/route_client-reference-manifest.js'],
+    },
     eslint: {
       dirs: ['app', 'components', 'layouts', 'scripts'],
     },
@@ -100,6 +105,12 @@ module.exports = () => {
         {
           source: '/(.*)',
           headers: securityHeaders,
+        },
+        {
+          // Next.js config headers take precedence over route response headers.
+          // Private demos need the same framing allowance as public demos.
+          source: '/drafts/assets/:path*',
+          headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
         },
         {
           // Allow iframes for demos folder - this overrides the catch-all above
