@@ -47,7 +47,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     allAuthors.find((a) => a.slug === 'default' && (a.language || 'en') === locale) ||
     allAuthors.find((a) => a.slug === 'default')
 
-  const posts = allCoreContent(sortPosts(allBlogs))
+  const posts = allCoreContent(sortPosts(allBlogs.filter((post) => !post.draft)))
   const featuredPosts = posts.filter((post) => (post.language || 'en') === locale && post.featured)
 
   return (

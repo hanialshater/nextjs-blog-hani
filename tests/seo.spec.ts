@@ -37,7 +37,7 @@ test.describe('SEO metadata', () => {
     expect(response.ok()).toBeTruthy()
 
     const body = await response.text()
-    for (const path of ['', '/blog', '/free-writing', '/projects', '/demos', '/about']) {
+    for (const path of ['', '/blog', '/projects', '/demos', '/about']) {
       expect(body).toContain(`${siteUrl}/en${path}`)
       expect(body).toContain(`${siteUrl}/ar${path}`)
     }
@@ -46,7 +46,7 @@ test.describe('SEO metadata', () => {
   })
 
   test('English localized pages expose stable canonicals and alternates', async ({ page }) => {
-    for (const path of ['', '/blog', '/free-writing', '/projects', '/demos', '/about']) {
+    for (const path of ['', '/blog', '/projects', '/demos', '/about']) {
       await page.goto(`/en${path}`)
       await expect(page.locator('html')).toHaveAttribute('lang', 'en')
       await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
@@ -57,7 +57,7 @@ test.describe('SEO metadata', () => {
   })
 
   test('Arabic localized pages expose stable canonicals and alternates', async ({ page }) => {
-    for (const path of ['', '/blog', '/free-writing', '/projects', '/demos', '/about']) {
+    for (const path of ['', '/blog', '/projects', '/demos', '/about']) {
       await page.goto(`/ar${path}`)
       await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
       await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')

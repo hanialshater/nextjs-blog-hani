@@ -30,7 +30,8 @@ const sectionFilters: Record<PostSection, (post: Pick<Blog, 'path'>) => boolean>
 }
 
 export function shouldIncludeDrafts() {
-  return process.env.NODE_ENV === 'development'
+  // Drafts are only available through authenticated /drafts routes, even locally.
+  return false
 }
 
 export function getPublishedPostsBySection(

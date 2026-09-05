@@ -92,10 +92,10 @@ export default function Home({
             {t('nav.blog')}
           </Link>
           <Link
-            href={`/${locale}/free-writing`}
+            href={`/${locale}/blog`}
             className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
           >
-            {t('nav.freeWriting')}
+            {t('nav.blog')}
           </Link>
           <Link
             href={`/${locale}/projects`}

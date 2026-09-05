@@ -6,8 +6,9 @@
 // The two target directories are owned entirely by this script (they are
 // git-ignored and rebuilt from scratch each run), so a removed bundle never
 // leaves stale files behind. Run automatically before dev/build/typecheck.
-import { existsSync, rmSync, mkdirSync, cpSync, readdirSync, statSync } from 'fs'
+import { existsSync, rmSync, mkdirSync, cpSync, readdirSync, statSync, readFileSync } from 'fs'
 import path from 'path'
+import matter from 'gray-matter'
 
 const root = process.cwd()
 const POSTS_DIR = path.join(root, 'data', 'posts')
@@ -20,13 +21,13 @@ function resetDir(dir) {
 }
 
 function syncBundleAssets() {
+  resetDir(IMAGE_TARGET)
+  resetDir(DEMO_TARGET)
+
   if (!existsSync(POSTS_DIR)) {
     console.log('[sync-content] no data/posts directory found — nothing to sync')
     return
   }
-
-  resetDir(IMAGE_TARGET)
-  resetDir(DEMO_TARGET)
 
   const slugs = readdirSync(POSTS_DIR).filter((name) =>
     statSync(path.join(POSTS_DIR, name)).isDirectory()
@@ -35,6 +36,13 @@ function syncBundleAssets() {
   let imageBundles = 0
   let demoBundles = 0
   for (const slug of slugs) {
+    const bundle = path.join(POSTS_DIR, slug)
+    const published = readdirSync(bundle)
+      .filter((name) => /^index(?:\.(?:en|ar))?\.mdx$/.test(name))
+      .some((name) => matter(readFileSync(path.join(bundle, name), 'utf8')).data.draft !== true)
+    // Draft-only assets must never enter /public, even during local development.
+    // Authenticated previews serve these directly through /drafts/assets instead.
+    if (!published) continue
     const imagesSrc = path.join(POSTS_DIR, slug, 'images')
     if (existsSync(imagesSrc)) {
       cpSync(imagesSrc, path.join(IMAGE_TARGET, slug), { recursive: true })

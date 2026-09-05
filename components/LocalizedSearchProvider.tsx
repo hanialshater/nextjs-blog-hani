@@ -6,7 +6,7 @@ import { CoreContent } from 'pliny/utils/contentlayer'
 import { Blog } from 'contentlayer/generated'
 import { useLocale } from '@/i18n/LocaleContext'
 import { ReactNode } from 'react'
-import { getPostRoutePath, getPostSection, isPublishedPost } from '@/lib/content/postRoutes'
+import { getPostRoutePath, isPublishedPost } from '@/lib/content/postRoutes'
 
 interface Props {
   children: ReactNode
@@ -39,14 +39,6 @@ export default function LocalizedSearchProvider({ children }: Props) {
             perform: () => router.push(`/${locale}/blog`),
           },
           {
-            id: 'free-writing',
-            name: t('nav.freeWriting'),
-            keywords: '',
-            shortcut: ['f'],
-            section: t('nav.home'),
-            perform: () => router.push(`/${locale}/free-writing`),
-          },
-          {
             id: 'projects',
             name: t('nav.projects'),
             keywords: '',
@@ -72,7 +64,7 @@ export default function LocalizedSearchProvider({ children }: Props) {
             id: post.path,
             name: post.title,
             keywords: post?.summary || '',
-            section: t(getPostSection(post) === 'free-writing' ? 'nav.freeWriting' : 'nav.blog'),
+            section: t('nav.blog'),
             subtitle: post.tags?.join(', ') || '',
             perform: () => {
               router.push(getPostRoutePath(post, locale))

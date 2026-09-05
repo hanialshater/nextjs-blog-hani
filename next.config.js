@@ -69,7 +69,25 @@ module.exports = () => {
     basePath,
     reactStrictMode: true,
     trailingSlash: false,
-    pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],
+    // Authenticated previews require a server. Never emit them in the public
+    // GitHub Pages export, which cannot enforce authentication.
+    pageExtensions: [
+      ...(output === 'export' ? [] : ['private.ts', 'private.tsx']),
+      'ts',
+      'tsx',
+      'js',
+      'jsx',
+      'md',
+      'mdx',
+    ],
+    outputFileTracingIncludes: {
+      '/drafts/assets/*': ['./data/posts/*/images/**/*', './data/posts/*/demos/**/*'],
+    },
+    // Next 15 traces a nonexistent client manifest for route handlers with a
+    // custom extension: https://github.com/vercel/next.js/issues/76955
+    outputFileTracingExcludes: {
+      '/drafts/assets/*': ['./.next/server/app/drafts/assets/**/route_client-reference-manifest.js'],
+    },
     eslint: {
       dirs: ['app', 'components', 'layouts', 'scripts'],
     },
@@ -89,10 +107,16 @@ module.exports = () => {
           headers: securityHeaders,
         },
         {
+          // Next.js config headers take precedence over route response headers.
+          // Private demos need the same framing allowance as public demos.
+          source: '/drafts/assets/:path*',
+          headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
+        },
+        {
           // Allow iframes for demos folder - this overrides the catch-all above
           source: '/demos/:path*',
           headers: [
-            ...securityHeaders.filter(h => h.key !== 'X-Frame-Options'),
+            ...securityHeaders.filter((h) => h.key !== 'X-Frame-Options'),
             {
               key: 'X-Frame-Options',
               value: 'SAMEORIGIN',

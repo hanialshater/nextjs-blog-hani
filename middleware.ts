@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { locales, defaultLocale } from './i18n/config'
+import { draftAccessDenied, hasDraftAccess, privateDraftHeaders } from './lib/drafts/access'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+
+  if (pathname === '/drafts' || pathname.startsWith('/drafts/')) {
+    if (!(await hasDraftAccess(request.headers.get('authorization')))) return draftAccessDenied()
+    const response = NextResponse.next()
+    for (const [name, value] of Object.entries(privateDraftHeaders))
+      response.headers.set(name, value)
+    return response
+  }
 
   // Check if pathname already has a locale
   const pathnameHasLocale = locales.some(
@@ -28,5 +37,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|static|.*\\..*).*)'],
+  matcher: ['/drafts/:path*', '/((?!_next|api|static|.*\\..*).*)'],
 }

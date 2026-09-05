@@ -16,13 +16,14 @@ data/posts/<slug>/
 
 ## How assets are wired
 
-Next.js only serves files from `public/`, so `scripts/sync-content.mjs` mirrors each
-bundle's assets there before every `dev`, `build`, and `typecheck`:
+`scripts/sync-content.mjs` mirrors published bundles' assets into `public/` before
+every `dev`, `build`, and `typecheck`. Draft-only assets stay in their source bundle
+and are served through authenticated `/drafts/assets/` routes instead:
 
-| In the bundle                       | Served at                              |
-| ----------------------------------- | -------------------------------------- |
-| `data/posts/<slug>/images/foo.png`  | `/static/images/posts/<slug>/foo.png`  |
-| `data/posts/<slug>/demos/bar.html`  | `/demos/posts/<slug>/bar.html`         |
+| In the bundle                      | Served at                             |
+| ---------------------------------- | ------------------------------------- |
+| `data/posts/<slug>/images/foo.png` | `/static/images/posts/<slug>/foo.png` |
+| `data/posts/<slug>/demos/bar.html` | `/demos/posts/<slug>/bar.html`        |
 
 Those two `public/` directories are generated and git-ignored — never edit them by
 hand. Run the sync manually with `yarn content:sync` if needed.
@@ -70,8 +71,9 @@ Embed a self-contained HTML demo with the `<Demo />` component:
 
 See `hello-bundle/` for a complete working reference (English + Arabic, a
 co-located image, and a portable `<Demo />`). It ships as `draft: true` so it
-stays out of the live site — flip `draft` to `false` in both `index.mdx` files to
-view it locally at `/en/free-writing/hello-bundle`.
+stays out of the public site. Preview it at `/drafts/en/hello-bundle` after configuring
+`DRAFT_PREVIEW_PASSWORD` (see the root README). Set `draft: false` only when ready
+to publish. Draft source in a public repository remains readable on GitHub.
 
 ## Shared assets
 
