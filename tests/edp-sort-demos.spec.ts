@@ -8,7 +8,11 @@ test.describe('EDP sort demos', () => {
     page.on('pageerror', (error) => errors.push(error.message))
 
     const demos = [
-      { path: '/demos/posts/edp-sort/mysterious-policy.en.html', ready: '#map', interact: '.pin' },
+      {
+        path: '/demos/posts/edp-sort/mysterious-policy.en.html',
+        ready: '#map',
+        interact: '.pin:has-text("Saffron Table")',
+      },
       {
         path: '/demos/posts/edp-sort/bandit-race-averaged.en.html',
         ready: '#chart',

@@ -7,6 +7,14 @@ async function expectEnglishDemo(page: Page, path: string, ready: string, action
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
   await page.goto(path)
+  // Training samples live in a collapsed disclosure in the guided demos.
+  if (ready.endsWith('training-text')) {
+    await page
+      .locator('details')
+      .filter({ has: page.locator(ready) })
+      .locator('summary')
+      .click()
+  }
   await expect(page.locator(ready)).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
   expect(await page.locator('body').innerText()).not.toMatch(arabic)
