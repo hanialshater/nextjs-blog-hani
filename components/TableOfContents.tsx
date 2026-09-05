@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale } from '@/i18n/LocaleContext'
 
 interface TocItem {
   value: string
@@ -8,60 +9,54 @@ interface TocItem {
   depth: number
 }
 
-interface TableOfContentsProps {
-  toc: TocItem[]
-}
-
-const TableOfContents = ({ toc }: TableOfContentsProps) => {
-  const [activeId, setActiveId] = useState<string>('')
+export default function TableOfContents({ toc = [] }: { toc?: TocItem[] }) {
+  const { t } = useLocale()
+  const [activeId, setActiveId] = useState('')
 
   useEffect(() => {
+    const headings = Array.from(
+      document.querySelectorAll('#article-content h2, #article-content h3')
+    )
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
-          }
-        })
+        for (const entry of entries) if (entry.isIntersecting) setActiveId(entry.target.id)
       },
-      { rootMargin: '-80px 0px -80% 0px' }
+      { rootMargin: '-5% 0px -75% 0px' }
     )
-
-    const headings = document.querySelectorAll('h2, h3')
     headings.forEach((heading) => observer.observe(heading))
+    return () => observer.disconnect()
+  }, [toc])
 
-    return () => {
-      headings.forEach((heading) => observer.unobserve(heading))
-    }
-  }, [])
-
-  if (!toc || toc.length === 0) return null
+  const items = toc.filter((item) => item.depth === 2 || item.depth === 3)
+  if (items.length < 2) return null
+  const links = (
+    <ul className="space-y-1 text-sm">
+      {items.map((item) => (
+        <li key={item.url} className={item.depth === 3 ? 'ms-3' : ''}>
+          <a
+            href={item.url}
+            aria-current={activeId === item.url.slice(1) ? 'location' : undefined}
+            className={`block py-2 ${activeId === item.url.slice(1) ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'}`}
+          >
+            {item.value}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
 
   return (
-    <nav className="hidden xl:block">
-      <div className="sticky top-24">
-        <h2 className="mb-4 text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-gray-100">
-          On this page
-        </h2>
-        <ul className="space-y-2 text-sm">
-          {toc.map((item) => (
-            <li key={item.url} className={`${item.depth === 3 ? 'ml-4' : ''}`}>
-              <a
-                href={item.url}
-                className={`block py-1 transition-colors ${
-                  activeId === item.url.slice(1)
-                    ? 'text-primary-500 font-medium'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
-                }`}
-              >
-                {item.value}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </nav>
+    <div className="mt-8 text-start">
+      <details className="rounded-lg border border-gray-200 px-4 py-3 xl:hidden dark:border-gray-700">
+        <summary className="cursor-pointer font-medium">{t('blog.contents')}</summary>
+        <nav aria-label={t('blog.contents')} className="mt-3">
+          {links}
+        </nav>
+      </details>
+      <nav aria-label={t('blog.contents')} className="hidden xl:block">
+        <h2 className="mb-3 text-sm font-semibold">{t('blog.contents')}</h2>
+        {links}
+      </nav>
+    </div>
   )
 }
-
-export default TableOfContents

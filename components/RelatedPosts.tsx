@@ -2,7 +2,7 @@ import Link from './Link'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import { formatDate } from 'pliny/utils/formatDate'
-import siteMetadata from '@/data/siteMetadata'
+import { getTranslation, type Locale } from '@/i18n/config'
 import { getPostRoutePath } from '@/lib/content/postRoutes'
 
 interface RelatedPostsProps {
@@ -40,7 +40,7 @@ const RelatedPosts = ({
   return (
     <div className="mt-10 border-t border-gray-200 pt-8 dark:border-gray-700">
       <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-        Related Posts
+        {getTranslation(locale as Locale, 'blog.relatedPosts')}
       </h2>
       <ul className="mt-6 space-y-4">
         {relatedPosts.map((post) => (
@@ -54,7 +54,7 @@ const RelatedPosts = ({
                   dateTime={post.date}
                   className="mt-1 block text-sm text-gray-500 dark:text-gray-400"
                 >
-                  {formatDate(post.date, siteMetadata.locale)}
+                  {formatDate(post.date, locale === 'ar' ? 'ar-SA' : 'en-US')}
                 </time>
                 {post.summary && (
                   <p className="mt-2 line-clamp-2 text-sm text-gray-600 dark:text-gray-300">

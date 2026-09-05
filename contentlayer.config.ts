@@ -25,6 +25,7 @@ import rehypePresetMinify from 'rehype-preset-minify'
 import siteMetadata from './data/siteMetadata'
 import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer.js'
 import prettier from 'prettier'
+import { getPostRoutePath } from './lib/content/postPaths.mjs'
 
 const root = process.cwd()
 const isProduction = process.env.NODE_ENV === 'production'
@@ -42,21 +43,15 @@ const icon = fromHtmlIsomorphic(
   { fragment: true }
 )
 
+function getContentSlug(doc: { _raw: { flattenedPath: string } }) {
+  const path = doc._raw.flattenedPath
+  if (path.startsWith('posts/')) return path.split('/')[1]
+  return path.replace(/^.+?\//, '').replace(/\.(ar|en)$/, '')
+}
+
 const computedFields: ComputedFields = {
   readingTime: { type: 'json', resolve: (doc) => readingTime(doc.body.raw) },
-  slug: {
-    type: 'string',
-    resolve: (doc) => {
-      const flattenedPath = doc._raw.flattenedPath
-      // Co-located bundles: posts/<slug>/index[.ar] -> slug is the folder name.
-      if (flattenedPath.startsWith('posts/')) {
-        return flattenedPath.split('/')[1]
-      }
-      // Legacy layout: <section>/<slug>[.ar]. Strip folder prefix + language suffix.
-      const rawSlug = flattenedPath.replace(/^.+?(\/)/, '')
-      return rawSlug.replace(/\.(ar|en)$/, '')
-    },
-  },
+  slug: { type: 'string', resolve: getContentSlug },
   path: {
     type: 'string',
     resolve: (doc) => doc._raw.flattenedPath,
@@ -76,7 +71,7 @@ function createSearchIndex(allBlogs: any[]) {
   ) {
     writeFileSync(
       `public/${path.basename(siteMetadata.search.kbarConfig.searchDocumentsPath)}`,
-      JSON.stringify(allCoreContent(sortPosts(allBlogs)))
+      JSON.stringify(allCoreContent(sortPosts(allBlogs.filter((post) => !post.draft))))
     )
     console.log('Local search index generated...')
   }
@@ -116,8 +111,14 @@ export const Blog = defineDocumentType(() => ({
         datePublished: doc.date,
         dateModified: doc.lastmod || doc.date,
         description: doc.summary,
-        image: doc.images ? doc.images[0] : siteMetadata.socialBanner,
-        url: `${siteMetadata.siteUrl}/${doc._raw.flattenedPath}`,
+        image: new URL(
+          typeof doc.images === 'string'
+            ? doc.images
+            : doc.images?.[0] || siteMetadata.socialBanner,
+          siteMetadata.siteUrl
+        ).href,
+        url: `${siteMetadata.siteUrl}${getPostRoutePath({ path: doc._raw.flattenedPath, section: doc.section, slug: getContentSlug(doc) }, doc.language || 'en')}`,
+        inLanguage: doc.language || 'en',
       }),
     },
   },

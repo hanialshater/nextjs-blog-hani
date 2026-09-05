@@ -9,6 +9,8 @@ import TagCloud from '@/components/TagCloud'
 import Link from '@/components/Link'
 import Image from '@/components/Image'
 import { formatDate } from 'pliny/utils/formatDate'
+import { getPostRoutePath } from '@/lib/content/postRoutes'
+import { genLocalizedPageMetadata } from 'app/seo'
 
 // Broad tags to filter out from project pages (already implied by project theme)
 const broadTags = ['philosophy', 'ai', 'technology', 'opinion']
@@ -37,18 +39,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const localized = getLocalizedProject(project, locale)
 
-  return {
+  return genLocalizedPageMetadata({
     title: localized.title,
     description: localized.description,
-    openGraph: {
-      title: localized.title,
-      description: localized.description,
-      url: `${siteMetadata.siteUrl}/${locale}/projects/${slug}`,
-      siteName: siteMetadata.title,
-      locale: locale === 'ar' ? 'ar_SA' : 'en_US',
-      type: 'website',
-    },
-  }
+    locale,
+    path: `projects/${slug}`,
+  })
 }
 
 export default async function ProjectPage({ params }: PageProps) {
@@ -136,14 +132,13 @@ export default async function ProjectPage({ params }: PageProps) {
         ) : (
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {posts.map((post) => {
-              const basePath = post.path?.startsWith('free-writing-blog') ? 'free-writing' : 'blog'
               return (
                 <li key={post.slug} className="py-4">
                   <article className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
                     <div>
                       <h3 className="text-xl leading-8 font-bold tracking-tight">
                         <Link
-                          href={`/${locale}/${basePath}/${post.slug}`}
+                          href={getPostRoutePath(post, locale)}
                           className="text-gray-900 dark:text-gray-100"
                         >
                           {post.title}

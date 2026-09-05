@@ -6,6 +6,7 @@ import { CoreContent } from 'pliny/utils/contentlayer'
 import { Blog } from 'contentlayer/generated'
 import { useLocale } from '@/i18n/LocaleContext'
 import { ReactNode } from 'react'
+import { getPostRoutePath, getPostSection, isPublishedPost } from '@/lib/content/postRoutes'
 
 interface Props {
   children: ReactNode
@@ -17,6 +18,7 @@ export default function LocalizedSearchProvider({ children }: Props) {
 
   return (
     <KBarSearchProvider
+      key={locale}
       kbarConfig={{
         searchDocumentsPath: 'search.json',
         defaultActions: [
@@ -64,17 +66,16 @@ export default function LocalizedSearchProvider({ children }: Props) {
         onSearchDocumentsLoad(json) {
           // Filter posts by current locale
           const filteredPosts = json.filter(
-            (post: CoreContent<Blog> & { language?: string }) => (post.language || 'en') === locale
+            (post: CoreContent<Blog>) => (post.language || 'en') === locale && isPublishedPost(post)
           )
           return filteredPosts.map((post: CoreContent<Blog>) => ({
             id: post.path,
             name: post.title,
             keywords: post?.summary || '',
-            section: t('nav.blog'),
+            section: t(getPostSection(post) === 'free-writing' ? 'nav.freeWriting' : 'nav.blog'),
             subtitle: post.tags?.join(', ') || '',
             perform: () => {
-              const basePath = post.path?.startsWith('free-writing-blog') ? 'free-writing' : 'blog'
-              router.push(`/${locale}/${basePath}/${post.slug}`)
+              router.push(getPostRoutePath(post, locale))
             },
           }))
         },

@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic'
 import TOCInline from 'pliny/ui/TOCInline'
 import Pre from 'pliny/ui/Pre'
 import BlogNewsletterForm from 'pliny/ui/BlogNewsletterForm'
@@ -6,12 +7,14 @@ import Image from './Image'
 import CustomLink from './Link'
 import TableWrapper from './TableWrapper'
 import Caption from './Caption'
-import MapElitesDemo from './MapElitesDemo'
-import AlgorithmDemos from './AlgorithmDemos'
-import EvolvedDemos from './EvolvedDemos'
-import Demo, { RucbPanel, BanditHistoryPanel } from './Demo'
+import Demo from './Demo'
+import { RucbPanel, BanditHistoryPanel, SemiBanditPanel } from '@/data/posts/edp-sort/BanditPanels'
 import CollisionBoard from './CollisionBoard'
 import BookIllustration from './BookIllustration'
+
+const MapElitesDemo = dynamic(() => import('./MapElitesDemo'))
+const AlgorithmDemos = dynamic(() => import('./AlgorithmDemos'))
+const EvolvedDemos = dynamic(() => import('./EvolvedDemos'))
 
 export const components: MDXComponents = {
   Image,
@@ -26,6 +29,7 @@ export const components: MDXComponents = {
   BookIllustration,
   RucbAppendix: RucbPanel,
   BanditHistory: BanditHistoryPanel,
+  SemiBandit: SemiBanditPanel,
   MapElitesDemo,
   AlgorithmDemos,
   EvolvedDemos,

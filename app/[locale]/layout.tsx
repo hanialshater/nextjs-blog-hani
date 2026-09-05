@@ -13,6 +13,16 @@ import { Metadata } from 'next'
 import { locales, Locale, localeDirection } from '@/i18n/config'
 import { LocaleProvider } from '@/i18n/LocaleContext'
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react'
+import { allBlogs } from 'contentlayer/generated'
+import {
+  findTranslatedPost,
+  getPostRoutePath,
+  isPostInLocale,
+  isPublishedPost,
+} from '@/lib/content/postRoutes'
+import { getTranslation } from '@/i18n/config'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
@@ -69,9 +79,24 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  const validLocale = locales.includes(locale as Locale) ? (locale as Locale) : 'en'
+  if (!locales.includes(locale as Locale)) notFound()
+  const validLocale = locale as Locale
   const dir = localeDirection[validLocale]
   const basePath = process.env.BASE_PATH || ''
+  const posts = allBlogs.filter((post) => isPublishedPost(post))
+  const translations = Object.fromEntries(
+    posts.map((post) => [
+      getPostRoutePath(post),
+      Object.fromEntries(
+        locales.flatMap((language) => {
+          const counterpart = isPostInLocale(post, language)
+            ? post
+            : findTranslatedPost(post, posts, language)
+          return counterpart ? [[language, getPostRoutePath(counterpart, language)]] : []
+        })
+      ),
+    ])
+  )
 
   return (
     <html lang={validLocale} dir={dir} className="scroll-smooth" suppressHydrationWarning>
@@ -104,16 +129,24 @@ export default async function LocaleLayout({
       <link rel="alternate" type="application/rss+xml" href={`${basePath}/feed.xml`} />
       <body
         className={`bg-white pl-[calc(100vw-100%)] text-black antialiased dark:bg-gray-950 dark:text-white ${
-          dir === 'rtl' ? 'font-[var(--font-noto-arabic)]' : ''
+          dir === 'rtl' ? 'font-[family-name:var(--font-noto-arabic)]' : ''
         }`}
       >
         <ThemeProviders>
           <LocaleProvider locale={validLocale}>
+            <Link
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:p-3 focus:text-black"
+            >
+              {getTranslation(validLocale, 'common.skipToContent')}
+            </Link>
             <Analytics analyticsConfig={siteMetadata.analytics as AnalyticsConfig} />
             <SectionContainer>
               <LocalizedSearchProvider>
-                <Header />
-                <main className="mb-auto">{children}</main>
+                <Header translations={translations} />
+                <main id="main-content" className="mb-auto">
+                  {children}
+                </main>
               </LocalizedSearchProvider>
               <Footer />
             </SectionContainer>

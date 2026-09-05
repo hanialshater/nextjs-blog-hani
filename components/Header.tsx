@@ -7,11 +7,11 @@ import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
 import SearchButton from './SearchButton'
-import LanguageSwitcher from './LanguageSwitcher'
+import LanguageSwitcher, { type TranslationPaths } from './LanguageSwitcher'
 import { useLocale } from '@/i18n/LocaleContext'
 import { navLinkTranslationKeys } from '@/i18n/config'
 
-const Header = () => {
+const Header = ({ translations }: { translations?: TranslationPaths }) => {
   const { locale, t, dir } = useLocale()
 
   let headerClass = 'flex items-center w-full bg-white dark:bg-gray-950 justify-between py-10'
@@ -60,7 +60,7 @@ const Header = () => {
             ))}
         </div>
         <SearchButton />
-        <LanguageSwitcher />
+        <LanguageSwitcher translations={translations} />
         <Link
           href="/feed.xml"
           className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"

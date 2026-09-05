@@ -50,6 +50,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'blog.previousArticle': 'Previous Article',
     'blog.nextArticle': 'Next Article',
     'blog.backToBlog': 'Back to the blog',
+    'blog.backToFreeWriting': 'Back to Free Writing',
+    'blog.contents': 'On this page',
+    'blog.pagination': 'Article pages',
+    'blog.authors': 'Authors',
+    'common.name': 'Name',
+    'common.skipToContent': 'Skip to content',
+    'share.x': 'Share on X',
+    'share.linkedin': 'Share on LinkedIn',
+    'share.copy': 'Copy link',
+    'share.copied': 'Link copied',
+    'share.failed': 'Could not copy the link. Copy it from your address bar.',
     'blog.autoTranslated': 'Auto-translated',
     'blog.viewOriginal': 'View original',
     'blog.readInArabic': 'اقرأ بالعربية',
@@ -97,6 +108,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'blog.previousArticle': 'المقال السابق',
     'blog.nextArticle': 'المقال التالي',
     'blog.backToBlog': 'العودة للمدونة',
+    'blog.backToFreeWriting': 'العودة للكتابة الحرة',
+    'blog.contents': 'في هذه الصفحة',
+    'blog.pagination': 'صفحات المقالات',
+    'blog.authors': 'الكاتب',
+    'common.name': 'الاسم',
+    'common.skipToContent': 'انتقل إلى المحتوى',
+    'share.x': 'شارك على X',
+    'share.linkedin': 'شارك على LinkedIn',
+    'share.copy': 'انسخ الرابط',
+    'share.copied': 'تم نسخ الرابط',
+    'share.failed': 'تعذّر نسخ الرابط. انسخه من شريط العنوان.',
     'blog.autoTranslated': 'ترجمة آلية',
     'blog.viewOriginal': 'شوف الأصل',
     'blog.readInArabic': 'اقرأ بالعربية',
@@ -124,5 +146,5 @@ export const translations: Record<Locale, Record<string, string>> = {
 }
 
 export function getTranslation(locale: Locale, key: string): string {
-  return translations[locale][key] || translations.en[key] || key
+  return translations[locale]?.[key] || translations.en[key] || key
 }
