@@ -1,36 +1,61 @@
 ---
 section: 'free-writing'
-title: "The AGI Misunderstanding: Why LLMs Can't Think of a Number"
+title: 'The AGI Misunderstanding: What Does “Think of a Number” Test?'
 date: "2025-05-25"
-summary: "A critical look at AGI hype through a simple game that exposes the fundamental limitations of LLMs"
+summary: 'A number game, an algebraic trick, and the gap between choosing a value, remembering it, and having the experience of a choice.'
 authors: ["default"]
 layout: "PostLayout"
 images: ["/static/images/posts/agi-misunderstanding/think-of-number.jpeg"]
 tags: ["ai", "agi", "llm", "technology", "opinion"]
+lastmod: '2026-09-06'
 ---
 
-I opened LinkedIn this morning after a relaxing weekend, and everyone seems to be freaking out about one thing: AGI. I want to clear up this misunderstanding, but first, let's play a game. My daughter actually wanted to try this game with Gemini, and it really shows something important.
+I opened LinkedIn after a relaxing weekend, and everyone seemed to be announcing AGI. Again. Apparently intelligence becomes general every time I stop checking my phone.
 
-Let's do this together.
+My daughter wanted to try a number game with Gemini. Let's play it first:
 
 1. Think of a number.
-2. Take from your friend the same number.
-3. Take from me 10.
-4. Throw half of the sum in the sea.
-5. Return to your friend his number.
+2. Take the same amount from your friend.
+3. Take 10 from me.
+4. Throw half the total into the sea.
+5. Return your friend's original amount.
 
-Now, tell me: what number do you have left? You should have 5. The game was rigged, but it illustrates a crucial point, imagine we play this game with any new AI, now, here's my challenge to the AGI believers: what number did your supposed AI, initially think of?
+You have 5 left. I know. Incredible powers. Please direct all research funding to my kitchen.
 
-The answer, of course, is **none**. LLMs can't "think" of a number, they can just predict the next tokens. Boom!
+But what number did you start with?
 
-This simple game exposes a fundamental truth about the LLMs: they are, at their core, sophisticated next-token prediction engines. Sure, they can mimic human language remarkably well, creating text that often seems intelligent. We can boost their performance with all sorts of tricks, but under the hood, they're still just predicting the next most likely word.
+The game cannot tell us. Call that number $x$:
 
-If an AI, can't even engage in the basic act of "thinking" of a number, how could It possibly form a genuine opinion? Forming an opinion requires a perspective, a subjective viewpoint shaped by experience, internal values, and a sense of self. LLMs possess none of these.
+$$
+\frac{x+x+10}{2}-x=5.
+$$
 
-The ability to form opinions is essential for navigating *complicated* problems. We often confuse these with *complex* problems. Complex problems have many moving parts but are solvable with enough data and computational power – AI's forte. Complicated problems, on the other hand, involve ambiguity, nuanced context, and require us to *create* a new value based on a unique perspective. These are the human problems, the messy, social, and cultural challenges that don't have a single right answer, only the answer that rings true to our individual point of view. AI may solve complex problems, but complicated ones? Not a chance.
+The original number disappears. A person who picked 73, a program that stored 12, and a system that simply recognized the algebra can all give the same answer. **Getting 5 neither proves nor disproves that a number was chosen.**
 
-When you look at the science of how our brains work – neuroscience and cognitive science – it becomes clear that the linear attention mechanism used by transformers is limited. Human cognitive system is far more complicated than linear attention machines, it could be even mind blowing when you dive into details of cognition and consciousness and how it links to our biology.
+That matters because it is very easy to stage a demonstration and mistake it for a test of the thing we care about. The AGI announcement and the triumphant debunking can make exactly the same mistake.
 
-I'm not saying AI is useless. Machines already outperform us in many areas: recalling information, raw computation, mastering games like Go, and countless other tasks. We should absolutely celebrate advancements in AI, but we need to be realistic about their limitations. Until my AI can genuinely "think of a number," or grasp the concept of desire, the dream of AGI will remain just that – a dream.
+## What does “think of a number” ask for?
 
-<img src="/static/images/posts/agi-misunderstanding/think-of-number.jpeg" alt="Think of a Number" style={{ width: '50%', height: 'auto', margin: '1em auto', display: 'block' }} />
+There are at least three different requests hiding inside it.
+
+**Choose a value.** Software can do that. A language model can output a numeral; a system can use a random-number generator. Calling the operation “next-token prediction” does not make the selected value disappear.
+
+**Keep the choice and use it consistently.** That is a question about memory and behavior across steps. We can test it. Have the system commit to a number, record it somewhere the evaluator can inspect, then ask questions whose answers actually depend on that number. The algebra trick above is a terrible test because it removes precisely the information we need.
+
+**Have the private experience of choosing.** That is a question about subjective experience. A fluent answer does not settle it, and neither does a correct calculation. “I felt like choosing seven” is an output to examine, not a window we have opened into a mind.
+
+I care about keeping those questions separate. Otherwise we move from “it completed the task” to “it has a perspective” without noticing that we changed the claim halfway through.
+
+## An opinion is more than a convincing paragraph
+
+A model can generate an argument, compare alternatives, and help me reach a decision. Those are useful capabilities. But when it writes “I believe,” I still want to know what stands behind the sentence: which criteria it is applying, whether the answer survives counterevidence, and whether the same commitments hold when the wording changes.
+
+This becomes especially important in problems where the goal itself is disputed. Which customer should a system serve? Which trade-off is acceptable? Who gets to define success? More computational power can help us explore the consequences. It does not, by itself, tell us whose values should govern the choice.
+
+That is my objection to easy AGI declarations: the word can swallow capability, autonomy, judgment, and consciousness, then return as if we had measured one thing.
+
+By all means, show me the machine doing something remarkable. Then tell me exactly what the demonstration establishes. If the claim is memory, test memory. If it is reasoning, choose a problem where the reasoning matters. If it is experience, do not smuggle that conclusion in with the answer to an arithmetic trick.
+
+The number in the sea was 5. The interesting questions are still on the shore.
+
+<img src="/static/images/posts/agi-misunderstanding/think-of-number.jpeg" alt="Illustration of the think-of-a-number game" style={{ width: '50%', height: 'auto', margin: '1em auto', display: 'block' }} />
