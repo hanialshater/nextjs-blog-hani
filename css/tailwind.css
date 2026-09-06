@@ -270,6 +270,10 @@ html[dir='rtl'] .prose :where(h1, h2, h3, h4) {
   color: var(--color-gray-600);
 }
 
+.reading-prose > :first-child {
+  margin-block-start: 0;
+}
+
 .dark .reading-prose > p:first-child {
   color: var(--color-gray-300);
 }

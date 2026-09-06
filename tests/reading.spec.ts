@@ -22,6 +22,8 @@ for (const locale of ['en', 'ar']) {
           paragraphWidth: paragraph.getBoundingClientRect().width,
           viewport: document.documentElement.clientWidth,
           pageWidth: document.documentElement.scrollWidth,
+          articleTop: element.getBoundingClientRect().top,
+          titleBottom: document.querySelector('main h1')!.getBoundingClientRect().bottom,
         }
       })
       expect(metrics.family).toContain(locale === 'ar' ? 'arabicReading' : 'englishReading')
@@ -29,6 +31,8 @@ for (const locale of ['en', 'ar']) {
       expect(metrics.size).toBeGreaterThanOrEqual(locale === 'ar' ? 22 : 19)
       expect(metrics.paragraphWidth).toBeLessThanOrEqual(700)
       expect(metrics.pageWidth).toBeLessThanOrEqual(metrics.viewport + 1)
+      // Desktop prose must start alongside the sidebar, not below its entire TOC.
+      if (width >= 1280) expect(metrics.articleTop - metrics.titleBottom).toBeLessThan(300)
     })
   }
 
