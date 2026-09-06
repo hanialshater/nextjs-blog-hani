@@ -23,6 +23,7 @@ import {
 import { getTranslation } from '@/i18n/config'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { readingFonts } from '../fonts'
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }))
@@ -99,7 +100,12 @@ export default async function LocaleLayout({
   )
 
   return (
-    <html lang={validLocale} dir={dir} className="scroll-smooth" suppressHydrationWarning>
+    <html
+      lang={validLocale}
+      dir={dir}
+      className={`scroll-smooth ${readingFonts}`}
+      suppressHydrationWarning
+    >
       <link
         rel="apple-touch-icon"
         sizes="76x76"

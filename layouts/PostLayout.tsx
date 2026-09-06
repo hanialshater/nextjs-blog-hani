@@ -70,7 +70,7 @@ export default function PostLayout({
       <ScrollTopAndComment />
       <article>
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
-          <header className="pt-6 xl:pb-6">
+          <header className="article-header pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
               <dl className="space-y-10">
                 <div>
@@ -89,7 +89,7 @@ export default function PostLayout({
                 </div>
               </dl>
               <div>
-                <PageTitle>{title}</PageTitle>
+                <PageTitle className="article-title">{title}</PageTitle>
               </div>
               {draft && (
                 <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
@@ -184,22 +184,15 @@ export default function PostLayout({
               )}
             </div>
           </header>
-          <div
-            className={`grid-rows-[auto_1fr] divide-y divide-gray-200 pb-8 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:divide-y-0 dark:divide-gray-700 ${isRTL ? 'xl:direction-rtl' : ''}`}
-          >
-            <dl
-              className={`pt-6 pb-10 xl:border-b xl:border-gray-200 xl:pt-11 xl:dark:border-gray-700 ${isRTL ? 'xl:col-start-4' : ''}`}
-            >
+          <div className="grid-rows-[auto_1fr] divide-y divide-gray-200 pb-8 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:divide-y-0 dark:divide-gray-700">
+            <dl className="pt-6 pb-10 xl:col-start-1 xl:row-start-1 xl:border-b xl:border-gray-200 xl:pt-11 xl:dark:border-gray-700">
               <dt className="sr-only">{t('blog.authors')}</dt>
               <dd>
                 <ul
                   className={`flex flex-wrap justify-center gap-4 sm:gap-x-12 xl:block xl:space-y-8 ${isRTL ? 'xl:text-right' : ''}`}
                 >
                   {authorDetails.map((author) => (
-                    <li
-                      className={`flex items-center gap-x-2 ${isRTL ? 'flex-row-reverse' : ''}`}
-                      key={author.name}
-                    >
+                    <li className="flex items-center gap-x-2" key={author.name}>
                       {author.avatar && (
                         <Image
                           src={author.avatar}
@@ -234,10 +227,11 @@ export default function PostLayout({
                 <TableOfContents toc={content.toc} />
               </dd>
             </dl>
-            <div
-              className={`divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700 ${isRTL ? 'xl:col-start-1 xl:col-end-4' : ''}`}
-            >
-              <div id="article-content" className="prose dark:prose-invert max-w-none pt-10 pb-8">
+            <div className="min-w-0 divide-y divide-gray-200 xl:col-span-3 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:pb-0 dark:divide-gray-700">
+              <div
+                id="article-content"
+                className="reading-prose prose dark:prose-invert max-w-none pt-10 pb-8"
+              >
                 {children}
               </div>
               <div className={`flex pt-6 pb-6 ${isRTL ? 'justify-start' : 'justify-end'}`}>
@@ -252,7 +246,7 @@ export default function PostLayout({
                 </div>
               )}
             </div>
-            <footer className={isRTL ? 'xl:col-start-4 xl:row-start-2' : ''}>
+            <footer className="xl:col-start-1 xl:row-start-2">
               <div className="divide-gray-200 text-sm leading-5 font-medium xl:divide-y dark:divide-gray-700">
                 {tags && (
                   <div className={`py-4 xl:py-8 ${isRTL ? 'text-right' : ''}`}>

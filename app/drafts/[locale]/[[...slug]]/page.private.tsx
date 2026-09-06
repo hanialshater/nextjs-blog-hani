@@ -46,7 +46,7 @@ export default async function Page({
       </p>
       {post ? (
         <article>
-          <h1 className="mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
+          <h1 className="article-title mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
           <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">
             {Math.ceil(post.readingTime.minutes)} {arabic ? 'دقائق قراءة' : 'min read'}
           </p>
@@ -54,7 +54,7 @@ export default async function Page({
             <aside>
               <TableOfContents toc={post.toc} />
             </aside>
-            <div id="article-content" className="prose dark:prose-invert max-w-none">
+            <div id="article-content" className="reading-prose prose dark:prose-invert max-w-none">
               <DraftContent code={post.body.code} toc={post.toc} />
             </div>
           </div>

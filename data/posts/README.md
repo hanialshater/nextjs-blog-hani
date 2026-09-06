@@ -62,12 +62,57 @@ Embed a self-contained HTML demo with the `<Demo />` component:
 <Demo src="/demos/posts/my-post/widget.html" title="My widget" height={320} />
 ```
 
+## Reading features
+
+All article layouts and private previews share bilingual typography: Source Serif 4
+for English prose and Noto Naskh Arabic for Arabic, with local font files, readable
+line lengths, and separate space for wide figures. Markdown images and existing
+`BookIllustration` blocks get an **Enlarge** control automatically. The viewer
+supports actual-size inspection, keyboard navigation and Escape to close. Images
+inside links keep their link behavior. Decorative images with empty alt text have
+no enlarge control.
+
+Use a captioned figure with accurate source dimensions:
+
+```mdx
+<Figure
+  src="/static/images/posts/my-post/diagram.png"
+  alt="Describe what the diagram communicates"
+  width={1600}
+  height={900}
+  caption="Figure 1. How the feedback loop works."
+  credit="Illustration by Hani Al-Shater."
+  wide
+/>
+```
+
+Use `wide` for large diagrams; omit it to keep a figure closer to the text measure.
+Use `<TechnicalNote>` for an optional derivation, implementation detail or appendix.
+It also works without JavaScript. Leave blank lines around Markdown inside it:
+
+```mdx
+<TechnicalNote title="The derivation">
+
+Explain the calculation here, including equations such as $x_{t+1}=x_t+1$.
+
+</TechnicalNote>
+```
+
+Supply the title in the article's language. Add `open` if the note should start
+expanded. Figures and book illustrations automatically use protected asset URLs
+inside drafts. See `hello-bundle` for working examples in both languages.
+
+The shared components live in `components/MDXComponents.tsx`; custom React widgets
+still need registration there. Standalone HTML demos remain portable within their
+post bundle.
+
 ## Adding a post
 
 1. Create `data/posts/<slug>/` with `index.mdx` (and `index.ar.mdx` for Arabic).
 2. Drop any images in `images/` and any demos in `demos/`.
 3. Set `section` in the frontmatter.
-4. `yarn dev` — the sync runs automatically and the post appears under its section.
+4. `yarn dev` — the sync runs automatically. Published articles appear in Blog;
+   articles with `draft: true` appear only in authenticated previews.
 
 See `hello-bundle/` for a complete working reference (English + Arabic, a
 co-located image, and a portable `<Demo />`). It ships as `draft: true` so it
