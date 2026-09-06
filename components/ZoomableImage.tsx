@@ -30,13 +30,10 @@ export default function ZoomableImage(props: ImageProps) {
     if (!open) return
     const modal = dialog.current
     const opener = trigger.current
-    const previousOverflow = document.body.style.overflow
     modal?.showModal()
-    document.body.style.overflow = 'hidden'
     closeButton.current?.focus()
     return () => {
       modal?.close()
-      document.body.style.overflow = previousOverflow
       opener?.focus({ preventScroll: true })
     }
   }, [open])

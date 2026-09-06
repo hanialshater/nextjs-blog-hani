@@ -60,6 +60,7 @@ for (const locale of ['en', 'ar']) {
       await trigger.press('Enter')
       const dialog = page.getByRole('dialog')
       await expect(dialog).toBeVisible()
+      expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden')
       await expect(
         dialog.getByRole('button', { name: locale === 'ar' ? /إغلاق الصورة/ : /Close image/ })
       ).toBeFocused()
@@ -77,7 +78,9 @@ for (const locale of ['en', 'ar']) {
       await page.keyboard.press('Escape')
       await expect(dialog).toHaveCount(0)
       await expect(trigger).toBeFocused()
-      expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
+      await expect
+        .poll(() => page.evaluate(() => getComputedStyle(document.body).overflow))
+        .not.toBe('hidden')
 
       // The existing book illustration component must use protected assets too.
       const illustration = page.locator('.article-figure').last().locator('img')
