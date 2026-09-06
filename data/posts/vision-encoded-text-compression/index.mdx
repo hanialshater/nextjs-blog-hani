@@ -1,225 +1,155 @@
 ---
 section: 'free-writing'
-title: 'Vision-Encoded Text Compression: Achieving 8× Token Savings Without Specialized Models'
+title: 'Vision-Encoded Text Compression: Tiny Text, Promising Results, Unmeasured Savings'
 date: '2025-10-23'
 tags: ['ai', 'optimization', 'vision-models', 'cost-reduction', 'machine-learning']
 draft: false
-summary: 'DeepSeek-OCR performance is revolutary, however, you could achive similar result of 8x text compression (87% token savings) with 99.5% accuracy using standard LLM models like Gemini 2.5'
+summary: 'An experiment in reading densely rendered screenshots, what the results suggest, and why readability must be measured separately from API token savings.'
+lastmod: '2026-09-06'
 ---
 
-**TL;DR**: DeepSeek-OCR performance is revolutionary, however, you could achieve similar result of **8× text compression** (87% token savings) with **99.5% accuracy** using standard LLM models like Gemini 2.5
+How small can you make a screenshot before a vision model stops reading it?
 
-**Don't believe me?** Just copy this image and paste it into Gemini with the prompt "read this text and write it down":
+That was the experiment. The surprising part was how far I could shrink the text and still get a useful transcription. The mistake was treating a rough image-token estimate as a measured API bill.
 
-![Try it yourself](/static/images/posts/vision-encoded-text-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+**Correction to the original post:** the advertised 8× token savings and comparison with DeepSeek-OCR were not established by these tests. The observations below concern readability on a small set of examples. The cost claim needs a separate measurement.
 
-This tiny image contains 1,287 characters that Gemini will read at 99.5% accuracy - using only 40 tokens instead of 321.
+Try the image with the prompt “read this text and write it down”:
 
-## The Accidental Discovery
+![A densely rendered English passage used in the experiment](/static/images/posts/vision-encoded-text-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
 
-A few months ago, I was trying LLM performance on a summarization task. I wanted to use both images and text in my prompts, so naturally, I started sending screenshots. It worked surprisingly well.
+The source passage contains 1,287 characters. Getting recognizable text out of something this small is interesting even before we say anything about tokens.
 
-Then I got curious: what if I made the screenshots smaller? I started compressing them - smaller, smaller, and smaller. Every time, Gemini kept reading the text perfectly. That's when it hit me:
+## The accidental discovery
 
-**Reading images containing text was 6× more token-efficient than sending the actual text!**
+I was testing LLMs on a summarization task and wanted to include both text and images. I started sending screenshots. They worked surprisingly well.
 
-That made intuitive sense. Nature doesn't have tokens - we just use our eyes to read. Vision is the natural interface for information.
+Then I made them smaller. And smaller. Gemini kept recovering text I would not enjoy reading myself. That suggested a useful question: could a compact visual representation carry a long passage more cheaply than its text representation?
 
-I got excited and proposed fine-tuning LLMs on low-resolution text to cut inference costs. But like many things in life, I got discouraged by skepticism about accuracy. "The OCR will be terrible," they said. "You'll lose too much information." The idea went on the shelf, forgotten.
+I proposed fine-tuning on low-resolution text. The obvious objection was accuracy: at some point the model would stop reading and start guessing. The idea went on the shelf.
 
-## Vindication
+Then [DeepSeek-OCR](https://arxiv.org/abs/2510.18234) appeared, investigating optical compression of context with a purpose-built model. That was exciting: the research direction was real. But their results and my screenshots answer different experimental questions. A few successful transcriptions do not reproduce a document benchmark.
 
-Today, I saw **DeepSeek-OCR** and nearly jumped out of my chair. They proved the idea - a specialized model that compresses text into vision tokens, achieving 7-20× compression. My intuition was right!
+## What the small tests showed
 
-**DeepSeek-OCR**: A custom-trained 3B vision-language model that encodes text images into compact vision tokens, then decodes them back. It achieves 97% accuracy at 10× compression with specialized training on 30M+ documents.
+The original experiments used Gemini 2.5 Flash through OpenRouter in October 2025. These are the transcription scores recorded in that post:
 
-But here's the punchline: **You don't need DeepSeek-OCR.**
+| Font and vertical scale | Originally reported accuracy |
+| --- | ---: |
+| 8px, Y = 1.0 | 91.1% |
+| 8px, Y = 0.9 | 87.8% |
+| 8px, Y = 0.8 | 99.4% |
+| 8px, Y = 0.7 | 55.0% |
+| 8px, Y = 0.6 | 99.5% |
 
-Regular vision models like Gemini 2.5 can already do this. You just need to:
-1. Render your text into an image
-2. Downscale it properly
-3. Send it to any vision API
+Here Y = 0.6 means keeping 60% of the rendered height while leaving the width unchanged. The promising setting was 8px Verdana with that vertical squeeze.
 
-**Poof** - you've got an 8× cost cut for your favorite task.
+**These are exploratory observations, not a validated accuracy benchmark.** The original post did not specify an exact scoring function, publish complete prediction/reference pairs, or report repeated trials. For the review passage, it listed only the change `500K` → `500k`. If that were the only character error in 1,287 characters, character accuracy would be about 99.92%, not 99.5%. The quoted percentage and the described error need reconciling against the raw output.
 
-Here's how we did it.
+The non-monotonic result is also a question, not an explanation. Why did 0.7 fail and 0.6 recover? Resampling, image preprocessing, and model variability are possible contributors. These tests do not tell us which. Calling 0.6 a universal “sweet spot” would turn one surprising observation into a rule we have not earned.
 
-## The Results
+## Readability is not token accounting
 
-We ran systematic ablation tests on different compression levels:
+The original calculation used:
 
-| Configuration | Tokens | Compression | Accuracy  | Status     |
-| ------------- | ------ | ----------- | --------- | ---------- |
-| Plain text    | 321    | 1×          | 100%      | Baseline   |
-| 8px Y=1.0     | 68     | 4.7×        | 91.1%     | ✗ Poor     |
-| 8px Y=0.9     | 60     | 5.4×        | 87.8%     | ✗ Poor     |
-| **8px Y=0.8** | **54** | **6×**      | **99.4%** | ✓ Good     |
-| 8px Y=0.7     | 46     | 7×          | 55.0%     | ✗ Failed   |
-| **8px Y=0.6** | **40** | **8×**      | **99.5%** | ✓ **Best** |
+```text
+estimated tokens = width × height / 750
+```
 
-**Winner**: 8px Verdana with 60% vertical compression (Y-scale 0.6)
+It treated that as a shared Claude/Gemini rule. It is not a valid basis for the Gemini claim. Even the arithmetic was wrong: `800 × 30 / 750 = 32`, not 40. Neither number establishes what the API actually charged.
 
-**Performance**:
-- **40 tokens** vs 321 plain text tokens
-- **8× compression** (87% token savings)
-- **99.5% accuracy** (nearly perfect)
+[Google's token-counting documentation](https://ai.google.dev/gemini-api/docs/tokens) describes model image processing and provides a token-counting API and response usage information. Image size alone does not justify borrowing another model's estimate. For a routed request, keep the provider, exact model identifier, settings, and returned usage together.
 
-## What 8× Compression Looks Like
+A fair cost comparison sends the **same task** through two paths: ordinary text and the rendered image. Count the complete request, the output, any extra transcription step, and retries needed to meet the same quality threshold. Input-token reduction is not automatically an equal reduction in the total bill.
 
-Here's the actual compressed image that Gemini reads at 99.5% accuracy:
+That experiment could find a saving. It could also find that the image costs more. The results above do not settle it.
 
-![8× Compressed Text](/static/images/posts/vision-encoded-text-compression/dense_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
+## The rendering pipeline
 
-**This image contains 1,287 characters** (a full MacBook Pro review) in just **40 tokens**.
-
-The only transcription error: `"500K" → "500k"` (capitalization).
-
-## How It Works
-
-The rendering pipeline is dead simple - just HTML and Playwright:
+The mechanism is simple: render, capture the text element, then resize it vertically. Capture the element rather than the whole browser viewport, or blank space becomes part of the image. Escape the input so a code snippet is rendered as text rather than interpreted as HTML.
 
 ```python
-from playwright.async_api import async_playwright
-from PIL import Image
+from html import escape
+from io import BytesIO
+from pathlib import Path
 
-async def render_compressed_text(text: str, output_path: str):
-    # 1. Generate HTML with ultra-small font
+from PIL import Image
+from playwright.async_api import async_playwright
+
+
+async def render_compressed_text(text: str, output_path: str, y_scale=0.6):
+    if not 0 < y_scale <= 1:
+        raise ValueError("y_scale must be in (0, 1]")
+
     html = f"""
-    <html><body style="width:800px;font-family:Verdana;font-size:8px;line-height:8px;margin:0">
-        {text}
+    <html><body style="margin:0;background:white">
+      <div id="text" style="width:800px;color:black;font-family:Verdana,sans-serif;
+           font-size:8px;line-height:8px;white-space:pre-wrap;
+           overflow-wrap:anywhere">{escape(text)}</div>
     </body></html>
     """
 
-    # 2. Screenshot with Playwright
     async with async_playwright() as p:
         browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.set_content(html)
-        await page.screenshot(path='temp.png')
-        await browser.close()
+        try:
+            page = await browser.new_page(
+                viewport={"width": 800, "height": 600}, device_scale_factor=1
+            )
+            await page.set_content(html)
+            await page.evaluate("document.fonts.ready")
+            png = await page.locator("#text").screenshot()
+        finally:
+            await browser.close()
 
-    # 3. Vertical compression (Y-scale 0.6)
-    img = Image.open('temp.png')
-    new_height = int(img.height * 0.6)
-    img = img.resize((img.width, new_height), Image.Resampling.LANCZOS)
-    img.save(output_path)
+    with Image.open(BytesIO(png)) as source:
+        height = max(1, round(source.height * y_scale))
+        compressed = source.resize((source.width, height), Image.Resampling.LANCZOS)
+        compressed.save(Path(output_path))
+        return compressed.size
 ```
 
-That's it. No custom models, no training, no infrastructure.
+This is rendering code, not a reproduction of the model results. Verdana must be installed if you want that font; otherwise the browser uses its fallback. Record the actual font and returned image dimensions with every run.
 
-## DeepSeek-OCR vs Our Approach
+## What failed, and what that means
 
-| Metric             | DeepSeek-OCR    | Our Approach    |
-| ------------------ | --------------- | --------------- |
-| **Compression**    | 7-20×           | **8×**          |
-| **Accuracy (@8×)** | ~95%            | **99.5%**       |
-| **Model**          | Custom 3B VLM   | Standard Gemini |
-| **Training**       | 30M+ documents  | None            |
-| **Deployment**     | Self-hosted GPU | API call        |
-| **Setup Time**     | Days            | Minutes         |
+**Binary grids.** Encoding characters as bits in a pixel grid did not produce useful decoding in these attempts. A compact encoding is no help if the reader does not know the code.
 
-**We match their compression with better accuracy using zero infrastructure.**
+**Morse code.** The original note listed estimates of 192 versus 321 tokens and then called Morse “more tokens.” That comparison was internally inconsistent, and both the accounting and decoding quality would need a clean retest.
 
-## The Quality Cliff
+**RGB channel splitting.** Putting different text into the color channels did not work in the reported attempts. There is no measured saving to claim from it.
 
-Compression isn't linear - there's a sharp quality cliff:
+**Arabic.** The tested rendering failed to recover Arabic reliably. Connected letterforms, dots, and diacritics make tiny rendering a different problem. That is a reason to test Arabic separately, not evidence that the language cannot benefit from visual compression.
 
-- **Y-scale 0.8** → 99.4% accuracy ✓
-- **Y-scale 0.7** → 55.0% accuracy ✗ (OCR degradation)
-- **Y-scale 0.6** → 99.5% accuracy ✓ (sweet spot!)
+The original comparison also reported that a Claude 4.5 setup needed a larger font than Gemini 2.5. Without exact model identifiers, common test passages, repeated runs, and measured usage, “Gemini is 4× better” is not an interpretable result. Minimum font size is not a general measure of vision quality.
 
-At 0.7, letter shapes degrade just enough to break Gemini's OCR. At 0.6, perfect readability.
+## The experiment worth running next
 
-## What Doesn't Work
+Use a held-out collection of prose, numbers, code, tables, and Arabic. Fix the rendering configurations before testing the collection. Save every source passage, image, output, model identifier, prompt, and usage record.
 
-We tried other compression schemes:
+For transcription, report character error rate:
 
-**Binary Grids**: Convert to 8-bit binary, render as pixels. Could achieve 23× compression, but vision models can't decode arbitrary binary patterns without training. Failed.
+$$
+\mathrm{CER}=\frac{S+D+I}{N},
+$$
 
-**Morse Code**: Dots and dashes actually use *more* tokens (192 vs 321) due to spacing requirements. Failed.
+where substitutions, deletions, and insertions are measured against the $N$ reference characters. State how whitespace and case are handled. Also check critical content separately: a missing minus sign can matter more than a paragraph of punctuation errors.
 
-**RGB Channel Splitting**: Encode different text in R/G/B channels. Gemini interprets it as chromatic aberration. Failed.
+For summarization or question answering, test those tasks directly. Good transcription on one passage is not a guarantee of good downstream reasoning on a compressed document. Repeat the calls so that one lucky response does not become the headline.
 
-**Arabic Script**: We tested Arabic text compression and it failed. Complex scripts with connected letters and diacritics require larger fonts and don't achieve the same compression ratios. This method works best for Latin-script languages.
+Then plot task quality against measured total cost. That is the comparison the original headline was trying to make.
 
-**Lesson**: Simple text rendering beats clever encoding with off-the-shelf models.
+## Why I still like the idea
 
-## Claude vs Gemini: Vision Gap
+Text tokens are one representation, not the only possible one. A visual encoder can potentially make a different trade-off between detail and context. DeepSeek-OCR makes that a concrete research question; an off-the-shelf API makes it easy to explore a small version of it.
 
-| Model      | Min Readable Font | Best Compression         | Accuracy |
-| ---------- | ----------------- | ------------------------ | -------- |
-| Claude 4.5 | 14px              | 261 tokens (19% savings) | 99.8%    |
-| Gemini 2.5 | 8px               | 40 tokens (87% savings)  | 99.5%    |
+One direction I would like to investigate is **VET-RAG: Vision-Encoded Text Retrieval-Augmented Generation**. Retrieve relevant document pages, then use a visual representation where it helps preserve layout or reduce processing cost. Retrieval still has to work; shrinking pages does not solve relevance, and compressing away the crucial sentence is not an optimization.
 
-**Gemini's vision model is 4× better** at reading tiny text. Claude hallucinates at 8px.
+The attractive question remains: how much useful information can the model recover per unit of computation? The tiny screenshot gives us a reason to investigate. The bill and the error report have to give us the answer.
 
+## Additional test material
 
-## Methodology Notes
+This second image contains a passage written in the style of quantum-computing news. It is test material, not a sourced news report:
 
-**Token Calculation**: Image tokens are calculated using Claude/Gemini's vision API formula: `tokens = (width × height) / 750`. For the 8px Y=0.6 configuration, the image is 800×30px = 24,000 pixels / 750 = 40 tokens.
+![A second densely rendered English test passage](/static/images/posts/vision-encoded-text-compression/news_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
 
-**Disclaimer**: These are small-scale experiments. Take results with a grain of salt. Test thoroughly on your specific use case before production deployment. Different text types (code, poetry, tables) may have different accuracy profiles.
-
----
-
-## Why Does This Matter?
-
-### 1. We're Just Getting Started
-
-This is just the beginning. With more efficient fonts and encoding schemes, we could potentially achieve **20× compression or more**. RGB channel multiplexing could push this even further.
-
-I wonder when we'll see LLMs trained without tokenized inputs at all - just pure image inputs. The fact that vision models can already read compressed text this well suggests we might not need text tokenization in the future.
-
-### 2. Hierarchical Context Windows: The Future of RAG
-
-The most exciting implication isn't the compression itself - it's what it reveals about **pooling and hierarchical processing**.
-
-Imagine future LLM architectures with hierarchical context windows: lower layers process raw images with hundreds of millions of tokens, while smarter upper layers work with compressed, abstract representations using far fewer tokens. If this works, it could revolutionize RAG systems.
-
-Let me call it **VET-RAG** (Vision-Encoded Text Retrieval-Augmented Generation) - you heard it here first! Instead of chunking and embedding text, we could store entire documents as compressed images, let the vision layers do the heavy lifting, and only elevate the relevant compressed representations to the reasoning layers.
-
-### 3. You Can Use This Today
-
-Most importantly: **this isn't theoretical**. You can implement this right now:
-
-- Send your long prompts as compressed images
-- Save 8× on token costs immediately
-- Thank me later!
-
-No custom models, no infrastructure, no training. Just render, compress, and send.
----
-
-## Appendix: Additional Examples
-
-### Example 1: Quantum Computing News (Y=0.6)
-
-![Quantum News Compressed](/static/images/posts/vision-encoded-text-compression/news_f8_Verdana_sans-serif_w800_ls0.0_lh1.00_ys0.60.png)
-
-**Input Text** (1,442 characters):
-> Scientists announced a major breakthrough in quantum computing this week, revealing a new error correction technique that could accelerate the development of practical quantum computers. The research team from MIT demonstrated that their novel approach reduces quantum bit errors by up to 90 percent compared to traditional methods...
-
-**Gemini Transcription** (99.6% accuracy):
-> Scientists announced a major breakthrough in quantum computing this week, revealing a new error correction technique that could accelerate the development of practical quantum computers. The research team from MIT demonstrated that their novel approach reduces quantum bit errors by up to 90 percent compared to traditional methods...
-
-**Errors**: Minor differences in comma placement and "for" vs "to" (1 word change).
-
-**Tokens**: 53 vs ~360 plain text = 85% savings
-
----
-
-### Example 2: MacBook Pro Review (Y=0.6)
-
-**Input Text** (1,287 characters):
-> The new MacBook Pro with M3 chip represents a significant upgrade in laptop computing. After extensive testing across video editing, software development, and machine learning workflows, the performance improvements are remarkable...
-
-**Gemini Transcription** (99.5% accuracy):
-> The new MacBook Pro with M3 chip represents a significant upgrade in laptop computing. After extensive testing across video editing, software development, and machine learning workflows, the performance improvements are remarkable...
-
-**Errors**: "500K" → "500k" (capitalization only)
-
-**Tokens**: 40 vs ~321 plain text = 87% savings
-
----
-
-*Published: October 2025*
-*Research conducted using Gemini 2.5 Flash via OpenRouter API*
+The original note recorded 1,442 source characters and a 99.6% transcription score, mentioning punctuation changes and “for” versus “to.” As with the review example, the full reference/output pair is needed to verify that score. Its old token-savings estimate is withdrawn for the same accounting reason.

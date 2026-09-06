@@ -7,6 +7,7 @@ summary: 'Start with five restaurants whose true quality is unknown, then follow
 authors: ['default']
 layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'dueling-bandits', 'sorting', 'interactive', 'edp']
+lastmod: '2026-09-06'
 ---
 
 Five restaurants are near your home. One of them is probably the best.
@@ -62,6 +63,8 @@ That missing information is the whole game.
 If the sushi place is truly best and you eat somewhere weaker tonight, you paid a hidden tax. You may still have had a fine dinner, but compared with the best available dinner, you left quality on the table. Bandit theory calls that tax **regret**:
 
 $$\text{Regret}(T) = \sum_{t=1}^{T}\big(\mu^* - \mu_{a_t}\big), \qquad \mu^* = \max_i \mu_i$$
+
+This is cumulative pseudo-regret: the expected reward sacrificed while learning, measured using the hidden means. It is different from **best-arm identification**, where the goal is to name the best option after a testing budget. Ranking and top-K recovery below move toward that second objective; the best exploration policy can change with the objective.
 
 The formula is just bookkeeping. Each night, compare the place you chose, $\mu_{a_t}$, with the best hidden average, $\mu^*$. Add up the gap.
 
@@ -444,7 +447,7 @@ A useful scheduler looks for pairs that are both close and under-sampled.
 - **Random** chooses any pair.
 - **Round-robin** chooses the least-played pair, $\arg\min_{(i,j)}n_{ij}$.
 - **Ladder** compares neighbours in the current table.
-- **Active** spends the next match where rank uncertainty is highest:
+- **Active** uses a heuristic that favors close, under-sampled pairs; a cutline-focused variant favors pairs near the current K-th place:
 
   $$\arg\max_{(i,j)}\left[\text{closeness}(|\hat{s}_i-\hat{s}_j|)+\text{uncertainty}\left(\frac{1}{1+n_{ij}}\right)\right]$$
 
@@ -452,7 +455,7 @@ A useful scheduler looks for pairs that are both close and under-sampled.
 
 The curve is mean top-5 recall across repeated leagues: how many of the true best five candidates have entered the estimated best five. The early part matters most, because with enough matches most reasonable schedulers eventually catch up.
 
-Set the table to **you scout (click 2)**. Pick a match, inspect how the ranking moves, then pick again.
+Use **rerun trials** to repeat the simulated comparison and **trials** to switch between 48 and 96 leagues. The lines average the results; the shaded bands show variation across trials. To choose individual matches yourself, return to the earlier league-table demo.
 
 The easy-looking matches are usually the least useful. The valuable matches are the ones where either result would teach you something.
 
@@ -553,7 +556,7 @@ Part III chooses several items at once.
 
 A product surface rarely asks for one item. It asks for a list: top 10 products, 12 snippets, 20 candidates, a page of recommendations.
 
-Pairwise ranking buys a global order, but the bill is **O(n²)**. A hundred items is already about five thousand pairs. A million is dead.
+Exhaustive pairwise ranking has an **O(n²)** comparison bill: a hundred items already give 4,950 possible pairs. Active ranking, as we just saw, need not buy every pair. The next approach changes something else: how much feedback one action returns.
 
 Part II reduced the bill by spending comparisons near the cutline. Part III uses a different lever: select a slate, observe feedback on the selected items, and update only those items.
 
@@ -683,8 +686,10 @@ The bill it did **not** pay:
 | candidates | 114 | 114 |
 | one full pass | 6,441 pairs | not taken |
 | expensive judge calls | thousands | **22** |
-| pairwise constraints | — | **2,582** |
+| pairwise constraints | — | Not reconciled; see note below |
 | the dull tail | compared anyway | judged 0–1× |
+
+The original run note listed 2,582 pairwise constraints. That cannot come from 22 rankings of at most 14 items alone: the upper bound is $22\binom{14}{2}=2{,}002$. Larger slates, extra comparisons, or accumulated history would need to be identified in the run log. The example illustrates the selection loop; it is not a fully reconciled cost benchmark.
 
 The funniest lines it surfaced, by Bradley-Terry score (every line a verbatim review):
 
@@ -700,7 +705,7 @@ That last row is the failure mode optimism is meant to catch.
 
 It has the **highest** fitted score after **one** judgment, which makes it interesting, not trustworthy. UCB should send it back for another test instead of crowning it.
 
-The trustworthy line is the one judged eleven times. *Highest score* and *highest score you believe* are different questions. Ranking by $\hat{r}_i$ alone answers the wrong one.
+The line judged eleven times has more evidence than the line judged once, but repeated judgments from the same evaluator do not guarantee correctness. *Highest score* and *highest score you believe* are different questions.
 
 One production caveat: the optimizer optimizes the target you give it.
 
