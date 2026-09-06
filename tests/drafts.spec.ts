@@ -102,7 +102,7 @@ test('owner can view draft images, interact with a demo and switch language', as
     const page = await context.newPage()
     await page.goto('/drafts/en/hello-bundle')
     await expect(page.getByRole('heading', { name: 'Hello, Self-Contained Post' })).toBeVisible()
-    const cover = page.locator('img[src*="/drafts/assets/hello-bundle/images/cover.png"]')
+    const cover = page.locator('img[src*="/drafts/assets/hello-bundle/images/cover.png"]').first()
     await expect(cover).toBeVisible()
     await expect
       .poll(() => cover.evaluate((image: HTMLImageElement) => image.naturalWidth))

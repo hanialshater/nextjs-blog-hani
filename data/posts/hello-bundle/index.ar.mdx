@@ -33,4 +33,34 @@ data/posts/hello-bundle/
 
 <Demo src="/demos/posts/hello-bundle/counter.html" title="تجربة العدّاد" height={220} />
 
+<TechnicalNote title="كيف يعمل العدّاد؟">
+
+تضيف كل ضغطة واحداً إلى قيمة العدّاد أو تطرحه منها، ويعيده زر التصفير إلى الصفر.
+يمكن وضع الشرح التفصيلي هنا، مع المعادلات مثل $c_{t+1}=c_t+1$ أو أمثلة الشيفرة،
+ليبقى مسار المقال متصلاً.
+
+```js
+count += 1
+```
+
+</TechnicalNote>
+
+## الأشكال والرسوم
+
+<Figure
+  src="/static/images/posts/hello-bundle/cover.png"
+  alt="شكل تعبئة الدوائر"
+  width={1200}
+  height={800}
+  caption="يمكن أن يمتد الشكل إلى عرض المقال، مع بقاء الفقرات في عمود أضيق."
+  credit="صورة توضيحية من حزمة هذا المقال."
+  wide
+/>
+
+<BookIllustration
+  src="/static/images/posts/hello-bundle/cover.png"
+  alt="رسم توضيحي لتعبئة الدوائر"
+  caption="تستخدم رسوم الكتاب عارض الصور نفسه."
+/>
+
 هذه هي الفكرة كاملة. راجع `data/posts/README.md` للمرجع الكامل.

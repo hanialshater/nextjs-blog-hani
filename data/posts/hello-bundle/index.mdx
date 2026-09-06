@@ -37,4 +37,37 @@ folder and embed via the `<Demo />` component — no app rebuild, no shared comp
 
 <Demo src="/demos/posts/hello-bundle/counter.html" title="Counter demo" height={220} />
 
+<TechnicalNote title="How the counter works">
+
+The demo keeps a local count. Each press adds or subtracts one; reset returns it
+to zero. This note can hold an explanation, equations such as $c_{t+1}=c_t+1$,
+or a code sample without interrupting the main article.
+
+```js
+count += 1
+```
+
+</TechnicalNote>
+
+## Figures and illustrations
+
+Use a figure when an image needs a caption and a credit. The enlarge control
+opens a keyboard-accessible viewer; choose **Actual size** to inspect details.
+
+<Figure
+  src="/static/images/posts/hello-bundle/cover.png"
+  alt="Circle packing figure"
+  width={1200}
+  height={800}
+  caption="A figure can use the full article width while paragraphs stay narrower."
+  credit="Example image from this post bundle."
+  wide
+/>
+
+<BookIllustration
+  src="/static/images/posts/hello-bundle/cover.png"
+  alt="Circle packing illustration"
+  caption="Existing book illustrations use the same image viewer."
+/>
+
 That's the whole convention. See `data/posts/README.md` for the full reference.

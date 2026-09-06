@@ -38,7 +38,7 @@ const RelatedPosts = ({
   if (relatedPosts.length === 0) return null
 
   return (
-    <div className="mt-10 border-t border-gray-200 pt-8 dark:border-gray-700">
+    <div className="not-prose mt-10 border-t border-gray-200 pt-8 dark:border-gray-700">
       <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
         {getTranslation(locale as Locale, 'blog.relatedPosts')}
       </h2>

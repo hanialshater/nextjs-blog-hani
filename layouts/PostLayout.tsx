@@ -70,7 +70,7 @@ export default function PostLayout({
       <ScrollTopAndComment />
       <article>
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
-          <header className="pt-6 xl:pb-6">
+          <header className="article-header pt-6 xl:pb-6">
             <div className="space-y-1 text-center">
               <dl className="space-y-10">
                 <div>
@@ -89,7 +89,7 @@ export default function PostLayout({
                 </div>
               </dl>
               <div>
-                <PageTitle>{title}</PageTitle>
+                <PageTitle className="article-title">{title}</PageTitle>
               </div>
               {draft && (
                 <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
@@ -237,7 +237,10 @@ export default function PostLayout({
             <div
               className={`divide-y divide-gray-200 xl:col-span-3 xl:row-span-2 xl:pb-0 dark:divide-gray-700 ${isRTL ? 'xl:col-start-1 xl:col-end-4' : ''}`}
             >
-              <div id="article-content" className="prose dark:prose-invert max-w-none pt-10 pb-8">
+              <div
+                id="article-content"
+                className="reading-prose prose dark:prose-invert max-w-none pt-10 pb-8"
+              >
                 {children}
               </div>
               <div className={`flex pt-6 pb-6 ${isRTL ? 'justify-start' : 'justify-end'}`}>

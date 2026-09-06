@@ -1,4 +1,4 @@
-import Image from './Image'
+import Image from './ZoomableImage'
 
 interface BookIllustrationProps {
   src: string
@@ -6,6 +6,7 @@ interface BookIllustrationProps {
   caption?: string
   priority?: boolean
   direction?: 'ltr' | 'rtl'
+  unoptimized?: boolean
 }
 
 export default function BookIllustration({
@@ -13,10 +14,11 @@ export default function BookIllustration({
   alt,
   caption,
   priority = false,
-  direction = 'rtl',
+  direction,
+  unoptimized,
 }: BookIllustrationProps) {
   return (
-    <figure className="not-prose my-10 sm:my-14" dir={direction}>
+    <figure className="article-figure article-figure-wide not-prose my-10 sm:my-14" dir={direction}>
       <div className="overflow-hidden rounded-xl border border-stone-200/80 bg-[#f4ecd9] shadow-sm dark:border-gray-700 dark:bg-gray-900">
         <Image
           src={src}
@@ -25,6 +27,7 @@ export default function BookIllustration({
           height={1024}
           sizes="(min-width: 1280px) 760px, (min-width: 640px) calc(100vw - 3rem), calc(100vw - 2rem)"
           priority={priority}
+          unoptimized={unoptimized}
           className="block h-auto w-full"
         />
       </div>
