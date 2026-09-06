@@ -72,7 +72,10 @@ for (const language of languages) {
         await opener.click()
         const dialog = page.getByRole('dialog', { name: language.main })
         await expect(dialog).toBeVisible()
-        await expect(opener).toHaveAttribute('aria-expanded', 'true')
+        await expect(header.locator('button[aria-controls="mobile-navigation"]')).toHaveAttribute(
+          'aria-expanded',
+          'true'
+        )
         const links = dialog.getByRole('navigation').getByRole('link')
         await expect(links).toHaveCount(5)
         // The opening animation must finish before checking physical positions.
