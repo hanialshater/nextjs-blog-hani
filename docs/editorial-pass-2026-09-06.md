@@ -6,7 +6,7 @@ This is a review draft of eleven published posts in English and Arabic, plus a p
 
 ## Article-by-article review
 
-Each row has its own content commit, with both languages together.
+The first pass gives each row its own content commit, with both languages together. The Arabic follow-up below adds one commit per revised Arabic article.
 
 | Article | Pass | Main changes |
 | --- | --- | --- |
@@ -22,6 +22,18 @@ Each row has its own content commit, with both languages together.
 | The Panic Button — [EN](../data/posts/panic-button-principle/index.mdx) · [AR](../data/posts/panic-button-principle/index.ar.mdx) | Focused rewrite | Keep a short leadership essay with three practical actions. Remove unsupported physiological/productivity claims. Make the promise of help credible, and avoid treating an unused button as proof that the system works. |
 | Price of Anarchy — [EN](../data/posts/price-of-anarchy/index.mdx) · [AR](../data/posts/price-of-anarchy/index.ar.mdx) | Light conceptual pass | Keep Uncle Jalal and the political satire. Correct the definitions of price of anarchy and Nash equilibrium, and place Ostrom’s work in context. Keep the car-scratching proposal inside the joke. |
 | The Love-Prompt of Devesh the Octopus — [EN](../data/posts/the-love-prompt-of-devesh-the-octopus/index.mdx) · [AR](../data/posts/the-love-prompt-of-devesh-the-octopus/index.ar.mdx) | Light fiction pass | Improve Arabic rhythm and clarify the performed romance and decoy-coffee gag so the reveal fits. Keep the strange plot and comedy. |
+
+## Arabic follow-up after Hani's feedback
+
+Hani's example sets the register for this second pass: mature conversational Levantine, with complete meaning and natural sentence structure. Dialect vocabulary alone does not make a literal translation work. Serious explanations need precise terms and connected reasoning; the shorter pieces can keep their looseness and humor.
+
+The opening of *Ignore the Feathers* now adopts his wording:
+
+> كل فريق اشتغلت معه كان عنده أفكار عظيمة أكتر من طاقته على الإنجاز. هاي أبداً مش مشكلة. التحدي بيكمن بالاختيار
+
+All eleven Arabic articles received another prose pass. The technical posts now explain ideas such as the solution archive, comparison-derived rewards, partial pooling, and experimental limits in sentences that carry their full meaning. Literal constructions such as «شهور هندسية»، «المثال الجاري»، and «الخبرة بتسافر» were rewritten in context. Fiction and satire keep their jokes while narration and dialogue read more naturally.
+
+This follow-up changes no English articles and makes no further changes to the deferred Hume/Dream post. Code blocks, display equations, external URLs, and direct asset references match the preceding draft exactly. Contentlayer compiled all 30 documents again, TypeScript checking passed, and the production build generated all 89 routes and passed draft isolation. `git diff --check` passed.
 
 ## Evidence still needed for stronger experimental claims
 
@@ -43,6 +55,6 @@ Review the major rewrites for authorial intent before merging. These are editori
 - The new Arabic demo’s inline JavaScript parses. Its simulation logic is inherited from the existing English averaged pairing demo; labels and direction are localized.
 - Verified that removing the new Dream-project notes restores those files exactly to the base revision.
 - `git diff --check` passed. Draft post sources are unchanged.
-- Visual verification remains pending: the available browser could not open the local preview (`ERR_BLOCKED_BY_CLIENT`).
+- Visual verification remains pending: the available browser could not open the local preview (`ERR_BLOCKED_BY_CLIENT`), and the branch's Vercel preview requires sign-in.
 
 Contentlayer emits an existing warning because `data/posts/README.md` is not a content document and is skipped. The build also reports a Node `punycode` deprecation warning.
