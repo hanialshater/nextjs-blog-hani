@@ -62,6 +62,7 @@ const MobileNav = () => {
       <Transition appear show={navShow} as={Fragment} unmount={false}>
         <Dialog
           as="div"
+          className="fixed inset-0 z-60"
           dir={dir}
           aria-label={t('nav.primary')}
           onClose={() => setNavShow(false)}
