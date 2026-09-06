@@ -1,7 +1,7 @@
 import { readFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 import { allBlogs } from 'contentlayer/generated'
-import { draftAccessDenied, hasDraftAccess, privateDraftHeaders } from '@/lib/drafts/access'
+import { draftHeaders } from '@/lib/drafts/headers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,10 +26,9 @@ const mimeTypes: Record<string, string> = {
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  if (!(await hasDraftAccess(request.headers.get('authorization')))) return draftAccessDenied()
   const segments = (await params).path
   const [slug, folder, ...asset] = segments
-  const missing = () => new Response('Not found', { status: 404, headers: privateDraftHeaders })
+  const missing = () => new Response('Not found', { status: 404, headers: draftHeaders })
   if (
     !asset.length ||
     !['images', 'demos'].includes(folder) ||
@@ -45,7 +44,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
     if (!filename.startsWith(root + path.sep)) return missing()
     return new Response(new Uint8Array(await readFile(filename)), {
       headers: {
-        ...privateDraftHeaders,
+        ...draftHeaders,
         'Content-Type': contentType,
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN',

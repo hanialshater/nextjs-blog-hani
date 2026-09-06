@@ -43,7 +43,6 @@ for (const locale of ['en', 'ar']) {
     const context = await browser.newContext({
       baseURL,
       viewport: { width: 390, height: 844 },
-      httpCredentials: { username: 'hani', password: process.env.DRAFT_PREVIEW_PASSWORD! },
     })
     try {
       const page = await context.newPage()
@@ -86,7 +85,7 @@ for (const locale of ['en', 'ar']) {
         .poll(() => page.evaluate(() => getComputedStyle(document.body).overflow))
         .not.toBe('hidden')
 
-      // The existing book illustration component must use protected assets too.
+      // The existing book illustration component must use the draft asset route too.
       const illustration = page.locator('.article-figure').last().locator('img')
       await expect(illustration).toHaveAttribute(
         'src',
@@ -105,7 +104,6 @@ test('technical notes remain readable without JavaScript', async ({ browser, bas
   const context = await browser.newContext({
     baseURL,
     javaScriptEnabled: false,
-    httpCredentials: { username: 'hani', password: process.env.DRAFT_PREVIEW_PASSWORD! },
   })
   try {
     const page = await context.newPage()

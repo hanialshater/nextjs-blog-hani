@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "revision": "bd77f22eea891285",
+  "title": {
+    "ar": "الحلم اللي أعطانا الكمبيوتر",
+    "en": "The Dream That Gave Us Computers"
+  },
+  "parts": [
+    {
+      "number": 1,
+      "title": {
+        "ar": "السؤال",
+        "en": "The Question"
+      }
+    },
+    {
+      "number": 2,
+      "title": {
+        "ar": "الحلم وخرابه",
+        "en": "The Dream and Its Destruction"
+      }
+    },
+    {
+      "number": 3,
+      "title": {
+        "ar": "الآلات",
+        "en": "The Machines"
+      }
+    },
+    {
+      "number": 4,
+      "title": {
+        "ar": "الإعادة",
+        "en": "The Replay"
+      }
+    }
+  ]
+}

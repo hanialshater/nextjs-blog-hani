@@ -1,50 +1,40 @@
 import { expect, test } from '@playwright/test'
 
-function authorization(password = process.env.DRAFT_PREVIEW_PASSWORD!) {
-  return `Basic ${Buffer.from(`hani:${password}`).toString('base64')}`
-}
-
-test('draft routes and assets reject anonymous and invalid access', async ({ request }) => {
+test('drafts open by link without a password or an authentication challenge', async ({
+  request,
+}) => {
   for (const url of [
-    '/drafts',
     '/drafts/en',
     '/drafts/ar',
-    '/drafts/en/learning-the-map',
-    '/drafts/assets/hello-bundle/images/cover.png',
+    '/drafts/en/hello-bundle',
     '/drafts/assets/hello-bundle/demos/counter.html',
   ]) {
-    const response = await request.get(url, { maxRedirects: 0 })
-    expect(response.status()).toBe(401)
-    expect(response.headers()['www-authenticate']).toContain('Basic')
+    const response = await request.get(url)
+    expect(response.status()).toBe(200)
+    expect(response.headers()['www-authenticate']).toBeUndefined()
     expect(response.headers()['cache-control']).toContain('no-store')
-    expect(await response.text()).not.toContain('Learning the Map')
+    expect(response.headers()['x-robots-tag']).toContain('noindex')
   }
-  const attempts: Record<string, string>[] = [
-    { Authorization: authorization('incorrect-password') },
-    { Authorization: 'Basic !!!' },
-    { Cookie: '__prerender_bypass=forged' },
-    {
-      RSC: '1',
-      'x-middleware-subrequest': 'middleware:middleware:middleware:middleware:middleware',
-    },
-  ]
-  for (const headers of attempts) {
-    const response = await request.get('/drafts/en/learning-the-map', { headers })
-    expect([401, 404]).toContain(response.status())
-    expect(await response.text()).not.toContain('Learning the Map')
-  }
+  const redirect = await request.get('/drafts', { maxRedirects: 0 })
+  expect(redirect.status()).toBe(307)
+  expect(redirect.headers().location).toBe('/drafts/en')
+  const staleLogin = await request.get('/drafts/en/hello-bundle', {
+    headers: { Authorization: 'Basic obsolete-browser-credential' },
+  })
+  expect(staleLogin.status()).toBe(200)
 })
 
-test('owner can read drafts in both languages without making them public', async ({ request }) => {
-  const headers = { Authorization: authorization() }
+test('readers can open both languages while normal article routes stay unpublished', async ({
+  request,
+}) => {
   for (const locale of ['en', 'ar']) {
-    const response = await request.get(`/drafts/${locale}`, { headers })
+    const response = await request.get(`/drafts/${locale}`)
     expect(response.status()).toBe(200)
     expect(await response.text()).toContain(`/drafts/${locale}/hello-bundle`)
     expect(response.headers()['cache-control']).toContain('no-store')
     expect(response.headers()['x-robots-tag']).toContain('noindex')
   }
-  const response = await request.get('/drafts/en/hello-bundle', { headers })
+  const response = await request.get('/drafts/en/hello-bundle')
   const html = await response.text()
   expect(response.status()).toBe(200)
   expect(html).toContain('Hello, Self-Contained Post')
@@ -55,17 +45,16 @@ test('owner can read drafts in both languages without making them public', async
   expect(html).not.toContain('application/ld+json')
   expect(html).not.toContain('vercel-insights')
 
-  // A privileged response must not prime a public cache or publish its source.
-  expect((await request.get('/drafts/en/hello-bundle')).status()).toBe(401)
-  expect((await request.get('/en/free-writing/hello-bundle', { headers })).status()).toBe(404)
-  expect((await request.get('/en/blog/hello-bundle', { headers })).status()).toBe(404)
-  expect((await request.get('/drafts/en/edp-sort', { headers })).status()).toBe(404)
+  // Unlisted reading must not publish the ordinary article routes.
+  expect((await request.get('/drafts/en/hello-bundle')).status()).toBe(200)
+  expect((await request.get('/en/free-writing/hello-bundle')).status()).toBe(404)
+  expect((await request.get('/en/blog/hello-bundle')).status()).toBe(404)
+  expect((await request.get('/drafts/en/edp-sort')).status()).toBe(404)
 })
 
-test('draft assets require access and are absent from public asset paths', async ({ request }) => {
-  const headers = { Authorization: authorization() }
+test('draft assets open by link and remain absent from normal asset paths', async ({ request }) => {
   for (const asset of ['images/cover.png', 'demos/counter.html']) {
-    const response = await request.get(`/drafts/assets/hello-bundle/${asset}`, { headers })
+    const response = await request.get(`/drafts/assets/hello-bundle/${asset}`)
     expect(response.status()).toBe(200)
     expect(response.headers()['cache-control']).toContain('no-store')
     expect(response.headers()['x-frame-options']).toBe('SAMEORIGIN')
@@ -77,7 +66,7 @@ test('draft assets require access and are absent from public asset paths', async
     '/drafts/assets/hello-bundle/index.mdx',
     '/drafts/assets/hello-bundle/images/%2e%2e%2findex.mdx',
   ])
-    expect((await request.get(url, { headers })).status()).toBe(404)
+    expect((await request.get(url)).status()).toBe(404)
 })
 
 test('draft metadata is absent from public discovery', async ({ request }) => {
@@ -90,13 +79,12 @@ test('draft metadata is absent from public discovery', async ({ request }) => {
   }
 })
 
-test('owner can view draft images, interact with a demo and switch language', async ({
+test('readers can view draft images, interact with a demo and switch language', async ({
   browser,
   baseURL,
 }) => {
   const context = await browser.newContext({
     baseURL,
-    httpCredentials: { username: 'hani', password: process.env.DRAFT_PREVIEW_PASSWORD! },
   })
   try {
     const page = await context.newPage()

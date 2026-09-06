@@ -1,11 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
-import { randomBytes } from 'node:crypto'
-
-// An ephemeral test-only password, inherited by workers and the local web server.
-process.env.DRAFT_PREVIEW_PASSWORD ||= randomBytes(32).toString('hex')
 
 export default defineConfig({
   testDir: './tests',
+  // The book suite starts its own server with isolated content and feedback fixtures.
+  testIgnore: '**/books.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -14,6 +12,18 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      ? {
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+          args: [
+            '--no-sandbox',
+            '--no-zygote',
+            '--disable-dev-shm-usage',
+            '--use-angle=swiftshader',
+            '--enable-unsafe-swiftshader',
+          ],
+        }
+      : {},
   },
   projects: [
     {
@@ -22,9 +32,17 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'yarn start --hostname 127.0.0.1',
+    command: 'node node_modules/next/dist/bin/next start --hostname 127.0.0.1',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      DRAFT_PREVIEW_PASSWORD: '',
+      DREAM_REVIEW_PASSWORD: '',
+      DREAM_GITHUB_TOKEN: '',
+      DREAM_EDITION_REF: '',
+      DREAM_FEEDBACK_TOKEN: '',
+      DREAM_LOCAL_EDITION_DIR: '',
+    },
   },
 })

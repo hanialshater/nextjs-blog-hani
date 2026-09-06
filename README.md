@@ -49,41 +49,25 @@ invalid pagination returns a 404 instead of an empty archive. Blog is the only p
 Translation cross-links are resolved in `lib/content/postRoutes.ts` and rendered by
 `layouts/PostLayout.tsx`. See `data/posts/README.md` for the full bundle reference.
 
-## Private draft previews
+## Draft reading links
 
-Keep `draft: true` in an article's frontmatter to preview it without publishing it.
-Public article URLs, archives, search, RSS and sitemaps exclude drafts, including in
-local development. Publishing means changing `draft` to `false` and deploying.
+Drafts are unlisted working pages, readable by anyone with their link. No password
+or environment-variable setup is needed. Open `/drafts/ar` or `/drafts/en`; each
+index includes the complete bilingual Dream book and the article drafts.
 
-On Vercel, add **DRAFT_PREVIEW_PASSWORD** as a sensitive server environment variable
-and redeploy. Generate a strong value with `openssl rand -hex 32`; never put it in
-Git or a `NEXT_PUBLIC_` variable. For local development, put it in `.env.local`.
-Missing passwords, passwords shorter than 32 characters, or longer than 256
-characters leave draft access disabled.
+Keep `draft: true` in article frontmatter. Normal article URLs, archives, search,
+RSS and sitemaps exclude drafts. Changing `draft` to `false` publishes an article
+into those listings. Draft responses retain noindex/noarchive and no-store headers;
+they have no analytics, public comments, or sharing controls. Draft-only images
+and demos remain under `/drafts/assets/` and are accessible through those links.
 
-Open `/drafts` (English) or `/drafts/ar` and use the browser's sign-in prompt:
-username **hani**, password **your configured value**. Individual previews live at
-`/drafts/en/<slug>` and `/drafts/ar/<slug>`. This is HTTP Basic authentication over
-HTTPS for a single owner, not an unlisted public URL. The browser remembers access
-for its authentication session; use a private browsing window and close it when
-finished. Rotating the environment password and redeploying revokes old access.
-
-Authentication is checked in middleware and again where draft data/assets are
-read. Draft responses are not cached or indexed, and their reading layout has no
-analytics, comments or sharing controls. Draft-only bundle images and demos are
-served through the same protected area; they are never copied to `public/`.
-Assets shared with a published translation are public by definition.
-
-**Repository privacy is separate:** this repository is public. Any draft committed
-here, including its Git history, is still readable on GitHub. The preview password
-protects the website, not the source repository. Keep confidential work in private
-storage/repositories; do not commit it here expecting website authentication to
-hide it. Existing public copies cannot be made secret retrospectively.
-
-GitHub Pages is a public static export and has no authentication server. Files
-named `page.private.tsx`, `layout.private.tsx` and `route.private.ts` are only
-registered in server builds; draft previews and draft-only assets are excluded
-from that export. Use the Vercel domain for authenticated previews.
+The Dream reading edition is bundled in `data/books/the-dream/`, with four parts
+in each language. It requires no `DREAM_GITHUB_TOKEN`, revision environment value,
+or reviewer password. See `docs/dream-reading-edition.md` for content updates and
+optional feedback delivery. This is a public source repository, and drafts are
+also available here. The `.private.ts(x)` filename convention is retained solely
+to omit these server routes from the GitHub Pages static export. Use the main
+Vercel-hosted domain for draft reading.
 
 ## Development
 

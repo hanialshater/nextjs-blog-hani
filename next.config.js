@@ -69,8 +69,8 @@ module.exports = () => {
     basePath,
     reactStrictMode: true,
     trailingSlash: false,
-    // Authenticated previews require a server. Never emit them in the public
-    // GitHub Pages export, which cannot enforce authentication.
+    // Draft reading routes use server rendering and are omitted from the
+    // separate GitHub Pages static export.
     pageExtensions: [
       ...(output === 'export' ? [] : ['private.ts', 'private.tsx']),
       'ts',
@@ -86,7 +86,12 @@ module.exports = () => {
     // Next 15 traces a nonexistent client manifest for route handlers with a
     // custom extension: https://github.com/vercel/next.js/issues/76955
     outputFileTracingExcludes: {
-      '/drafts/assets/*': ['./.next/server/app/drafts/assets/**/route_client-reference-manifest.js'],
+      '/drafts/assets/*': [
+        './.next/server/app/drafts/assets/**/route_client-reference-manifest.js',
+      ],
+      '/drafts/books/the-dream/feedback': [
+        './.next/server/app/drafts/books/the-dream/feedback/route_client-reference-manifest.js',
+      ],
     },
     eslint: {
       dirs: ['app', 'components', 'layouts', 'scripts'],
