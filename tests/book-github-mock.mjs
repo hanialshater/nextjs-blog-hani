@@ -1,9 +1,9 @@
 // Test-process preload only. Application code never imports this module.
 // No request is sent to GitHub and no real issue is created by these tests.
-const fs = require('node:fs')
+import fs from 'node:fs'
 if (process.env.DREAM_TEST_MOCK_STORE) {
-  const original = globalThis.fetch
-  globalThis.fetch = async (input, init) => {
+  const original = global.fetch
+  global.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
     if (url.startsWith('https://api.github.com/repos/hanialshater/the-dream/issues')) {
       const filename = process.env.DREAM_TEST_MOCK_STORE

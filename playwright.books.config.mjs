@@ -39,7 +39,7 @@ export default defineConfig({
       DREAM_LOCAL_EDITION_DIR: process.env.DREAM_LOCAL_EDITION_DIR,
       DREAM_GITHUB_TOKEN: 'synthetic-test-token',
       DREAM_TEST_MOCK_STORE: process.env.DREAM_TEST_MOCK_STORE,
-      NODE_OPTIONS: `--require=${path.resolve('tests/book-github-mock.cjs')}`,
+      NODE_OPTIONS: `--import=${path.resolve('tests/book-github-mock.mjs')}`,
     },
   },
 })
