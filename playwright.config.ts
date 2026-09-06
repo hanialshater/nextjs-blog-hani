@@ -6,6 +6,8 @@ process.env.DRAFT_PREVIEW_PASSWORD ||= randomBytes(32).toString('hex')
 
 export default defineConfig({
   testDir: './tests',
+  // The private book suite starts its own server with isolated content and feedback fixtures.
+  testIgnore: '**/books.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
