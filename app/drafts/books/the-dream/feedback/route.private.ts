@@ -1,18 +1,16 @@
 import { createHash } from 'node:crypto'
-import { hasBookAccess, bookAccessDenied } from '@/lib/books/access'
 import { getBookPart } from '@/lib/books/content'
 import { feedbackCategories } from '@/lib/books/types'
-import { privateDraftHeaders } from '@/lib/drafts/access'
+import { draftHeaders } from '@/lib/drafts/headers'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 function result(status: number, code: string) {
-  return Response.json({ code }, { status, headers: privateDraftHeaders })
+  return Response.json({ code }, { status, headers: draftHeaders })
 }
 
 export async function POST(request: Request) {
-  if (!(await hasBookAccess(request.headers.get('authorization')))) return bookAccessDenied()
   // Next may construct request.url with an internal hostname. Compare the
   // browser origin to the public Host header, using the proxy's scheme.
   const requestURL = new URL(request.url)
@@ -78,7 +76,7 @@ export async function POST(request: Request) {
     if (!chapter || (body.passage && !(body.passage in chapter.passages))) {
       return result(400, 'passage')
     }
-    const token = process.env.DREAM_FEEDBACK_TOKEN || process.env.DREAM_GITHUB_TOKEN
+    const token = process.env.DREAM_FEEDBACK_TOKEN
     if (!token) return result(503, 'unavailable')
     const requestHeaders = {
       Authorization: `Bearer ${token}`,

@@ -22,7 +22,7 @@ type Note = {
 
 const words = {
   en: {
-    draft: 'Private working draft',
+    draft: 'Working draft',
     parts: 'Parts',
     chapters: 'Chapters in this part',
     language: 'العربية',
@@ -43,6 +43,10 @@ const words = {
     quote: 'Selected passage',
     noQuote: 'Commenting on the chapter',
     submit: 'Send privately to Hani',
+    download: 'Download this note',
+    downloaded: 'Your note was downloaded. It has not been sent to Hani.',
+    localOnly: 'Your note stays in this browser. Download it to share with Hani.',
+    allDrafts: 'All drafts',
     sending: 'Sending…',
     close: 'Close',
     saved: 'Your note was saved for Hani. Thank you.',
@@ -57,7 +61,7 @@ const words = {
     minutes: 'min reading, plus experiments',
   },
   ar: {
-    draft: 'مسوّدة خاصة للقراءة',
+    draft: 'مسوّدة قيد العمل',
     parts: 'الأجزاء',
     chapters: 'فصول هذا الجزء',
     language: 'English',
@@ -78,6 +82,10 @@ const words = {
     quote: 'المقطع المحدّد',
     noQuote: 'تعليق على الفصل',
     submit: 'ابعث الملاحظة لهاني بشكل خاص',
+    download: 'نزّل الملاحظة',
+    downloaded: 'نزلت الملاحظة كملف. لسه ما انبعتت لهاني.',
+    localOnly: 'ملاحظتك بتضل بهالمتصفح. نزّلها كملف عشان تبعثها لهاني.',
+    allDrafts: 'كل المسودات',
     sending: 'عم تنبعت…',
     close: 'إغلاق',
     saved: 'وصلت ملاحظتك لهاني. شكراً.',
@@ -94,7 +102,7 @@ const words = {
 }
 
 const Chapter = memo(function Chapter({ chapter }: { chapter: ReaderChapter }) {
-  // Only compile output from the author's pinned private repository reaches
+  // Only compiled output from the author's checked-in reading edition reaches
   // this renderer. Never accept MDX/code from readers or feedback submissions.
   const Content = useMemo(
     () =>
@@ -120,9 +128,11 @@ const Chapter = memo(function Chapter({ chapter }: { chapter: ReaderChapter }) {
 export default function BookReader({
   manifest,
   edition,
+  feedbackEnabled = false,
 }: {
   manifest: BookManifest
   edition: ReaderPart
+  feedbackEnabled?: boolean
 }) {
   const { locale, part, revision, chapters } = edition
   const t = words[locale]
@@ -130,7 +140,9 @@ export default function BookReader({
   const [current, setCurrent] = useState(chapters[0].id)
   const [position, setPosition] = useState<Position | null>(null)
   const [note, setNote] = useState<Note | null>(null)
-  const [status, setStatus] = useState<'idle' | 'sending' | 'saved' | 'failed' | 'stale'>('idle')
+  const [status, setStatus] = useState<
+    'idle' | 'sending' | 'saved' | 'failed' | 'stale' | 'downloaded'
+  >('idle')
   const dialog = useRef<HTMLDialogElement>(null)
   const articleRoot = useRef<HTMLElement>(null)
   const saveKey = `dream:position:${locale}`
@@ -247,6 +259,20 @@ export default function BookReader({
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!note || status === 'sending') return
+    if (!feedbackEnabled) {
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify({ ...note, locale, part, revision }, null, 2)], {
+          type: 'application/json',
+        })
+      )
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `dream-note-${locale}-${note.chapter}-${note.submission}.json`
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setStatus('downloaded')
+      return
+    }
     setStatus('sending')
     try {
       const response = await fetch(`${BOOK_ROOT}/feedback`, {
@@ -290,6 +316,9 @@ export default function BookReader({
       </header>
       <div className="book-shell">
         <aside className="book-sidebar">
+          <a href={`/drafts/${locale}`} className="book-small">
+            {t.allDrafts}
+          </a>
           <nav aria-label={t.parts}>
             <ol>
               {manifest.parts.map((p) => (
@@ -394,14 +423,14 @@ export default function BookReader({
               disabled={status === 'saved' || status === 'sending'}
               onChange={(e) => setNote({ ...note, comment: e.target.value })}
             />
-            <p className="book-small">{t.local}</p>
+            <p className="book-small">{feedbackEnabled ? t.local : t.localOnly}</p>
             {status !== 'idle' && status !== 'sending' && <p role="status">{t[status]}</p>}
             <button
               className="book-submit"
               disabled={status === 'sending' || status === 'saved'}
               type="submit"
             >
-              {status === 'sending' ? t.sending : t.submit}
+              {status === 'sending' ? t.sending : feedbackEnabled ? t.submit : t.download}
             </button>
           </form>
         )}

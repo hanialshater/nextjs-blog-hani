@@ -42,7 +42,7 @@ export default async function Page({
         </div>
       </nav>
       <p className="mb-5 inline-block rounded-md bg-amber-100 px-3 py-1 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-        {arabic ? 'معاينة خاصة — غير منشورة' : 'Private preview — unpublished'}
+        {arabic ? 'مسوّدة قيد العمل' : 'Working draft — unlisted'}
       </p>
       {post ? (
         <article>
@@ -62,8 +62,25 @@ export default async function Page({
       ) : (
         <>
           <h1 className="mb-8 text-4xl font-bold">{arabic ? 'مسوداتي' : 'My drafts'}</h1>
+          <section className="mb-8 rounded-lg border border-gray-200 p-6 dark:border-gray-700">
+            <a
+              href={`/drafts/books/the-dream/${locale}/part-1`}
+              className="text-2xl font-semibold hover:underline"
+            >
+              {arabic ? 'الحلم — الكتاب كاملًا' : 'The Dream — complete book'}
+            </a>
+            <p className="mt-3 text-gray-600 dark:text-gray-300">
+              {arabic
+                ? 'أربعة أجزاء، مع شروح تقنية وأمثلة وتجارب تفاعلية.'
+                : 'Four parts, with technical explanations, worked examples, and interactive experiments.'}
+            </p>
+          </section>
           {!drafts.length && (
-            <p>{arabic ? 'لا توجد مسودات بهذه اللغة.' : 'No drafts in this language.'}</p>
+            <p>
+              {arabic
+                ? 'لا توجد مسودات مقالات أخرى بهذه اللغة.'
+                : 'No other article drafts in this language.'}
+            </p>
           )}
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {drafts.map((draft) => (

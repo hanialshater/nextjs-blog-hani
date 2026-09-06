@@ -3,9 +3,6 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const root = '/drafts/books/the-dream'
-const credential = () => ({ username: 'dream', password: process.env.DREAM_REVIEW_PASSWORD! })
-const authorization = () =>
-  `Basic ${Buffer.from(`dream:${process.env.DREAM_REVIEW_PASSWORD}`).toString('base64')}`
 const source = async (locale: string, part: number) =>
   JSON.parse(
     await readFile(
@@ -24,39 +21,24 @@ async function openLab(page: Page, kind: string) {
   return lab
 }
 
-test('anonymous and book-only credentials respect both privacy boundaries', async ({ request }) => {
-  for (const url of [`${root}/ar/part-1`, `${root}/en/part-3?_rsc=privacy`, `${root}/feedback`]) {
-    const response = await request.get(url, {
-      headers: {
-        'x-middleware-subrequest': 'middleware:middleware:middleware:middleware:middleware',
-        RSC: '1',
-      },
-    })
-    expect(response.status()).toBe(401)
+test('book pages and server component requests open without credentials', async ({ request }) => {
+  for (const url of [`${root}/ar/part-1`, `${root}/en/part-3?_rsc=reading`]) {
+    const response = await request.get(url, { headers: { RSC: '1' } })
+    expect(response.status()).toBe(200)
+    expect(response.headers()['www-authenticate']).toBeUndefined()
     expect(response.headers()['cache-control']).toContain('no-store')
-    expect(await response.text()).not.toContain('PRIVATE_BOOK_SENTINEL')
+    expect(response.headers()['x-robots-tag']).toContain('noindex')
   }
-  const ownerPage = await request.get('/drafts/ar', { headers: { Authorization: authorization() } })
-  expect(ownerPage.status()).toBe(401)
-  const ownerAsset = await request.get('/drafts/assets/demos/posts/example/demo.html', {
-    headers: { Authorization: authorization() },
-  })
-  expect(ownerAsset.status()).toBe(401)
-  const book = await request.get(`${root}/en/part-2`, {
-    headers: { Authorization: authorization() },
-  })
-  expect(book.status()).toBe(200)
-  expect(book.headers()['x-robots-tag']).toContain('noindex')
-  expect(book.headers()['cache-control']).toContain('no-store')
-  const wrong = await request.get(`${root}/en/part-2`, {
-    headers: { Authorization: `Basic ${Buffer.from('dream:incorrect').toString('base64')}` },
-  })
-  expect(wrong.status()).toBe(401)
+  expect((await request.get('/drafts/ar')).status()).toBe(200)
+  expect((await request.get(`${root}/en/part-5`)).status()).toBe(404)
+  expect(
+    (
+      await request.get(`${root}/en/part-2`, { headers: { Authorization: 'Basic stale-login' } })
+    ).status()
+  ).toBe(200)
 })
 
-test.describe('authenticated reading', () => {
-  test.use({ httpCredentials: credential() })
-
+test.describe('reading without passwords', () => {
   test('all eight reading pages contain the full aligned chapter map', async ({ page }) => {
     const errors: string[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -238,7 +220,7 @@ test('feedback rejects cross-origin, stale, oversized, and unknown-passage reque
     category: 'example',
     submission: '12345678-1234-1234-1234-123456789012',
   }
-  const headers = { Authorization: authorization(), Origin: baseURL! }
+  const headers = { Origin: baseURL! }
   const cross = await request.post(`${root}/feedback`, {
     headers: { ...headers, Origin: 'https://example.invalid' },
     data: body,

@@ -1,48 +1,30 @@
 import 'server-only'
-import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { hasBookAccess } from './access'
 import type { BookLocale, BookManifest, BookPart } from './types'
 
-export async function requireBookAccess() {
-  if (!(await hasBookAccess((await headers()).get('authorization')))) notFound()
-}
-
-export function editionConfigured() {
-  return !!(
-    (process.env.DREAM_LOCAL_EDITION_DIR && !process.env.VERCEL) ||
-    (process.env.DREAM_GITHUB_TOKEN && /^[a-f0-9]{40}$/.test(process.env.DREAM_EDITION_REF || ''))
-  )
+const bundledFiles: Record<string, () => Promise<{ default: unknown }>> = {
+  'manifest.json': () => import('@/data/books/the-dream/manifest.json'),
+  'part-1.ar.json': () => import('@/data/books/the-dream/part-1.ar.json'),
+  'part-2.ar.json': () => import('@/data/books/the-dream/part-2.ar.json'),
+  'part-3.ar.json': () => import('@/data/books/the-dream/part-3.ar.json'),
+  'part-4.ar.json': () => import('@/data/books/the-dream/part-4.ar.json'),
+  'part-1.en.json': () => import('@/data/books/the-dream/part-1.en.json'),
+  'part-2.en.json': () => import('@/data/books/the-dream/part-2.en.json'),
+  'part-3.en.json': () => import('@/data/books/the-dream/part-3.en.json'),
+  'part-4.en.json': () => import('@/data/books/the-dream/part-4.en.json'),
 }
 
 async function readEditionFile(filename: string): Promise<unknown> {
-  // Repeat authentication at the data boundary, including direct RSC requests.
-  await requireBookAccess()
-  if (!/^(manifest|part-[1-4]\.(ar|en))\.json$/.test(filename)) notFound()
+  if (!Object.hasOwn(bundledFiles, filename)) notFound()
+  // Local fixtures are available only outside Vercel. Deployed reading uses
+  // the edition committed with the blog and needs no external token or password.
   const localDirectory = process.env.DREAM_LOCAL_EDITION_DIR
   if (localDirectory && !process.env.VERCEL) {
     return JSON.parse(await readFile(path.join(localDirectory, filename), 'utf8'))
   }
-  const ref = process.env.DREAM_EDITION_REF || ''
-  if (!/^[a-f0-9]{40}$/.test(ref) || !process.env.DREAM_GITHUB_TOKEN) {
-    throw new Error('Book edition is not configured')
-  }
-  const response = await fetch(
-    `https://api.github.com/repos/hanialshater/the-dream/contents/web/edition/${filename}?ref=${ref}`,
-    {
-      headers: {
-        Accept: 'application/vnd.github.raw+json',
-        Authorization: `Bearer ${process.env.DREAM_GITHUB_TOKEN}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(15000),
-    }
-  )
-  if (!response.ok) throw new Error(`Private book source unavailable (${response.status})`)
-  return response.json()
+  return (await bundledFiles[filename]()).default
 }
 
 export async function getBookManifest(): Promise<BookManifest> {

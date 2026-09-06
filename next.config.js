@@ -69,8 +69,8 @@ module.exports = () => {
     basePath,
     reactStrictMode: true,
     trailingSlash: false,
-    // Authenticated previews require a server. Never emit them in the public
-    // GitHub Pages export, which cannot enforce authentication.
+    // Draft reading routes use server rendering and are omitted from the
+    // separate GitHub Pages static export.
     pageExtensions: [
       ...(output === 'export' ? [] : ['private.ts', 'private.tsx']),
       'ts',

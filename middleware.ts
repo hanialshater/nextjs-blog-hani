@@ -1,26 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { locales, defaultLocale } from './i18n/config'
-import { draftAccessDenied, hasDraftAccess, privateDraftHeaders } from './lib/drafts/access'
-import { bookAccessDenied, hasBookAccess } from './lib/books/access'
-import { BOOK_ROOT } from './lib/books/types'
+import { draftHeaders } from './lib/drafts/headers'
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  if (pathname === BOOK_ROOT || pathname.startsWith(`${BOOK_ROOT}/`)) {
-    if (!(await hasBookAccess(request.headers.get('authorization')))) return bookAccessDenied()
-    const response = NextResponse.next()
-    for (const [name, value] of Object.entries(privateDraftHeaders))
-      response.headers.set(name, value)
-    return response
-  }
-
   if (pathname === '/drafts' || pathname.startsWith('/drafts/')) {
-    if (!(await hasDraftAccess(request.headers.get('authorization')))) return draftAccessDenied()
     const response = NextResponse.next()
-    for (const [name, value] of Object.entries(privateDraftHeaders))
-      response.headers.set(name, value)
+    for (const [name, value] of Object.entries(draftHeaders)) response.headers.set(name, value)
     return response
   }
 

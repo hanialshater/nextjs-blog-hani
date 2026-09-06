@@ -43,5 +43,5 @@ jobs:
       - name: Test
         run: yarn test
 
-      - name: Test private book reader with synthetic content
+      - name: Test book reader with synthetic content
         run: yarn playwright test --config playwright.books.config.mjs

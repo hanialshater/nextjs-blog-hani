@@ -1,91 +1,62 @@
-# The Dream: private bilingual reading edition
+# The Dream: unlisted bilingual working edition
 
-The reader lives at `/drafts/books/the-dream/ar/part-1` and
-`/drafts/books/the-dream/en/part-1`, with four parts in each language.
+Read `/drafts/books/the-dream/ar/part-1` or
+`/drafts/books/the-dream/en/part-1`. Four parts in each language contain all 55
+chapters, thirteen paired technical explanations, eight new experiments, and the
+four existing Part I demos. The book is linked from `/drafts/ar` and `/drafts/en`.
 
-The manuscript and compiled edition remain in the **private**
-`hanialshater/the-dream` repository. This public repository contains the reading
-interface and generic mathematical experiments. Do not copy book prose into
-`data/posts`, `public`, test fixtures, or a `NEXT_PUBLIC_*` environment variable.
+## Access and deployment
 
-## Server configuration
+The author requested removal of password protection on 6 September 2026. Draft
+pages and assets now open without credentials. They remain excluded from public
+blog listings, feeds, search, and sitemaps, and return noindex/noarchive and
+no-store headers. These are unlisted reading pages, not confidential documents.
 
-Configure these in the Vercel project that serves the blog, then redeploy:
+The edition is committed in `data/books/the-dream/` and imported only by server
+code. Each request sends the selected part to the browser. Reading needs no
+Vercel environment changes, external GitHub access token, or reviewer password.
+Old `DRAFT_PREVIEW_PASSWORD`, `DREAM_REVIEW_PASSWORD`, `DREAM_EDITION_REF`, and
+`DREAM_GITHUB_TOKEN` values no longer govern reading.
 
-| Variable | Value and purpose |
-|---|---|
-| `DREAM_EDITION_REF` | A full 40-character commit SHA in the private book repository containing `web/edition/manifest.json` and all eight part JSON files. Pin a commit, not a moving branch. |
-| `DREAM_GITHUB_TOKEN` | A fine-grained GitHub token restricted to the private book repository, with Contents read permission. It is used only on the server. |
-| `DREAM_REVIEW_PASSWORD` | A randomly generated password, 32–256 characters. Book reviewers sign in with username `dream`. |
-| `DREAM_FEEDBACK_TOKEN` | A token restricted to the same private repository, with Issues read/write permission. If omitted, feedback uses `DREAM_GITHUB_TOKEN`, which then also needs Issues read/write. |
+The original editorial sources remain in `hanialshater/the-dream`. The bundled
+edition is copied from commit `62faf7f8ee84230f1514b9b65564dd61187e8680`, content
+revision `bd77f22eea891285`. It is a working draft: English is complete and aligned,
+with further prose harmonization still planned. No new cuts or prose edits are
+part of this access change.
 
-The existing owner credential (`hani` / `DRAFT_PREVIEW_PASSWORD`) also opens the
-book. The `dream` credential **does not** open the owner's other drafts or their
-assets. Share the book credential through an appropriate private channel; never
-put it in a URL, issue, PR, or this repository.
+## Updating the book
 
-Both the middleware and the server data boundary authenticate requests. Pages
-and feedback responses use private/no-store and noindex headers. The reading
-layout has no analytics or public comments. The private routes use the existing
-`.private.ts(x)` convention and are omitted from the GitHub Pages static export.
+Compile the edition in the book repository with `web/build-edition.mjs`, then
+copy all eight part JSON files and `manifest.json` to `data/books/the-dream/`.
+Commit them together and deploy the blog. Part and manifest revisions must match.
+Never edit generated MDX code in response to reader-submitted text.
 
-## Edition updates
+## Reading position and notes
 
-1. Edit and compile content in the private book repository using its
-   `web/build-edition.mjs` instructions.
-2. Commit the complete edition there. Each part and manifest share a content
-   revision identifier; the reader rejects mismatched revisions.
-3. Set `DREAM_EDITION_REF` to that commit and redeploy this reader.
-4. Check an Arabic and English part as a book reviewer, then verify that an
-   unrelated owner draft still rejects the same credential.
+Reading position and unsent notes stay in the current browser. A language switch
+preserves the chapter. Notes include revision, language, part, chapter, passage,
+quote, category, and comment.
 
-The reader downloads only the requested part. Public Part I images and demos are
-reused at their existing public paths. New experiments are React components with
-generic explanatory labels; the longer worked explanations remain private.
+Without an inbox token, the note form offers **Download this note**. It produces
+a JSON file the reader can share and explicitly says the note has not been sent.
+There is no network submission or account setup needed for this mode.
 
-## Feedback and reading position
+Optionally, set `DREAM_FEEDBACK_TOKEN` with Issues read/write access to the book
+repository to enable its private review inbox. The form then offers sending and
+only reports success after GitHub accepts the note. This optional endpoint accepts
+same-origin submissions with size limits, revision/passage checks, and a durable
+recent-issue burst check. Reader text is escaped to avoid mentions. Retry markers
+are checked against the most recent 100 issues; simultaneous requests can race.
+These small-review-group limits are not a general-purpose abuse prevention system.
 
-Select a passage and choose **Leave a note**. A submission records the edition
-revision, language, part, stable chapter ID, content-derived passage ID, selected
-quote, category, and comment. It becomes an issue in the private book repository.
-No issue URL or repository credential is returned to a reviewer.
+## Verification
 
-Unsent notes and reading position remain in that browser's local storage. They
-are not synchronized between devices. Switching languages preserves the chapter;
-the two transcreated texts need not have matching paragraph boundaries. Reading
-position within one language uses a passage ID where possible and falls back to
-the chapter after a content revision.
+`yarn test` exercises the real bundled book and normal drafts with all access/source
+environment variables explicitly empty, including local note download. The separate
+`yarn playwright test --config playwright.books.config.mjs` suite uses synthetic
+content and a simulated inbox to verify the experiments and feedback without
+creating real issues. `DREAM_LOCAL_EDITION_DIR` is an optional local test fixture
+source and is ignored on Vercel.
 
-The form reports success only after the server accepts a save. Failures retain
-the unsent note. Stale editions receive a distinct message so the reader can copy
-the note before reloading. Normal retries use a submission marker checked against
-the latest 100 private issues. A durable recent-issue check also limits ordinary
-bursts. This is a small review-group workflow, not a transactional queue: simultaneous
-identical requests can race, and retries after the latest-100 window can duplicate.
-
-## Local verification
-
-Install dependencies with the repository's pinned Yarn version, then:
-
-```sh
-yarn build
-node node_modules/@playwright/test/cli.js install chromium
-node node_modules/@playwright/test/cli.js test --config playwright.books.config.mjs
-```
-
-Public CI tests generate synthetic text outside the repository and replace
-GitHub only in the test server process. No test creates a real GitHub issue.
-To check the real book locally, point `DREAM_LOCAL_EDITION_DIR` to the private
-checkout's `web/edition` directory before running the same tests. This filesystem
-source is disabled on Vercel. If using an already installed Chromium binary,
-set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for the test runner.
-
-The tests cover all eight reading pages, chapter/language position, book-only
-authorization, RSC requests, passage feedback and failed saves, all eight
-experiments, Arabic mobile overflow, and feedback request validation.
-
-## Launch state
-
-The implementation is prepared for review. A successful local test does not
-configure Vercel secrets or publish the live draft. Deployment requires the
-correct Vercel account/project connection and the server variables above.
+The existing `.private.ts(x)` convention still excludes draft server routes from
+the GitHub Pages export. It no longer denotes a password requirement.
