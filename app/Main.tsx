@@ -8,6 +8,8 @@ import Card from '@/components/Card'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import { Blog } from 'contentlayer/generated'
 import { getPostRoutePath } from '@/lib/content/postRoutes'
+import headerNavLinks from '@/data/headerNavLinks'
+import { navLinkTranslationKeys } from '@/i18n/config'
 
 interface Spark {
   id: string
@@ -84,37 +86,21 @@ export default function Home({
         <p className="mb-6 text-base text-gray-500 dark:text-gray-400">{authorOccupation}</p>
 
         {/* Navigation Links */}
-        <nav className="mb-10 flex flex-wrap justify-center gap-5 text-sm">
-          <Link
-            href={`/${locale}/blog`}
-            className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            {t('nav.blog')}
-          </Link>
-          <Link
-            href={`/${locale}/blog`}
-            className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            {t('nav.blog')}
-          </Link>
-          <Link
-            href={`/${locale}/projects`}
-            className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            {t('nav.projects')}
-          </Link>
-          <Link
-            href={`/${locale}/demos`}
-            className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            {t('nav.demos')}
-          </Link>
-          <Link
-            href={`/${locale}/about`}
-            className="text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            {t('nav.about')}
-          </Link>
+        <nav
+          aria-label={t('nav.explore')}
+          className="mb-10 flex flex-wrap justify-center gap-x-5 gap-y-2 text-base leading-7 rtl:text-lg"
+        >
+          {headerNavLinks
+            .filter((link) => link.href !== '/')
+            .map((link) => (
+              <Link
+                key={link.href}
+                href={`/${locale}${link.href}`}
+                className="py-1 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+              >
+                {t(navLinkTranslationKeys[link.title])}
+              </Link>
+            ))}
         </nav>
 
         {/* Spark Carousel */}
