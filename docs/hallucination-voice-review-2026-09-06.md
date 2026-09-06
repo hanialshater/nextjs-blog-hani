@@ -2,7 +2,7 @@
 
 This draft starts from Hani's original English and Arabic at `ec7f39317220b336ba3dcac43e8d4c6709b872e4`. It replaces the earlier editorial rewrite, which cut the argument and changed the voice. These notes supersede the Hallucination entry in the earlier editorial report.
 
-The first commit restores the originals. The second contains the proposed edits against those originals, so the actual editing decisions can be reviewed separately from the restoration. This is a review draft, not a deployment.
+In PR #17, the first commit restored the originals and the second contained the edits against them, so the editing decisions could be reviewed separately from the restoration. Hani approved publication, and that revision is live. The first-pass notes below are retained as a record; the focused follow-up at the end describes the subsequent changes.
 
 ## What the draft preserves
 
@@ -30,14 +30,25 @@ These are editorial proposals, not merely corrections to spelling. The factual i
 - Keep the investment-loop example, but distinguish funding, valuation, and revenue for delivered services. The [FTC's findings](https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2025/01/behind-ftcs-6b-report-large-ai-partnerships-investments) support the cloud-spending mechanism. The round $500 million is illustrative. This does not establish that all cloud revenue is circular or that AI has no paying customers.
 - Retain the narrator-power argument around Nvidia without claiming that its actual chip sales do not exist or matter.
 
-## One reference still needs Hani's identification
+## Double-greedy reference
 
-The original double-greedy paragraph remains in the draft. Which paper does it mean?
+The first pass preserved the original double-greedy anecdote while its intended paper remained unidentified. The focused follow-up replaces it with a specifically named, linked example: *Parallel Double Greedy Submodular Maximization*, NIPS 2014. This is an illustrative replacement, not a claim that we identified Hani's intended “best CS paper in a decade.”
 
-The well-known [tight linear-time half-approximation](https://theory.epfl.ch/moranfe/Publications/FOCS2012.pdf) appeared at FOCS 2012. A later [parallel double-greedy paper](https://proceedings.neurips.cc/paper_files/paper/2014/file/63545404a8d4327e42a3416d73647995-Paper.pdf) appeared at NIPS 2014. Neither should silently be substituted for Hani's intended reference. The venue statement is unresolved; publication at an ML conference alone also does not establish the authors' funding motives.
+The well-known [tight linear-time half-approximation](https://theory.epfl.ch/moranfe/Publications/FOCS2012.pdf) appeared at FOCS 2012. The later [parallel paper](https://proceedings.neurips.cc/paper_files/paper/2014/file/63545404a8d4327e42a3416d73647995-Paper.pdf) studies approximation guarantees and concurrency control, with ML applications. The published argument now concerns how the AI label absorbs the wider computing stack; it makes no claim about why these researchers selected their venue.
 
 ## Validation
 
 Contentlayer compiled all 30 documents and TypeScript checking passed. `git diff --check` passed. Both versions retain the original section headings and image paths. The added `lastmod` records this editorial pass; the original publication date remains November 20, 2025.
 
-Only this article's two source files and this review note are changed. No new build or browser run was needed for the prose-only change. The double-greedy citation remains open for review.
+Only this article's two source files and this review note are changed. PR #17 passed CI and deployment; both live language versions were verified after publication.
+
+## Focused follow-up after the fresh-read evaluation
+
+Hani requested another pass with the voice preserved. This pass keeps the opening, historical stages, Matrix argument, swearing, reload, “Take both,” and final surfing line. The changes concentrate on the identified weak passages:
+
+- The financing loop now runs backwards in a worked hypothetical: missed revenue, a stalled funding round, reduced cloud purchases, and weaker supplier growth. A new connecting paragraph explains why useful models can coexist with a failing financial story. This supports the author's forecast without claiming a mathematical proof of an inevitable crash.
+- The LeCun heading becomes “The godfather still has work to do.” The paragraph uses his announced research agenda to examine how scientific authority is borrowed to sell an apparently settled destination. It does not claim that departure proves he was forced out.
+- “Scientific Stagnation” becomes “The Breakthrough on the Roadmap.” The paragraph targets the treatment of an uncertain discovery as a scheduled business deliverable. Its place in the collapse argument now follows from the mismatch between research and financing schedules.
+- The glitches contrast sweeping launch rhetoric with everyday life. The list targets valuations ahead of customers and investment treated as independent demand, rather than claiming that all AI customers are absent.
+- Infrastructure ownership becomes something builders have to establish and contest. The ending no longer assumes a crash automatically transfers control to them.
+- Arabic replaces opaque constructions about future prices, cynical distance, sunk costs, and “maintaining the narrative” with concrete meanings. The two languages carry the same argument without imposing the English sentence structure on Arabic.
