@@ -380,7 +380,7 @@ p + p {
   margin-top: 4px;
   font-weight: 400;
 }
-.board .graphlabel {
+.route-scene .graphlabel {
   font-size: 13px;
   fill: var(--ink);
   paint-order: stroke;
@@ -388,22 +388,22 @@ p + p {
   stroke-width: 5px;
   stroke-linejoin: round;
 }
-.board .node {
+.route-scene .node {
   fill: var(--paper);
   stroke: var(--ink);
   stroke-width: 1.5;
 }
-.board .node.chosen {
+.route-scene .node.chosen {
   fill: var(--accent);
   stroke: var(--accent);
 }
-.board .nodetext {
+.route-scene .nodetext {
   font-size: 16px;
   font-weight: 650;
   fill: var(--ink);
   pointer-events: none;
 }
-.board .nodetext.chosen {
+.route-scene .nodetext.chosen {
   fill: white;
 }
 .routebutton {
@@ -555,7 +555,7 @@ details p {
     color: #092820;
   }
   .matrix button.selected,
-  .board .nodetext.chosen {
+  .route-scene .nodetext.chosen {
     color: #092820;
     fill: #092820;
   }
@@ -655,4 +655,228 @@ details p {
 .matrix button.transferred {
   border-color: var(--purple);
   box-shadow: inset 0 -3px var(--purple);
+}
+
+/* One consistent control position, with a single primary action. */
+.lesson-controls {
+  margin: 0 0 22px;
+  padding: 18px 20px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--tint);
+}
+.next-instruction {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+.next-number {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.next-instruction strong {
+  font-size: 15px;
+  display: block;
+  color: var(--accent);
+}
+.next-instruction p {
+  font-size: 15px;
+  margin-top: 3px;
+  max-width: 72ch;
+}
+.lesson-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+.next-button {
+  min-width: 270px;
+  max-width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+}
+.play-button {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+  background: var(--paper);
+}
+.play-button svg {
+  fill: currentColor;
+  flex: none;
+}
+.play-button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.lesson-controls button:disabled {
+  opacity: 0.58;
+}
+.compare-button {
+  margin-top: 12px;
+}
+.board {
+  padding: 18px;
+  background: linear-gradient(150deg, var(--wash), var(--paper));
+}
+.boardhead {
+  margin-bottom: 17px;
+}
+.district {
+  fill: var(--paper);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.district-divider {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 3 7;
+}
+.svg-name {
+  font-size: 18px;
+  fill: var(--ink);
+  font-weight: 650;
+}
+.svg-small {
+  font-size: 14px;
+  fill: var(--muted);
+}
+.svg-heading {
+  font-size: 14px;
+  fill: var(--muted);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+}
+.svg-value {
+  font-size: 16px;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.svg-conflict {
+  font-size: 15px;
+  fill: var(--danger);
+  font-weight: 650;
+}
+.entity-card,
+.calendar-slot {
+  fill: var(--paper);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+.booked-card {
+  fill: var(--tint);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.conflict-card {
+  fill: var(--paper);
+  stroke: var(--danger);
+  stroke-width: 2.5;
+}
+.observed-card {
+  fill: var(--paper);
+  stroke: var(--orange);
+  stroke-width: 2.5;
+}
+.score-badge {
+  fill: var(--paper);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.availability-strip {
+  fill: var(--paper);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.decision-scene {
+  overflow: visible;
+}
+#manual-plan {
+  margin-top: 16px;
+  padding-top: 13px;
+}
+#manual-plan summary {
+  font-weight: 500;
+  color: var(--muted);
+}
+@media (max-width: 680px) {
+  .lesson-controls {
+    padding: 15px;
+    margin-bottom: 18px;
+  }
+  .next-instruction p {
+    font-size: 14px;
+  }
+  .next-button {
+    min-width: 0;
+    width: 100%;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .play-button {
+    font-size: 14px;
+    min-width: 0;
+    min-height: 44px;
+  }
+  .board {
+    padding: 12px;
+  }
+  .boardhead span {
+    font-size: 12px;
+    text-align: right;
+  }
+  .svg-name {
+    font-size: 22px;
+  }
+  .svg-small {
+    font-size: 18px;
+  }
+  .svg-heading {
+    font-size: 18px;
+    letter-spacing: 0;
+  }
+  .svg-value {
+    font-size: 20px;
+  }
+  .svg-conflict {
+    font-size: 18px;
+  }
+  .route-scene .graphlabel {
+    font-size: 19px;
+  }
+  .matching-scene .svg-value {
+    font-size: 20px;
+  }
+  .matching-scene .svg-small {
+    font-size: 17px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .observed-card {
+    animation: reveal-evidence 0.65s ease-out;
+  }
+  @keyframes reveal-evidence {
+    from {
+      stroke-width: 5;
+    }
+    to {
+      stroke-width: 2.5;
+    }
+  }
 }

@@ -67,3 +67,22 @@ Next visual review should cover desktop and narrow layouts, dark mode, all three
 learning phases, the expanded evidence table, and comparison results. Have a new
 reader explain the selected-only feedback rule and the difference between direct
 evidence and shared inference before calling the pedagogy validated with learners.
+
+## Guided playback and diagram revision
+
+The main walkthrough has one prominent next-step button in a stable position. It
+first exposes the invalid shortcut, then finds a feasible plan, then commits it.
+Play/Pause advances the same state machine, with six seconds for the initial
+conflict and four seconds per subsequent step. It pauses after three rounds;
+manual interaction, changing stages, leaving the page and hiding the tab cancel
+the pending timer. No playback begins automatically on load.
+
+Routing now shows two districts and highlights the missing connection. Matching
+uses a bipartite SVG with capacity counts and collision highlights. Scheduling
+uses a three-day SVG calendar with unavailable bookings marked directly. Numeric
+matrices remain available under an expandable inspection control. SVG scenes were
+rendered and inspected separately; this does not substitute for full browser QA.
+
+An additional isolated DOM pass checked the entire next-button sequence, one
+primary action, all SVG states, play/pause/resume, the three-round stop, cancelling
+playback on navigation, and pausing on tab visibility changes in all three labs.

@@ -102,11 +102,17 @@
     metric = 'gap',
     busy = false,
     raceToken = 0,
-    worldCount = 12
+    worldCount = 12,
+    playing = false,
+    playTimer = null,
+    playUntil = 0,
+    playbackNote = ''
   const app = document.getElementById('app')
   const fmt = (n) => Number(n).toFixed(1)
   const availableCount = () => world.arms.filter((a) => a.allowed !== false).length
   function reset() {
+    stopPlaying()
+    playbackNote = ''
     raceToken++
     busy = false
     comparison = null
@@ -250,6 +256,147 @@
     }
     render()
   }
+  function stopPlaying() {
+    playing = false
+    if (playTimer !== null) clearTimeout(playTimer)
+    playTimer = null
+  }
+  function advanceLesson() {
+    playbackNote = ''
+    if (stage === 0) {
+      if (E.valid(world, picked)) startLearning()
+      else if (trap || picked.length) fillPlan()
+      else showTrap()
+    } else if (stage === 1) nextPhase()
+  }
+  function schedulePlayback() {
+    playTimer = setTimeout(
+      () => {
+        playTimer = null
+        if (!playing || document.hidden) {
+          stopPlaying()
+          render()
+          return
+        }
+        advanceLesson()
+        if (stage === 1 && phase === 'updated' && state.round >= playUntil) {
+          stopPlaying()
+          playbackNote =
+            'Paused after three rounds. Inspect the evidence, play three more, or compare policies.'
+          render()
+        } else if (playing) schedulePlayback()
+      },
+      stage === 0 && trap ? 6000 : 4000
+    )
+  }
+  function togglePlayback() {
+    if (playing) {
+      stopPlaying()
+      playbackNote = 'Paused. Continue with the next-step button whenever you are ready.'
+      render()
+      return
+    }
+    playing = true
+    playbackNote = ''
+    playUntil = state.round + 3
+    advanceLesson()
+    schedulePlayback()
+  }
+  function nextInstruction() {
+    if (stage === 0) {
+      if (E.valid(world, picked))
+        return {
+          label: content.action + ' →',
+          hint: 'The plan is valid. Commit to it, then see what the world tells you.',
+          count: '03',
+        }
+      if (trap || picked.length)
+        return {
+          label: 'Find best valid plan →',
+          hint: 'Now ask the solver to satisfy the constraints while improving the total.',
+          count: '02',
+        }
+      return {
+        label: content.trap + ' →',
+        hint: 'Start here: try the tempting shortcut and see exactly why it fails.',
+        count: '01',
+      }
+    }
+    if (phase === 'chosen')
+      return {
+        label: 'Reveal selected outcomes →',
+        hint: 'The plan is chosen. Reveal only the outcomes of the pieces it uses.',
+        count: '02',
+      }
+    if (phase === 'observed')
+      return {
+        label: 'Update the estimates →',
+        hint: 'The observations have arrived. Apply them and watch which estimates change.',
+        count: '03',
+      }
+    return {
+      label: 'Choose the next plan →',
+      hint: 'Use the updated estimates to make the next complete decision.',
+      count: '01',
+    }
+  }
+  function lessonControls() {
+    const next = nextInstruction()
+    const icon = playing
+      ? '<rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/>'
+      : '<path d="M7 4 L20 12 L7 20 Z"/>'
+    return `<section class="lesson-controls" aria-label="Lesson controls"><div class="next-instruction"><span class="next-number">${next.count}</span><div><strong>${playing ? 'Playing · pause whenever you want to inspect' : 'Your next step'}</strong><p>${playbackNote || next.hint}</p></div></div><div class="lesson-buttons"><button class="primary next-button" data-action="next" ${playing ? 'disabled' : ''}>${next.label}</button><button class="play-button" data-action="play" aria-pressed="${playing}"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">${icon}</svg>${playing ? 'Pause' : 'Play lesson'}</button></div></section>`
+  }
+  function shownValue(k) {
+    const observation = observations.find((o) => o.k === k)
+    return phase === 'observed' && observation ? observation.value : values()[k].mean
+  }
+  function connectionSvg() {
+    const est = values()
+    const preview = !picked.length
+    const visible = preview ? [0, 4, 8, 12] : picked
+    const lines = visible
+      .map((k) => {
+        const a = world.arms[k],
+          y1 = 68 + a.a * 72,
+          y2 = 68 + a.b * 72
+        const collision = visible.filter((j) => world.arms[j].b === a.b).length > 1 && !preview
+        const color = collision
+          ? 'var(--danger)'
+          : observations.some((o) => o.k === k)
+            ? 'var(--orange)'
+            : 'var(--accent)'
+        return `<g><path class="assignment-link" d="M140 ${y1} C238 ${y1},282 ${y2},380 ${y2}" stroke="${preview ? 'var(--line)' : color}" stroke-width="${preview ? 2 : 3.5}" fill="none" ${preview ? 'stroke-dasharray="5 6"' : ''}/><rect x="158" y="${y1 - 13}" width="43" height="26" rx="13" class="score-badge"/><text x="179.5" y="${y1 + 5}" text-anchor="middle" class="svg-value">${Math.round(preview ? est[k].mean : shownValue(k))}</text></g>`
+      })
+      .join('')
+    const cards = [0, 1, 2, 3]
+      .map((i) => {
+        const y = 42 + i * 72,
+          count = picked.filter((k) => world.arms[k].b === i).length,
+          collision = count > 1
+        return `<g><rect class="entity-card" x="12" y="${y}" width="128" height="52" rx="10"/><text class="svg-name" x="27" y="${y + 23}">${world.rows[i]}</text><text class="svg-small" x="27" y="${y + 41}">${i < 2 ? 'Design' : 'Data'}</text><rect class="entity-card ${collision ? 'conflict-card' : count ? 'booked-card' : ''}" x="380" y="${y}" width="128" height="52" rx="10"/><text class="svg-name" x="395" y="${y + 23}">${world.cols[i]}</text><text class="svg-small" x="395" y="${y + 41}">${count} / 1 booked</text>${collision ? `<circle cx="494" cy="${y + 16}" r="9" fill="var(--danger)"/><text x="494" y="${y + 21}" text-anchor="middle" fill="white" font-size="14">!</text>` : ''}</g>`
+      })
+      .join('')
+    return `<svg class="decision-scene matching-scene" viewBox="0 0 520 350" role="img" aria-label="${preview ? 'Starting estimates: all four clients prefer Mira.' : picked.map((k) => world.arms[k].name).join('; ')}"><text class="svg-heading" x="12" y="22">CLIENTS</text><text class="svg-heading" x="380" y="22">EXPERTS</text>${lines}${cards}<text class="svg-small" x="260" y="342" text-anchor="middle">${preview ? 'Dashed lines: each client’s current favourite' : trap ? 'Four requests. One appointment.' : 'Each solid connection is one selected pairing.'}</text></svg>`
+  }
+  function calendarSvg() {
+    const columns = ['Monday', 'Tuesday', 'Wednesday']
+    const slots = world.cols
+      .map((_, c) => {
+        const x = 92 + Math.floor(c / 2) * 137,
+          y = 52 + (c % 2) * 112
+        const bookings = picked.filter((k) => world.arms[k].b === c)
+        const invalid = bookings.some((k) => !world.arms[k].allowed) || bookings.length > 1
+        const observed = bookings.some((k) => observations.some((o) => o.k === k))
+        return `<g><rect class="calendar-slot ${invalid ? 'conflict-card' : bookings.length ? (observed ? 'observed-card' : 'booked-card') : ''}" x="${x}" y="${y}" width="125" height="98" rx="10"/>${bookings.length ? bookings.map((k, i) => `<text class="svg-name" x="${x + 13}" y="${y + 27 + i * 20}">${world.rows[world.arms[k].a]}</text>`).join('') + `<text class="svg-value" x="${x + 13}" y="${y + 55}">${Math.round(shownValue(bookings[0]))} points</text><text class="svg-small" x="${x + 13}" y="${y + 80}">${invalid ? 'Unavailable ✕' : phase === 'observed' ? 'Observed' : 'Estimate'}</text>` : `<text class="svg-small" x="${x + 62.5}" y="${y + 55}" text-anchor="middle">Open</text>`}</g>`
+      })
+      .join('')
+    const unassigned = world.rows.filter((_, r) => !picked.some((k) => world.arms[k].a === r))
+    const restrictions = constrained
+      ? 'Alex: no Wed · Bea: no Mon · Cam: Mira only'
+      : 'All clients can use any open appointment'
+    return `<svg class="decision-scene calendar-scene" viewBox="0 0 520 350" role="img" aria-label="Three-day calendar. ${picked.length ? picked.map((k) => world.arms[k].name + (world.arms[k].allowed ? '' : ', unavailable')).join('; ') : 'Six empty appointments.'}">${columns.map((day, d) => `<text class="svg-heading" x="${154.5 + d * 137}" y="28" text-anchor="middle">${day}</text>`).join('')}<text class="svg-name" x="12" y="97">Mira</text><text class="svg-small" x="12" y="117">Design</text><text class="svg-name" x="12" y="209">Noah</text><text class="svg-small" x="12" y="229">Data</text>${slots}<text class="svg-small" x="12" y="296">${unassigned.length ? 'Not booked: ' + unassigned.join(', ') : 'All four clients have an appointment.'}</text><rect class="availability-strip" x="10" y="311" width="500" height="31" rx="6"/><text class="svg-small" x="260" y="331" text-anchor="middle">${restrictions}</text></svg>`
+  }
   function routeBoard() {
     const est = values()
     const edges = world.arms
@@ -258,7 +405,7 @@
           [x2, y2] = world.nodes[a.b]
         const selected = picked.includes(k),
           observed = observations.find((o) => o.k === k)
-        return `<g><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${selected ? (observed ? 'var(--orange)' : 'var(--accent)') : 'var(--line)'}" stroke-width="${selected ? 4 : 1}" ${selected ? '' : 'stroke-dasharray="3 5"'} />${selected ? `<text class="graphlabel" x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 6}" text-anchor="middle">${fmt(observed && phase === 'observed' ? observed.value : est[k].mean)}</text>` : ''}</g>`
+        return `<g><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${selected ? (trap ? 'var(--danger)' : observed ? 'var(--orange)' : 'var(--accent)') : 'var(--line)'}" stroke-width="${selected ? 4 : 1}" ${selected ? '' : 'stroke-dasharray="3 5"'} />${selected ? `<text class="graphlabel" x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 6}" text-anchor="middle">${fmt(observed && phase === 'observed' ? observed.value : est[k].mean)}</text>` : ''}</g>`
       })
       .join('')
     const nodes = world.nodes
@@ -267,7 +414,7 @@
           `<g ${stage === 0 ? `class="routebutton" role="button" tabindex="0" aria-label="Visit stop ${'ABCDEF'[i]}${i === 0 ? ', restart route' : ''}" data-node="${i}"` : ''}><circle class="node ${!trap && routeOrder.includes(i) ? 'chosen' : ''}" cx="${x}" cy="${y}" r="21"/><text class="nodetext ${!trap && routeOrder.includes(i) ? 'chosen' : ''}" x="${x}" y="${y + 6}" text-anchor="middle">${'ABCDEF'[i]}</text></g>`
       )
       .join('')
-    return `<svg viewBox="0 0 520 310" role="group" aria-label="Six-stop route. Solid lines are selected roads. Dotted lines are unselected roads."><text x="95" y="22" class="graphlabel">WEST</text><text x="385" y="22" class="graphlabel">EAST</text>${edges}${nodes}</svg><p class="routeorder">${trap ? 'Two disconnected loops' : routeOrder.map((i) => 'ABCDEF'[i]).join(' → ') + (routeOrder.length === 6 ? ' → A' : '')}</p>`
+    return `<svg class="decision-scene route-scene" viewBox="0 0 520 310" role="group" aria-label="Six-stop route. Solid lines are selected roads. Dotted lines are unselected roads."><rect x="27" y="37" width="184" height="245" rx="36" class="district"/><rect x="309" y="37" width="184" height="245" rx="36" class="district"/><path d="M258 38 L258 283" class="district-divider"/><text x="95" y="22" class="graphlabel">WEST</text><text x="385" y="22" class="graphlabel">EAST</text>${edges}${nodes}${trap ? '<text x="260" y="153" text-anchor="middle" class="svg-conflict">Two loops</text><text x="260" y="173" text-anchor="middle" class="svg-conflict">no link</text>' : ''}</svg><p class="routeorder">${trap ? 'Two disconnected loops' : routeOrder.map((i) => 'ABCDEF'[i]).join(' → ') + (routeOrder.length === 6 ? ' → A' : '')}</p>`
   }
   function matrixBoard() {
     const est = values()
@@ -293,15 +440,15 @@
       .join('')}</tbody></table>`
   }
   function board() {
-    return `<div class="board"><div class="boardhead"><h3>${kind === 'route' ? 'Your map' : kind === 'matching' ? 'Your matching' : 'Your week'}</h3><span>${phase === 'updated' ? 'Updated estimates' : observations.length ? 'Orange: outcomes' : 'Current estimates'} · ${world.unit}</span></div>${kind === 'route' ? routeBoard() : matrixBoard()}<div class="legend"><span><i class="key"></i>Selected</span><span><i class="key unseen"></i>Unselected</span>${observations.length ? '<span><i class="key observed"></i>Direct evidence</span>' : ''}${phase === 'updated' && policy === 'shared' ? '<span><i class="key" style="background:var(--purple)"></i>Shared inference</span>' : ''}</div></div>`
+    return `<div class="board"><div class="boardhead"><h3>${kind === 'route' ? 'Your map' : kind === 'matching' ? 'Your matching' : 'Your week'}</h3><span>${phase === 'updated' ? 'Updated estimates' : observations.length ? 'Orange: outcomes' : 'Current estimates'} · ${world.unit}</span></div>${kind === 'route' ? routeBoard() : kind === 'matching' ? connectionSvg() : calendarSvg()}<div class="legend"><span><i class="key"></i>Selected</span><span><i class="key unseen"></i>Unselected</span>${observations.length ? '<span><i class="key observed"></i>Direct evidence</span>' : ''}${phase === 'updated' && policy === 'shared' ? '<span><i class="key" style="background:var(--purple)"></i>Shared inference</span>' : ''}</div>${kind !== 'route' ? `<details id="manual-plan"><summary>${stage === 0 ? 'Or choose your own pairings' : 'Inspect pairing estimates and shared changes'}</summary>${matrixBoard()}</details>` : ''}</div>`
   }
   function buildView() {
-    const legal = E.valid(world, picked),
-      total = E.sum(
-        picked,
-        values().map((e) => e.mean)
-      )
-    return `<h2>${content.instruction}</h2><div class="split">${board()}<div class="aside"><p>${content.prompt}</p><p class="rule"><strong>The rule:</strong> ${content.rule}</p><div class="stats"><div class="stat"><b>${picked.length}/${kind === 'route' ? 6 : 4}</b><span>pieces selected</span></div><div class="stat"><b>${picked.length ? fmt(total) : '—'}</b><span>estimated ${world.unit}</span></div><div class="stat"><b>${legal ? 'Valid' : 'Not yet'}</b><span>feasibility</span></div></div>${message ? `<div class="callout ${legal ? '' : 'error'}" role="status">${message}</div>` : '<p class="note">Try the tempting shortcut below. What goes wrong when you choose each piece independently?</p>'}<div class="actions"><button class="small" data-action="trap">${content.trap}</button><button class="small" data-action="solve">Find best valid plan</button></div><div class="actions"><button class="primary" data-action="learn" ${legal ? '' : 'disabled'}>${content.action}</button><button class="small" data-action="clear">Clear</button></div></div></div>`
+    const legal = E.valid(world, picked)
+    const total = E.sum(
+      picked,
+      values().map((e) => e.mean)
+    )
+    return `${lessonControls()}<div class="split">${board()}<div class="aside"><h2>${trap ? 'The shortcut breaks a rule' : legal ? 'A complete, feasible plan' : 'First, try the obvious answer'}</h2><p class="rule"><strong>The rule:</strong> ${content.rule}</p>${message ? `<div class="callout ${legal ? '' : 'error'}" role="status">${message}</div>` : `<p>${kind === 'route' ? 'What happens if you keep the six cheapest roads? The first step makes that choice visible.' : kind === 'matching' ? 'Mira has the highest starting score for every client. The first step gives everyone their favourite.' : 'The first step puts attractive bookings into the calendar without checking who can attend.'}</p>`}<div class="stats"><div class="stat"><b>${picked.length}/${kind === 'route' ? 6 : 4}</b><span>pieces selected</span></div><div class="stat"><b>${picked.length ? fmt(total) : '—'}</b><span>estimated ${world.unit}</span></div><div class="stat"><b>${legal ? 'Valid' : 'Not yet'}</b><span>feasibility</span></div></div><details id="custom-help"><summary>Try a plan yourself</summary><p>${content.prompt}</p><div class="actions"><button class="small" data-action="solve">Find best valid plan</button><button class="small" data-action="clear">Clear selection</button></div></details></div></div>`
   }
   function inspectView() {
     const k = inspected !== null && world.arms[inspected] ? inspected : picked[0]
@@ -345,13 +492,13 @@
           : observed
             ? `${observations.length} noisy outcomes arrived. The estimates have not changed yet. The next step adds these observations to the learner’s memory.`
             : `${observations.length} selected ${content.pieces} gained one direct observation each. ${transferred ? `${transferred} unselected estimates also moved through shared evidence; their direct sample counts did not change.` : 'Unselected estimates did not change.'}`
-    return `<div class="top"><h2>Watch one learning loop</h2><span class="round">${content.round[0].toUpperCase() + content.round.slice(1)} ${state.round + (updated ? 0 : 1)}</span></div><div class="controls"><label>How should the learner choose?<select id="policy" ${phase === 'chosen' || observed ? 'disabled' : ''}>${Object.entries(
+    return `${lessonControls()}<div class="top"><h2>Watch one learning loop</h2><span class="round">${content.round[0].toUpperCase() + content.round.slice(1)} ${state.round + (updated ? 0 : 1)}</span></div><div class="controls"><label>How should the learner choose?<select id="policy" ${phase === 'chosen' || observed ? 'disabled' : ''}>${Object.entries(
       names
     )
       .map(([k, n]) => `<option value="${k}" ${policy === k ? 'selected' : ''}>${n}</option>`)
       .join(
         ''
-      )}</select></label></div><div class="phasebar">${['Choose a plan', 'Observe selected pieces', 'Update the model'].map((s, i) => `<span class="${((phase === 'choose' || phase === 'chosen') && i === 0) || (observed && i === 1) || (updated && i === 2) ? 'active' : ''}">${i + 1}. ${s}</span>`).join('')}</div><div class="split">${board()}<div class="aside"><div class="callout" role="status">${explanation}</div><p class="note">${content.learn}</p>${inspectView()}<div class="actions"><button class="primary" data-action="step">${phase === 'chosen' ? 'Reveal selected outcomes' : observed ? 'Update the estimates' : 'Choose the next plan'}</button></div><button class="small" data-action="compare">Compare learning over 100 rounds →</button></div></div>${evidence()}`
+      )}</select></label></div><div class="phasebar">${['Choose a plan', 'Observe selected pieces', 'Update the model'].map((s, i) => `<span class="${((phase === 'choose' || phase === 'chosen') && i === 0) || (observed && i === 1) || (updated && i === 2) ? 'active' : ''}">${i + 1}. ${s}</span>`).join('')}</div><div class="split">${board()}<div class="aside"><div class="callout" role="status">${explanation}</div><p class="note">${content.learn}</p>${inspectView()}<button class="small compare-button" data-action="compare">Compare policies after the walkthrough →</button></div></div>${evidence()}`
   }
   async function runComparison() {
     busy = true
@@ -402,7 +549,7 @@
     return `<h2>${content.compare}</h2><p class="intro">Run four policies in the same worlds. All use the same exact solver, starting estimates and observation-noise rule. Only the learning policy changes.</p><div class="controls"><label>Shared structure: <strong id="strength">${structure === 0 ? 'None' : structure === 0.5 ? 'Some' : 'Strong'}</strong><input id="structure" type="range" min="0" max="1" step="0.5" value="${structure}" ${busy ? 'disabled' : ''}></label><label>Worlds<select id="worlds" ${busy ? 'disabled' : ''}><option value="1" ${worldCount === 1 ? 'selected' : ''}>Current world · seed ${seed}</option><option value="12" ${worldCount === 12 ? 'selected' : ''}>12 worlds · seeds ${seed}–${seed + 11}</option></select></label>${kind === 'schedule' ? `<label>Client constraints<select id="constraints" ${busy ? 'disabled' : ''}><option value="on" ${constrained ? 'selected' : ''}>Enforced</option><option value="off" ${!constrained ? 'selected' : ''}>Removed</option></select></label>` : ''}<button class="primary" data-action="race" ${busy ? 'disabled' : ''}>${busy ? 'Running…' : 'Run 100 rounds'}</button></div><div class="progress" id="progress" role="status">${comparison ? `Complete · ${comparison.count} ${comparison.count === 1 ? 'world' : 'worlds'}` : busy ? 'Evaluating policies…' : 'Make a prediction, then run: will sharing experience help when the labels carry no signal?'}</div>${chartView()}<div class="callout" style="margin-top:18px">${content.takeaway}</div><details><summary>What exactly does this experiment measure?</summary><p>Each component has a fixed hidden mean and independent Gaussian observation noise. Rewards and costs add across a plan. All feasible plans are enumerated (${world.plans.length} in the current world), so the optimum is exact. The simulator uses hidden means only to generate observations and evaluate decisions. Policies receive public features and observations of their selected components.</p><p>All policies start with the same public baseline. Tabular estimates shrink toward that baseline with two pseudo-observations. The shared learner adjusts this prior using other components in the same public group, then learns a separate component mean. Group labels are supplied; they are not learned from the hidden answer.</p><p>Exploration uses a noise-scaled heuristic bonus. The sampling policy draws independent Gaussian values around the estimates once per round; this is a Thompson-style approximation, not an exact Bayesian posterior. Neither method here claims a regret bound. The shared learner’s uncertainty scale stays conservative and local; it does not claim to be a calibrated hierarchical posterior.</p><p>Shared structure changes the hidden world, not the solver. With no shared structure, group labels do not predict residual quality. Turning off calendar constraints keeps the clients, slots and hidden values fixed, and changes only which plans are allowed. Outcomes for the same component and round use the same seeded noise across policies. Single runs are illustrations, not evidence that one policy always wins.</p></details>`
   }
   function render() {
-    const evidenceOpen = document.getElementById('evidence')?.open
+    const openDetails = [...app.querySelectorAll('details[open][id]')].map((el) => el.id)
     const active = document.activeElement
     const focusKey =
       active && active !== document.body
@@ -411,8 +558,10 @@
             .find(Boolean) || (active.id ? `#${active.id}` : null)
         : null
     app.innerHTML = `<main class="lab"><div class="top"><div><p class="eyebrow">Decision laboratory / ${content.number}</p><h1>${content.title}</h1></div><button class="restart" data-action="reset">Start over</button></div><p class="intro">${content.intro}</p><nav class="steps" aria-label="Experiment stages">${['Build a plan', 'Watch it learn', 'Compare policies'].map((s, i) => `<button data-stage="${i}" ${stage === i ? 'aria-current="step"' : ''}><span class="stepnum">${i + 1}</span>${s}</button>`).join('')}</nav>${stage === 0 ? buildView() : stage === 1 ? learnView() : compareView()}<p class="foot">Synthetic teaching example · exact small-problem solver · seed ${seed} · ${world.plans.length} feasible plans</p></main>`
-    if (evidenceOpen && document.getElementById('evidence'))
-      document.getElementById('evidence').open = true
+    openDetails.forEach((id) => {
+      const detail = document.getElementById(id)
+      if (detail) detail.open = true
+    })
     if (focusKey) app.querySelector(focusKey)?.focus({ preventScroll: true })
     requestAnimationFrame(reportHeight)
   }
@@ -426,6 +575,7 @@
   app.addEventListener('click', (event) => {
     const el = event.target.closest('button,[data-node]')
     if (!el || el.disabled) return
+    if (el.dataset.action !== 'play') stopPlaying()
     if (el.dataset.node !== undefined) return select(Number(el.dataset.node))
     if (el.dataset.arm !== undefined) return select(Number(el.dataset.arm))
     if (el.dataset.inspect !== undefined) {
@@ -459,6 +609,12 @@
       return
     }
     switch (el.dataset.action) {
+      case 'next':
+        advanceLesson()
+        break
+      case 'play':
+        togglePlayback()
+        break
       case 'reset':
         reset()
         break
@@ -494,10 +650,12 @@
     const node = event.target.closest('[data-node]')
     if (node && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault()
+      stopPlaying()
       select(Number(node.dataset.node))
     }
   })
   app.addEventListener('change', (event) => {
+    stopPlaying()
     if (event.target.id === 'worlds') {
       worldCount = Number(event.target.value)
     }
@@ -523,6 +681,14 @@
       render()
     }
   })
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && playing) {
+      stopPlaying()
+      playbackNote = 'Paused while this lesson was hidden.'
+      render()
+    }
+  })
+  window.addEventListener('pagehide', stopPlaying)
   window.addEventListener('resize', reportHeight)
   new ResizeObserver(reportHeight).observe(app)
   reset()
