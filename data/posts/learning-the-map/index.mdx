@@ -1,9 +1,10 @@
 ---
 title: 'Practical Decision-Making, Part 2: A Solver Wrapped Around Uncertainty'
 date: '2026-06-21'
+lastmod: '2026-09-11'
 draft: true
 section: 'free-writing'
-summary: 'When the decision is no longer one number but a whole structured object — a route, a matching, a weekly schedule — you must optimize while the value of the pieces is still being learned. Three interactive semi-bandit demos: routing on Berlin52, matching clients to experts, and filling a calendar.'
+summary: 'When the decision is no longer one number but a whole structured object — a route, a matching, a weekly schedule — you must optimize while the value of the pieces is still being learned. Three guided experiments: build a route, match clients to experts, and learn across calendar bookings.'
 authors: ['default']
 layout: 'PostLayout'
 tags: ['algorithms', 'bandits', 'semi-bandits', 'tsp', 'matching', 'scheduling', 'optimization', 'interactive', 'edp']
@@ -52,49 +53,75 @@ The rest of this part walks the same loop three times.
 
 ## Example 1 · Routing — learning a city by driving it
 
-Let the city be a graph $G=(V,E)$ where each edge has an unknown mean cost $\mu_e$. A legal action is not one edge but a **Hamiltonian cycle** $T_t$. On day $t$ the driver commits to a full tour, and the world returns a noisy cost $X_{t,e}$ for each of its 52 edges; the day's bill is their sum. The target is the familiar one,
+Start with six stops. Small enough to inspect, large enough to get into trouble.
 
-$$T^* = \arg\min_{T}\ \sum_{e \in T}\mu_e,$$
+Choose the six cheapest roads independently. You get two little triangles. Every stop has two neighbours. The total looks excellent. The driver cannot complete the trip.
 
-except the costs that decide the answer are unknown when the route must be chosen. A 52-stop tour uses 52 edges out of 1,326 possible ones, so one day teaches you about 52 roads and nothing *directly* about the other 1,274.
+A route needs a global constraint: all the stops must belong to **one connected cycle**. The solver enforces that constraint even when an attractive road would tempt us to break it.
 
-**Optimism, with the sign flipped.** For a maximization problem UCB inflates uncertain options. Here we minimize, so optimism makes uncertain roads look temporarily *cheaper*:
+<Demo src="/demos/posts/learning-the-map/route-lab.html?v=2" title="Build a route, observe its roads, and watch the map change" height={780} />
 
-$$\tilde{\mu}_e = \hat{\mu}_e - \beta\sqrt{\tfrac{\log t}{n_e}},$$
+**Try it in three steps.** First, press **Try the six cheapest roads**, then build a connected route yourself or let the solver find one. Next, drive it. The demo pauses before observations change the estimates: six roads return travel times; the other nine return nothing. Finally, update the estimates and ask the policy for another plan.
 
-and we solve the tour that minimizes those optimistic costs. The minus sign is the entire exploration mechanism: a reliably slow road stays out of good tours, a cheap road gets used, and a barely-known road gets a temporary discount in case it is the shortcut we haven't tried. (The Thompson variant tells the same story differently: sample one plausible cost for every edge, solve the best tour in that imagined city, drive it, update.)
+Let the city be a graph $G=(V,E)$ where each edge has an unknown mean cost $\mu_e$. The target is
 
-The demo runs four learners on the real **Berlin52** instance, racing toward the full-knowledge oracle tour. The map cost is distance × a hidden congestion field (the red zones) × a per-road quirk — so position carries real information.
+$$T^* = \arg\min_{T\in\mathcal{T}}\sum_{e\in T}\mu_e,$$
 
-<Demo src="/demos/posts/learning-the-map/berlin52-semibandit.html?v=1" title="Semi-bandit on Berlin52: learning the map by driving it" height={1180} />
+where $\mathcal{T}$ contains only valid tours. The solver knows that set. The learner does not know the costs that decide which tour is best.
 
-What the race shows is the heart of the toolbox. **Greedy** trusts its current means and gets stuck re-driving one mediocre tour. **Tabular UCB / Thompson** treat all 1,326 roads as independent unknowns and must drive most of the map before converging — hundreds of days. **Contextual** never learns roads one at a time: it estimates the congestion *field* on a coarse grid (so a few drives in a region predict every road there), then a per-road correction — and it reaches a good tour from a fraction of the measurements, refining toward the optimum as it covers ground. *Structure to start fast; per-piece detail to finish exact.* That contrast — learn-every-piece versus exploit-the-structure — is the one to keep in mind for the next two examples.
+For six stops there are 15 undirected edges and 60 distinct tours, counting a route and its reversal as the same tour. We can check every tour. That makes the reference optimum exact and removes solver quality as a possible explanation for a policy's performance. A large routing problem would need a more capable solver or an approximation; it would introduce a second source of error.
+
+**Optimism, with the sign flipped.** In a maximization problem, uncertainty makes an option look more promising. Here we minimize, so an exploration bonus becomes a discount:
+
+$$\widetilde{\mu}_{t,e}=\widehat{\mu}_{t,e}-b_{t,e}.$$
+
+The solver finds the best valid tour under those discounted costs. The discount is not a prediction that traffic will be lighter. It is a reason to investigate a road whose cost is still uncertain. In the demo, $b_{t,e}$ grows with elapsed rounds and shrinks as direct observations accumulate; its scale is a teaching heuristic, not a calibrated confidence bound.
+
+The sampling policy asks a different question: *what if this were the true map?* It draws one plausible cost for every road, holds those costs fixed while solving, then drives the resulting route. Resampling a road every time the solver looks at it would give the solver a moving target instead of an imagined city.
+
+Open **Compare policies** and watch both measures. A policy may eventually recommend a good route after spending many days exploring expensive roads. Another may start with a fortunate estimate and need little exploration in this particular world. The experiment should show those possibilities; it should not promise the same winner on every map.
 
 ## Example 2 · Matching — pairing clients with experts
 
-Swap the route for a bipartite **assignment**. Each round you must match clients to experts — one each — and you only learn how good a pairing is once you actually make it. The optimizer is now the exact **Hungarian algorithm** (the in-browser stand-in for an assignment LP you might solve with Pyomo or CVXPY); the learner supplies a value for every client·expert pair.
+Four clients need four experts. Each expert has one appointment.
 
-<Demo src="/demos/posts/learning-the-map/matching-semibandit.html?v=1" title="Semi-bandit matching: clients to experts" height={1180} />
+Look down the starting estimates: everyone wants Mira. Giving each client their highest-scoring expert produces four attractive choices and one impossible afternoon.
 
-The same four policies appear, and **Contextual + per-pair** — which learns a small client-type × expert-specialty table before correcting per couple — leads in the early rounds while greedy stalls and random wanders.
+The question is now about **opportunity cost**. Giving Mira to Alex means someone else must take their second choice. Who gives up the least? The best complete matching may send a client to an expert who was not first in that client's row.
 
-But matching also exposes an honest limit, and it answers a question the demos raise: *why doesn't structure always dominate?* Two reasons specific to assignment. First, **coverage is fast**: with $n$ clients you observe $n$ fresh pairs every round, so even the tabular learner sweeps the whole matrix in a handful of rounds — there is less for generalization to save. Second, **assignment explores itself**: unlike the TSP, where greedy re-drives the *same* tour, every round's matching naturally touches a spread of distinct pairs, so even the plain learner gets near-free exploration. Structure still wins early, just by less. The lever that widens the gap is the next example: make the action big and **constrained**, so "just try every pairing" stops being cheap.
+<Demo src="/demos/posts/learning-the-map/matching-lab.html?v=2" title="Build a matching and see why observing every client is not exploring every pairing" height={780} />
+
+Press **Give everyone their favourite**, then repair the assignment. The numbers are public starting estimates. After you commit, each selected pair returns a noisy outcome. Only then can you improve your knowledge of those pairings.
+
+There are 24 possible one-to-one assignments here, so the demo checks all of them. At larger sizes, the Hungarian algorithm solves the same linear assignment problem without enumerating every possibility. The learner still supplies the values; the assignment solver still enforces one client per expert.
+
+This example exposes a tempting mistake: four observations per round do not mean four **new pairs** per round. A policy can make the same four matches again and again. Every client gets an appointment, every expert stays busy, and twelve alternatives remain untested.
+
+In **Compare policies**, read the **pieces tried** column alongside the quality curves. Trusting the current estimates can work well when the starting assignment is good. It can also preserve an early mistake. A valid assignment does not supply exploration by itself.
 
 ## Example 3 · Scheduling — filling a weekly calendar
 
-Now give the experts a calendar. Each works only certain Mon–Fri × AM/PM slots (their **availability**, and so their **capacity**), and each week you must book clients into open slots — a larger, constrained assignment. Availability deletes most cells, so probing every client in every slot is genuinely expensive, which is exactly when structure earns its keep.
+Now give two experts a three-day calendar. There are six appointments and four clients. Alex cannot attend Wednesday. Bea cannot attend Monday. Cam needs a service available only from Mira. Two clients cannot occupy the same appointment.
 
-This demo also makes the hidden quality more honest. Instead of a tidy table, it is sampled from a **matrix factorization**: every client has a latent "needs" vector and every expert a latent "strengths" vector, and a booking is good when the two **align** (clients and experts are coloured by their latent direction, so matching colours should fit) — plus a per-booking quirk. Toggle the **Bipartite view** to see clients fanning into experts sized by capacity; toggle back to watch the week fill the calendar.
+A booking has to fit the calendar before its quality matters.
 
-<Demo src="/demos/posts/learning-the-map/schedule-semibandit.html?v=1" title="Semi-bandit weekly scheduling on a calendar grid" height={1200} />
+<Demo src="/demos/posts/learning-the-map/schedule-lab.html?v=2" title="Respect a calendar and inspect how one observation changes related booking estimates" height={800} />
 
-With the bigger, constrained board the contrast snaps back into focus: the contextual learner — a coarse, low-rank read of the latent factors plus a per-booking correction — runs at roughly **half** the gap of tabular UCB through the whole learning phase, while greedy locks onto an early guess and random never improves. Constraints made coverage hard, and structure paid for it.
+Build a feasible week, then reveal its four outcomes. The default learner uses **shared experience**: clients have public types, experts have public specialties, and observations of one type–specialty combination inform other bookings in that group.
 
-(A note for the curious: the *truth* is a matrix factorization, but the *learner* here approximates it with a bucketed type×specialty table rather than fitting the latent vectors directly. On a problem where coverage is this fast, the bucketed read learns quicker than online matrix-factorization SGD — a small reminder that the best learner depends on the budget, not just the model.)
+Watch what happens when you press **Update the estimates**. Selected bookings gain direct observations. Some unselected predictions change too, because related bookings supplied evidence. Open the evidence table: those rows still have no new direct sample. Their changed estimates are inferences, not measurements.
+
+That distinction is the point of the experiment. We did not book Alex into every slot. We learned something from a similar booking and used it to revise our expectation.
+
+The shared learner starts with a group estimate, then gives a booking's own observations more influence as they accumulate. Sharing can help early; direct evidence lets individual differences matter. The model can still be wrong about which bookings deserve to share information.
+
+Test that assumption in **Compare policies**. Turn **Shared structure** to **None** and rerun the same seeds. The public labels remain, but they no longer predict the hidden residual quality. Compare twelve worlds rather than looking for a pleasing single curve.
+
+You can also remove the client constraints while keeping the same clients, appointments and hidden values. That isolates a different question: how does changing the feasible set affect learning? Constraints may exclude useful probes, but can also remove alternatives that no longer need consideration. The direction is something to inspect, not assume.
 
 ## The pattern behind the toolbox
 
-Three actions — a tour, a matching, a schedule — three different solvers — 2-opt, Hungarian, constrained assignment — and one loop:
+Three actions — a tour, a matching, a schedule — three feasible sets, and one loop:
 
 ```text
 1. choose a structured action (the solver enforces its shape)
@@ -103,13 +130,31 @@ Three actions — a tour, a matching, a schedule — three different solvers —
 4. call the solver again
 ```
 
-The interesting part is step 3, and across the demos there are really three ways to do it:
+The loop contains two decisions. **Which plan should we use now?** And **how should its feedback change our next estimate?**
 
-- **Tabular** — learn every piece on its own. Exact in the limit, but you must touch (almost) every piece. Slowest, and the baseline the others beat.
-- **Structural / contextual** — learn a small shared model (a congestion field, a type×specialty table, latent factors) and let it predict pieces you haven't tried. Fast, but only as good as the model is faithful.
-- **Hierarchical** — the structural model *plus* a per-piece correction. Fast to a good answer, then exact as coverage fills in. This is what wins in all three demos.
+The demos separate those decisions:
 
-And the demos answer *when* structure pays, not just *that* it does. It pays most when learning every piece is expensive relative to the budget — many pieces, few observations per round (Berlin52's 1,326 roads), or constraints that make coverage hard (the calendar). It pays least when the action self-explores and coverage is cheap (small unconstrained matching). The same machinery, dialled by the shape of the problem.
+- **Trust the estimates:** optimize current component means without an exploration adjustment.
+- **Explore uncertain pieces:** add an uncertainty bonus for rewards, or subtract one for costs, before solving.
+- **Sample a plausible world:** draw a complete set of component values and solve against that fixed draw. The demo uses a Gaussian approximation rather than an exact Bayesian posterior.
+- **Share experience + explore:** use related components to inform each estimate, retain per-component observations, and apply an exploration adjustment.
+
+Sharing evidence is a modelling choice. Adding a bonus is a decision policy. Keeping them separate helps us ask where an improvement came from.
+
+### A good plan found is not necessarily a good plan learned
+
+The simulator knows every hidden mean. The learner sees only selected noisy outcomes. That separation matters when we evaluate the experiment.
+
+If we report the best true plan the learner ever visited, we may reward an accident the learner cannot recognize or repeat. Instead, the demos measure two things:
+
+| Measure | Question it answers |
+| --- | --- |
+| **Quality of learned recommendation** | If exploration stopped now, how good is the plan the learner would choose using its estimated means? |
+| **Total cost of learning** | How much expected value did all the executed plans sacrifice relative to the true optimum? |
+
+For costs, the first is the recommended plan's true expected cost minus the optimum. For rewards, the subtraction reverses. The second adds the corresponding gap for every plan actually executed: cumulative pseudo-regret.
+
+A low final gap does not erase the bill paid to get there. And a cheap learning history in one world does not establish that a policy would discover a better option in another. Both views belong in the comparison.
 
 ## What these toy models leave out
 
