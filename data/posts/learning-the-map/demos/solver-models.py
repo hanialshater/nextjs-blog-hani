@@ -74,3 +74,16 @@ def update_selected(sums, counts, observations, undirected=False):
         if undirected:
             sums[j, i] += value
             counts[j, i] += 1
+
+
+def solve_schedule(scores, available):
+    # scores: client × expert × day × time
+    # available: expert × day × time, with True for an open slot
+    slots = np.argwhere(available)
+    open_scores = scores[:, slots[:, 0], slots[:, 1], slots[:, 2]]
+
+    # As in the demo, there is one client per open slot.
+    if len(scores) != len(slots):
+        raise ValueError("Expected one client per open slot")
+    chosen_columns = solve_assignment(open_scores)
+    return slots[chosen_columns]  # one (expert, day, time) per client

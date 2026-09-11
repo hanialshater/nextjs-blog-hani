@@ -37,6 +37,7 @@ function loadDemo(kind) {
         return nodes.get(id)
       },
       querySelector: node,
+      querySelectorAll: () => [],
     },
     window: { addEventListener() {} },
     SemiBanditGuide: (value) => {

@@ -16,7 +16,8 @@ function SemiBanditGuide(config) {
         <g data-phase="3"><rect x="489" y="1" width="230" height="80" rx="12"/><text x="505" y="31">03 · Update</text><text class="flow-note" x="505" y="57">Learn, then choose again</text></g>
       </svg>
       <p id="guide-status" role="status" aria-live="polite"></p>
-      <details class="feedback"><summary>Inspect selected feedback <span id="feedback-count"></span></summary>
+      <details class="feedback"><summary>Inspect selected feedback</summary>
+        <p id="feedback-count"></p>
         <p>Each row is one noisy observation. Unselected components return no observations. Shared models can still change their predictions for similar components.</p>
         <div class="feedback-scroll"><table><thead><tr><th>Selected component</th><th>Observed value</th><th>Samples stored</th></tr></thead><tbody id="feedback-rows"></tbody></table></div>
       </details>
@@ -32,45 +33,21 @@ function SemiBanditGuide(config) {
   var pauseIcon =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zm8 0h4v16h-4z" fill="currentColor"/></svg>'
 
+  step.textContent = 'Next step →'
+
   function refresh() {
     var st = config.state()
     var label = config.policy()
-    step.textContent =
-      phase === 0
-        ? '1. Choose ' + (completed ? 'next ' : '') + config.action + ' →'
-        : phase === 1
-          ? '2. Reveal selected feedback →'
-          : '3. Update estimates →'
     status.textContent =
       phase === 0 && !completed
-        ? 'Start here: choose a ' +
-          config.action +
-          ', or press Play to walk through the learning loop.'
+        ? 'Ready. Press Play for the walkthrough, or Next step to choose a ' + config.action + '.'
         : phase === 1
-          ? label +
-            ' chose one ' +
-            config.action +
-            '. Predict what it will learn, then reveal feedback. No observations have been stored yet for this ' +
-            config.unit +
-            '.'
+          ? '1 / 3 · Chosen. Next: reveal the ' + config.count + ' selected ' + config.parts + '.'
           : phase === 2
-            ? label +
-              ' received ' +
+            ? '2 / 3 · Observed. Next: store these ' +
               config.count +
-              ' separate observations out of ' +
-              config.total +
-              ' possible ' +
-              config.parts +
-              '. Inspect the values below, then update the learner.'
-            : label +
-              ' stored those ' +
-              config.count +
-              ' observations. Unselected components got no new samples. Choose the next ' +
-              config.action +
-              ' to see how learning changes the decision.'
-    host.querySelectorAll('[data-phase]').forEach(function (node) {
-      node.classList.toggle('active', Number(node.dataset.phase) === (phase || (completed ? 3 : 1)))
-    })
+              ' observations and update estimates.'
+            : '3 / 3 · Updated. Next: choose a new ' + config.action + ' using what was learned.'
     rows.replaceChildren()
     var feedback = st.feedback || []
     count.textContent = feedback.length
@@ -121,6 +98,7 @@ function SemiBanditGuide(config) {
     play.innerHTML =
       (value ? pauseIcon : playIcon) + (value ? 'Pause walkthrough' : 'Play walkthrough')
     play.setAttribute('aria-pressed', String(value))
+    status.setAttribute('aria-live', value ? 'off' : 'polite')
     schedule()
   }
   play.onclick = function () {

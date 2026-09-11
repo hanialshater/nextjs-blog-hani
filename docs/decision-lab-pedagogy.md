@@ -1,6 +1,6 @@
 # Part 2: preserve the semi-bandit story
 
-The original article is restored verbatim. The original Berlin52 map, 18×18 matching, weekly calendar, policy races, charts and contextual learners remain the main demos.
+The original article prose is preserved, with visible CVXPY code blocks added beside the routing, matching and calendar examples. The original Berlin52 map, 18×18 matching, weekly calendar, policy races, charts and contextual learners remain the main demos.
 
 The controls now start paused and make one complete learning loop inspectable:
 
@@ -17,3 +17,5 @@ Thompson sampling now draws one symmetric cost matrix per decision, rather than 
 Build the portable review gallery with `node scripts/export-decision-labs.mjs /tmp/decision-laboratory.html`. The simulations work offline; the decorative OpenStreetMap Berlin backdrop requires network access and retains its heatmap fallback.
 
 Verification: `node --test tests/semibandit-feedback.test.mjs` checks feasible selections, delayed selected-only updates, replay reset and a fixed symmetric Thompson sample. A separate DOM harness checked Play/Pause/Next/Reset and the feedback ledger in all three demos. CVXPY/HiGHS models were executed against brute-force assignment and TSP optima, including a disconnected-subtour trap. Full browser visual QA remains blocked by the protected preview.
+
+Playback uses a constant Next step label, fixed control widths and fixed status/feedback space. The diagram no longer transfers a highlight between stages. Policy buttons persist through renders so playback does not reset keyboard focus. A DOM harness checked these invariants over twelve automatic stages in each demo.
