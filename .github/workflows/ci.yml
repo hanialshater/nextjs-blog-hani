@@ -34,8 +34,8 @@ jobs:
       - name: Typecheck
         run: yarn typecheck
 
-      - name: Decision laboratory simulation invariants
-        run: node --test tests/decision-lab-engine.test.mjs
+      - name: Semi-bandit feedback invariants
+        run: node --test tests/semibandit-feedback.test.mjs
 
       - name: Lint
         run: yarn lint

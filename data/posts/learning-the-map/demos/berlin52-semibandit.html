@@ -47,32 +47,37 @@
   .cap { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
   .dim { color: var(--muted); }
 </style>
+<link rel="stylesheet" href="semibandit-guide.css" />
+<script src="semibandit-guide.js"></script>
 </head>
 <body>
   <h1>Semi-bandit on Berlin52 — learning the map by driving it</h1>
   <p class="sub">Every day you must drive a full valid tour of all 52 stops. Each road's cost is its length times the hidden <b>congestion</b> of where it runs (the red zones) times the road's own quirk, revealed only on roads you actually drive. Five policies race to the cheapest tour.</p>
 
+  <div id="semibandit-guide"></div>
   <div class="controls">
-    <button id="play" class="primary">Pause</button>
-    <button id="step">Step</button>
+    <button id="play" aria-pressed="false">▶ Play walkthrough</button>
+    <button id="step" class="primary">1. Choose tour →</button>
     <button id="reset">Reset</button>
-    <label class="ctl">Speed <input id="speed" type="range" min="1" max="30" value="10" /></label>
+    <label class="ctl">Pace <select id="speed"><option value="2400">Slow</option><option value="1200" selected>Normal</option><option value="200">Fast</option></select></label>
     <label class="ctl">Noise <input id="noise" type="range" min="0" max="40" value="15" /><span id="noiseval" class="dim">15%</span></label>
     <label class="ctl">Explore β <input id="beta" type="range" min="0" max="120" value="45" /><span id="betaval" class="dim">0.45</span></label>
   </div>
 
+  <p class="cap">The charts and totals use hidden truth for evaluation only. Learners receive only the noisy outcomes listed in the feedback panel. Best-so-far means the best action visited, evaluated with hidden truth.</p>
   <div class="wrap">
     <div class="mapcard">
       <canvas id="map" width="540" height="440"></canvas>
+      <p class="cap">Berlin backdrop; benchmark coordinates are schematic, not street-aligned.</p>
       <div class="pillrow" id="viewpills"></div>
     </div>
     <div class="side">
       <div class="stat"><span>Day</span><b id="s-day">0</b></div>
       <div class="stat"><span>Shown policy</span><b id="s-pol">UCB semi-bandit</b></div>
-      <div class="stat"><span>Tour cost today</span><b id="s-cost">—</b></div>
+      <div class="stat"><span>Last completed tour (true cost)</span><b id="s-cost">—</b></div>
       <div class="stat"><span>Best tour so far</span><b id="s-best">—</b></div>
-      <div class="stat"><span>Oracle (full map)</span><b id="s-oracle">—</b></div>
-      <div class="stat"><span>Gap to oracle</span><b id="s-gap">—</b></div>
+      <div class="stat"><span>Full-map heuristic</span><b id="s-oracle">—</b></div>
+      <div class="stat"><span>Gap to reference</span><b id="s-gap">—</b></div>
       <div class="stat"><span>Roads measured</span><b id="s-meas">—</b></div>
       <div class="legend" id="legend"></div>
       <p class="cap" style="margin-bottom:0">Thick faint edges on the map are roads this policy is still uncertain about; thin solid edges are well measured. Click a legend entry to show that policy on the map.</p>
@@ -90,6 +95,70 @@
   <p class="cap">
     True road cost = straight-line distance (TSPLIB <b>berlin52</b>) times a hidden congestion field (the red zones); each drive returns that cost with multiplicative noise. The optimizer is nearest-neighbour + 2-opt on each policy's view of the map: <b>random</b> ignores the map, <b>greedy</b> trusts its current means, <b>UCB</b> makes unmeasured roads look temporarily cheaper (the minus sign in <code>mean &minus; &beta;&middot;&radic;(log&nbsp;t&nbsp;/&nbsp;n)</code>), and <b>Thompson</b> solves one plausible sampled map. True cost = distance &times; regional congestion &times; a per-road factor unique to each edge. The <b>tabular</b> policies treat all 1326 roads as independent unknowns, so they must drive most of the map to converge. <b>Contextual + per-edge</b> is hierarchical: it learns the shared <em>congestion field</em> on a coarse grid (so a few drives in a region predict every road there) and then a per-road correction as each edge is driven. It reaches a good tour far sooner than the tabular policies from the shared structure, and keeps refining toward the optimum as it covers roads &mdash; structure to start fast, per-edge detail to finish exact.
   </p>
+
+  <details class="solver-model">
+    <summary>Solver model · browser code + CVXPY equivalent</summary>
+    <p><b>What runs here:</b> Nearest-neighbour initialization, 2-opt and Or-opt local search. This produces a valid tour, with no guarantee of the global optimum.</p>
+    <p>Rows and columns are the 52 stops. A selected edge means driving between two stops. The learner turns its estimates and uncertainty into objective coefficients. The solver chooses a feasible action. Only the selected components then return noisy feedback.</p>
+    <h3>In the browser · JavaScript</h3><pre><code>// The actual browser UCB entry point
+var lt = Math.log(t + 1);
+return solve(function(i, j) {
+  var k = i*N+j;
+  var bonus = BETA*PRIOR*Math.sqrt(lt/(st.n[k]+1));
+  return Math.max(0.02*PRIOR, mean(st,i,j)-bonus);
+}, [0], 8);</code></pre>
+    <h3>The optimization model · CVXPY</h3>
+    <p>Python reference code, shown for reading and running locally. Install with <code>pip install cvxpy highspy numpy</code>. The exact TSP model has a 30-second solve limit and may not certify the Berlin52 optimum within that time.</p>
+    <pre><code>import cvxpy as cp
+import numpy as np
+
+def ucb_scores(sums, counts, t, beta, prior, scale, minimize=False):
+    &quot;&quot;&quot;Tabular policy: optimism lowers costs or raises rewards.&quot;&quot;&quot;
+    means = np.divide(sums, counts, out=np.full_like(sums, prior, dtype=float),
+                      where=counts &gt; 0)
+    bonus = beta * scale * np.sqrt(np.log(t + 1) / (counts + 1))
+    return np.maximum(0.02 * prior, means - bonus) if minimize else means + bonus
+
+def solve_tour(costs):
+    &quot;&quot;&quot;Exact directed TSP formulation; may be slow for all 52 stops.
+
+    Symmetric input costs describe the same undirected tour problem.
+    The browser uses nearest-neighbour + 2-opt + Or-opt for responsiveness.
+    Degree constraints alone allow disconnected subtours; MTZ prevents them.
+    &quot;&quot;&quot;
+    costs = np.asarray(costs, dtype=float)
+    n = len(costs)
+    x = cp.Variable((n, n), boolean=True)
+    u = cp.Variable(n - 1)  # visit order for every stop except depot 0
+    constraints = [cp.diag(x) == 0,
+                   cp.sum(x, axis=1) == 1,  # leave every stop once
+                   cp.sum(x, axis=0) == 1,  # enter every stop once
+                   u &gt;= 1, u &lt;= n - 1]
+    for i in range(1, n):
+        for j in range(1, n):
+            if i != j:
+                constraints.append(u[i - 1] - u[j - 1] + n * x[i, j] &lt;= n - 1)
+    problem = cp.Problem(cp.Minimize(cp.sum(cp.multiply(costs, x))), constraints)
+    problem.solve(solver=cp.HIGHS, highs_options={&quot;time_limit&quot;: 30.0})
+    if problem.status != cp.OPTIMAL:
+        raise RuntimeError(f&quot;No certified optimum within the limit: {problem.status}&quot;)
+    return np.argmax(x.value, axis=1)  # successor of each stop
+
+def update_selected(sums, counts, observations, undirected=False):
+    &quot;&quot;&quot;Each (i, j, value) is one selected component&#x27;s noisy outcome.
+
+    No samples for unchosen components. Contextual policies additionally
+    update shared group estimates from these same observations.
+    &quot;&quot;&quot;
+    for i, j, value in observations:
+        sums[i, j] += value
+        counts[i, j] += 1
+        if undirected:
+            sums[j, i] += value
+            counts[j, i] += 1</code></pre>
+    <p>For tabular UCB, call <code>ucb_scores</code> with the stored sums and counts, the current round, β, and prior=PRIOR, scale=PRIOR, minimize=True. Pass those scores to <code>solve_tour</code>. Contextual policies replace these coefficients with shared-group predictions plus per-component corrections; the feasibility model stays the same. Random skips optimization.</p>
+    <p><a href="data:text/x-python;base64,IiIiQ1ZYUFkgZXF1aXZhbGVudHMgZm9yIHRoZSBicm93c2VyIGRlbW9zLiBJbnN0YWxsOiBwaXAgaW5zdGFsbCBjdnhweSBoaWdoc3B5IG51bXB5CgpUaGUgYnJvd3NlciB1c2VzIEphdmFTY3JpcHQgSHVuZ2FyaWFuIGFzc2lnbm1lbnQgYW5kIGhldXJpc3RpYyB0b3VyIHNlYXJjaC4KVGhlc2UgZnVuY3Rpb25zIHNob3cgdGhlIGNvcnJlc3BvbmRpbmcgb3B0aW1pemF0aW9uIG1vZGVscyBpbiBQeXRob24uCklucHV0cyBhcmUgdGhlIGxlYXJuZXIncyBzY29yZXMsIG5ldmVyIHRoZSBzaW11bGF0b3IncyBoaWRkZW4gdHJ1ZSB2YWx1ZXMuCiIiIgppbXBvcnQgY3Z4cHkgYXMgY3AKaW1wb3J0IG51bXB5IGFzIG5wCgoKZGVmIHVjYl9zY29yZXMoc3VtcywgY291bnRzLCB0LCBiZXRhLCBwcmlvciwgc2NhbGUsIG1pbmltaXplPUZhbHNlKToKICAgICIiIlRhYnVsYXIgcG9saWN5OiBvcHRpbWlzbSBsb3dlcnMgY29zdHMgb3IgcmFpc2VzIHJld2FyZHMuIiIiCiAgICBtZWFucyA9IG5wLmRpdmlkZShzdW1zLCBjb3VudHMsIG91dD1ucC5mdWxsX2xpa2Uoc3VtcywgcHJpb3IsIGR0eXBlPWZsb2F0KSwKICAgICAgICAgICAgICAgICAgICAgIHdoZXJlPWNvdW50cyA+IDApCiAgICBib251cyA9IGJldGEgKiBzY2FsZSAqIG5wLnNxcnQobnAubG9nKHQgKyAxKSAvIChjb3VudHMgKyAxKSkKICAgIHJldHVybiBucC5tYXhpbXVtKDAuMDIgKiBwcmlvciwgbWVhbnMgLSBib251cykgaWYgbWluaW1pemUgZWxzZSBtZWFucyArIGJvbnVzCgoKZGVmIHNvbHZlX2Fzc2lnbm1lbnQoc2NvcmVzKToKICAgICIiIlJvd3MgPSBjbGllbnRzOyBjb2x1bW5zID0gZXhwZXJ0cyAobWF0Y2hpbmcpIG9yIE9QRU4gc2xvdHMgKHNjaGVkdWxpbmcpLgoKICAgIFNjaGVkdWxpbmcgY3JlYXRlcyBjb2x1bW5zIG9ubHkgZm9yIGF2YWlsYWJsZSAoZXhwZXJ0LCBkYXksIHRpbWUpIHNsb3RzLgogICAgSW4gdGhlc2UgZGVtb3MgdGhlcmUgYXJlIGV4YWN0bHkgYXMgbWFueSBjbGllbnRzIGFzIGNvbHVtbnMuCiAgICAiIiIKICAgIHNjb3JlcyA9IG5wLmFzYXJyYXkoc2NvcmVzLCBkdHlwZT1mbG9hdCkKICAgIG4sIG0gPSBzY29yZXMuc2hhcGUKICAgIGlmIG4gIT0gbToKICAgICAgICByYWlzZSBWYWx1ZUVycm9yKCJUaGVzZSBkZW1vcyB1c2UgYSBzcXVhcmUsIGNvbXBsZXRlIGFzc2lnbm1lbnQiKQogICAgeCA9IGNwLlZhcmlhYmxlKChuLCBtKSwgYm9vbGVhbj1UcnVlKQogICAgY29uc3RyYWludHMgPSBbY3Auc3VtKHgsIGF4aXM9MSkgPT0gMSwgICMgZWFjaCBjbGllbnQgZ2V0cyBvbmUgYXNzaWdubWVudAogICAgICAgICAgICAgICAgICAgY3Auc3VtKHgsIGF4aXM9MCkgPT0gMV0gICMgZWFjaCBleHBlcnQvb3BlbiBzbG90IHVzZWQgb25jZQogICAgcHJvYmxlbSA9IGNwLlByb2JsZW0oY3AuTWF4aW1pemUoY3Auc3VtKGNwLm11bHRpcGx5KHNjb3JlcywgeCkpKSwgY29uc3RyYWludHMpCiAgICBwcm9ibGVtLnNvbHZlKHNvbHZlcj1jcC5ISUdIUykKICAgIGlmIHByb2JsZW0uc3RhdHVzICE9IGNwLk9QVElNQUw6CiAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKGYiQXNzaWdubWVudCBzb2x2ZToge3Byb2JsZW0uc3RhdHVzfSIpCiAgICByZXR1cm4gbnAuYXJnbWF4KHgudmFsdWUsIGF4aXM9MSkKCgpkZWYgc29sdmVfdG91cihjb3N0cyk6CiAgICAiIiJFeGFjdCBkaXJlY3RlZCBUU1AgZm9ybXVsYXRpb247IG1heSBiZSBzbG93IGZvciBhbGwgNTIgc3RvcHMuCgogICAgU3ltbWV0cmljIGlucHV0IGNvc3RzIGRlc2NyaWJlIHRoZSBzYW1lIHVuZGlyZWN0ZWQgdG91ciBwcm9ibGVtLgogICAgVGhlIGJyb3dzZXIgdXNlcyBuZWFyZXN0LW5laWdoYm91ciArIDItb3B0ICsgT3Itb3B0IGZvciByZXNwb25zaXZlbmVzcy4KICAgIERlZ3JlZSBjb25zdHJhaW50cyBhbG9uZSBhbGxvdyBkaXNjb25uZWN0ZWQgc3VidG91cnM7IE1UWiBwcmV2ZW50cyB0aGVtLgogICAgIiIiCiAgICBjb3N0cyA9IG5wLmFzYXJyYXkoY29zdHMsIGR0eXBlPWZsb2F0KQogICAgbiA9IGxlbihjb3N0cykKICAgIHggPSBjcC5WYXJpYWJsZSgobiwgbiksIGJvb2xlYW49VHJ1ZSkKICAgIHUgPSBjcC5WYXJpYWJsZShuIC0gMSkgICMgdmlzaXQgb3JkZXIgZm9yIGV2ZXJ5IHN0b3AgZXhjZXB0IGRlcG90IDAKICAgIGNvbnN0cmFpbnRzID0gW2NwLmRpYWcoeCkgPT0gMCwKICAgICAgICAgICAgICAgICAgIGNwLnN1bSh4LCBheGlzPTEpID09IDEsICAjIGxlYXZlIGV2ZXJ5IHN0b3Agb25jZQogICAgICAgICAgICAgICAgICAgY3Auc3VtKHgsIGF4aXM9MCkgPT0gMSwgICMgZW50ZXIgZXZlcnkgc3RvcCBvbmNlCiAgICAgICAgICAgICAgICAgICB1ID49IDEsIHUgPD0gbiAtIDFdCiAgICBmb3IgaSBpbiByYW5nZSgxLCBuKToKICAgICAgICBmb3IgaiBpbiByYW5nZSgxLCBuKToKICAgICAgICAgICAgaWYgaSAhPSBqOgogICAgICAgICAgICAgICAgY29uc3RyYWludHMuYXBwZW5kKHVbaSAtIDFdIC0gdVtqIC0gMV0gKyBuICogeFtpLCBqXSA8PSBuIC0gMSkKICAgIHByb2JsZW0gPSBjcC5Qcm9ibGVtKGNwLk1pbmltaXplKGNwLnN1bShjcC5tdWx0aXBseShjb3N0cywgeCkpKSwgY29uc3RyYWludHMpCiAgICBwcm9ibGVtLnNvbHZlKHNvbHZlcj1jcC5ISUdIUywgaGlnaHNfb3B0aW9ucz17InRpbWVfbGltaXQiOiAzMC4wfSkKICAgIGlmIHByb2JsZW0uc3RhdHVzICE9IGNwLk9QVElNQUw6CiAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKGYiTm8gY2VydGlmaWVkIG9wdGltdW0gd2l0aGluIHRoZSBsaW1pdDoge3Byb2JsZW0uc3RhdHVzfSIpCiAgICByZXR1cm4gbnAuYXJnbWF4KHgudmFsdWUsIGF4aXM9MSkgICMgc3VjY2Vzc29yIG9mIGVhY2ggc3RvcAoKCmRlZiB1cGRhdGVfc2VsZWN0ZWQoc3VtcywgY291bnRzLCBvYnNlcnZhdGlvbnMsIHVuZGlyZWN0ZWQ9RmFsc2UpOgogICAgIiIiRWFjaCAoaSwgaiwgdmFsdWUpIGlzIG9uZSBzZWxlY3RlZCBjb21wb25lbnQncyBub2lzeSBvdXRjb21lLgoKICAgIE5vIHNhbXBsZXMgZm9yIHVuY2hvc2VuIGNvbXBvbmVudHMuIENvbnRleHR1YWwgcG9saWNpZXMgYWRkaXRpb25hbGx5CiAgICB1cGRhdGUgc2hhcmVkIGdyb3VwIGVzdGltYXRlcyBmcm9tIHRoZXNlIHNhbWUgb2JzZXJ2YXRpb25zLgogICAgIiIiCiAgICBmb3IgaSwgaiwgdmFsdWUgaW4gb2JzZXJ2YXRpb25zOgogICAgICAgIHN1bXNbaSwgal0gKz0gdmFsdWUKICAgICAgICBjb3VudHNbaSwgal0gKz0gMQogICAgICAgIGlmIHVuZGlyZWN0ZWQ6CiAgICAgICAgICAgIHN1bXNbaiwgaV0gKz0gdmFsdWUKICAgICAgICAgICAgY291bnRzW2osIGldICs9IDEK" download="solver-models.py">Download the Python models</a> · <a href="https://www.cvxpy.org/tutorial/constraints/index.html#mixed-integer-programs" target="_blank" rel="noreferrer">CVXPY integer variables</a> · <a href="https://www.cvxpy.org/tutorial/solvers/index.html" target="_blank" rel="noreferrer">Solver setup</a></p>
+  </details>
 
 <script>
 (function () {
@@ -198,7 +267,7 @@
   function mean(st,i,j){ var k=i*N+j; return st.n[k]>0 ? st.sum[k]/st.n[k] : PRIOR; }
   function observe(st, t){
     for(var k=0;k<t.length;k++){ var a=t[k], b=t[(k+1)%t.length];
-      var x=D[a][b]*(1+ NOISE*gauss()); if(x<1) x=1;
+      var x=st.feedback[k].value;
       var p=a*N+b, q=b*N+a; st.sum[p]+=x; st.n[p]+=1; st.sum[q]+=x; st.n[q]+=1;
       if(st.cellN){ var cl=CELL[a*N+b]; st.cellSum[cl]+=x/DIST[a][b]; st.cellN[cl]+=1;     // regional congestion sample
         var ce=st.cellSum[cl]/st.cellN[cl], rs=x/(DIST[a][b]*ce);                           // leftover = this road's own factor
@@ -215,7 +284,16 @@
                 // unseen road (n=0) looks near-free, which is what forces exploration.
                 pick:function(st,t){ var lt=Math.log(t+1); return solve(function(i,j){ var k=i*N+j; var b=BETA*PRIOR*Math.sqrt(lt/(st.n[k]+1)); var v=mean(st,i,j)-b; return v<0.02*PRIOR?0.02*PRIOR:v; }, [0], 8); } },
     thompson: { name:"Thompson",        color:getVar('--thompson'), on:true,
-                pick:function(st,t){ return solve(function(i,j){ var k=i*N+j; var se = st.n[k]>0 ? (NOISE*mean(st,i,j))/Math.sqrt(st.n[k]) : PRIOR_SD; var v=mean(st,i,j)+se*gauss(); return v<0.05*PRIOR?0.05*PRIOR:v; }, [0], 8); } },
+                pick:function(st,t){
+                  // One symmetric sampled world per decision, fixed throughout local search.
+                  var sampled=new Float64Array(N*N);
+                  for(var i=0;i<N;i++) for(var j=i+1;j<N;j++){
+                    var k=i*N+j, m=mean(st,i,j);
+                    var se=st.n[k]>0?NOISE*m/Math.sqrt(st.n[k]):PRIOR_SD;
+                    sampled[k]=sampled[j*N+i]=Math.max(0.05*PRIOR,m+se*gauss());
+                  }
+                  return solve(function(i,j){return sampled[i*N+j];}, [0], 8);
+                } },
     contextual:{ name:"Contextual + per-edge", color:getVar('--ctx'), on:true,
                 // hierarchical: estimate the congestion field on a G x G grid (shared, fast to learn)
                 // PLUS a per-road correction for each edge actually driven (personalised, slow).
@@ -231,20 +309,16 @@
   function getVar(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888"; }
 
   // ---- simulation state ----
-  var NOISE=0.15, BETA=0.45, day=0, states={}, view="ucb", playing=true, frame=0;
+  var NOISE=0.15, BETA=0.45, day=0, states={}, view="ucb", playing=false, frame=0;
   function reset(){
     rng = mulberry32(20260621); day=0; frame=0;
     states={}; ORDER.forEach(function(p){ states[p]=newState(p==='contextual'); });
     draw(); chart(); chart2(); stats();
   }
 
-  function stepDay(){
-    day++;
-    ORDER.forEach(function(p){ if(!POLICIES[p].on && p!==view) { /* still simulate so toggling on later is fair? keep simple: simulate all */ }
-      var st=states[p]; var t=POLICIES[p].pick(st, day); var c=tourCostTrue(t);
-      st.tour=t; st.cost=c; if(c<st.best)st.best=c; st.hist.push(c); observe(st,t);
-    });
-  }
+  function chooseAction(){ day++; ORDER.forEach(function(p){ var st=states[p]; st.tour=POLICIES[p].pick(st,day); st.feedback=[]; }); }
+  function revealFeedback(){ ORDER.forEach(function(p){ var st=states[p]; st.feedback=st.tour.map(function(a,k){ var b=st.tour[(k+1)%N]; return {label:'Stop '+(a+1)+' ↔ '+(b+1), index:a*N+b, value:Math.max(1,D[a][b]*(1+NOISE*gauss()))}; }); }); }
+  function learnFeedback(){ ORDER.forEach(function(p){ var st=states[p]; observe(st,st.tour); var c=tourCostTrue(st.tour); st.cost=c; st.best=Math.min(st.best,c); st.hist.push(c); }); }
 
   // ---- map drawing ----
   var mc=document.getElementById('map'), mctx=mc.getContext('2d');
@@ -326,7 +400,7 @@
     cctx.strokeStyle=getVar('--oracle'); cctx.setLineDash([5,4]); cctx.globalAlpha=0.7;
     cctx.beginPath(); cctx.moveTo(pad,Y(ORACLE)); cctx.lineTo(pad+w,Y(ORACLE)); cctx.stroke();
     cctx.setLineDash([]); cctx.globalAlpha=1;
-    cctx.fillStyle=getVar('--oracle'); cctx.fillText('oracle '+Math.round(ORACLE), pad+4, Y(ORACLE)-4);
+    cctx.fillStyle=getVar('--oracle'); cctx.fillText('full-map heuristic '+Math.round(ORACLE), pad+4, Y(ORACLE)-4);
     // policy curves
     ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return;
       cctx.strokeStyle=POLICIES[p].color; cctx.lineWidth = p===view?2.4:1.4; cctx.globalAlpha = p===view?1:0.8;
@@ -346,7 +420,7 @@
       c2ctx.beginPath(); c2ctx.moveTo(pad,y); c2ctx.lineTo(pad+w,y); c2ctx.stroke(); c2ctx.globalAlpha=1;
       c2ctx.fillText((g===50?'≥50':g)+'%', 6, y+3); });
     c2ctx.strokeStyle=getVar('--line'); c2ctx.beginPath(); c2ctx.moveTo(pad,8); c2ctx.lineTo(pad,8+h); c2ctx.lineTo(pad+w,8+h); c2ctx.stroke();
-    c2ctx.fillStyle=getVar('--muted'); c2ctx.fillText('gap to oracle, best tour so far — how fast each policy converges', pad+6, 8+h+14);
+    c2ctx.fillStyle=getVar('--muted'); c2ctx.fillText('best visited tour: true-cost gap to heuristic reference (clipped at 0%)', pad+6, 8+h+14);
     ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return;
       c2ctx.strokeStyle=POLICIES[p].color; c2ctx.lineWidth=p===view?2.4:1.4; c2ctx.globalAlpha=p===view?1:0.85;
       var run=Infinity; c2ctx.beginPath();
@@ -372,28 +446,18 @@
   // ---- legend + view pills ----
   function buildLegend(){
     var L=document.getElementById('legend'); L.innerHTML='';
-    ORDER.forEach(function(p){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name+(POLICIES[p].on?'':' <span class="dim">(off)</span>');
+    ORDER.forEach(function(p){ var s=document.createElement('button'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name+(POLICIES[p].on?'':' <span class="dim">(off)</span>');
       s.onclick=function(){ view=p; POLICIES[p].on=true; render(); }; L.appendChild(s); });
     var V=document.getElementById('viewpills'); V.innerHTML='<span class="dim" style="font-size:12px;margin-right:4px">show on map:</span>';
-    ORDER.forEach(function(p){ var b=document.createElement('span'); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name;
+    ORDER.forEach(function(p){ var b=document.createElement('button'); b.setAttribute('aria-pressed',String(view===p)); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name;
       b.onclick=function(){ view=p; render(); }; V.appendChild(b); });
   }
 
-  function render(){ buildLegend(); draw(); chart(); chart2(); stats(); reportHeight(); }
+  function render(){ buildLegend(); draw(); chart(); chart2(); stats(); if(guide)guide.refresh(); reportHeight(); }
 
   // ---- loop ----
-  var acc=0, SPEED=10;
-  function tick(){ frame++;
-    if(playing){ acc+=SPEED; while(acc>=10){ stepDay(); acc-=10; } }
-    draw(); if(frame%3===0){ chart(); chart2(); stats(); }
-    requestAnimationFrame(tick);
-  }
-
-  // ---- controls ----
-  document.getElementById('play').onclick=function(){ playing=!playing; this.textContent=playing?'Pause':'Play'; };
-  document.getElementById('step').onclick=function(){ playing=false; document.getElementById('play').textContent='Play'; stepDay(); render(); };
-  document.getElementById('reset').onclick=function(){ reset(); buildLegend(); };
-  document.getElementById('speed').oninput=function(){ SPEED=+this.value; };
+  var guide;
+  function tick(){ if(playing && !document.hidden)frame++; draw(); requestAnimationFrame(tick); }
   document.getElementById('noise').oninput=function(){ NOISE=+this.value/100; document.getElementById('noiseval').textContent=this.value+'%'; };
   document.getElementById('beta').oninput=function(){ BETA=+this.value/100; document.getElementById('betaval').textContent=(+this.value/100).toFixed(2); };
 
@@ -403,7 +467,16 @@
   window.addEventListener('load', reportHeight);
 
   // ---- go ----
-  reset(); buildLegend(); SPEED=10; tick();
+  reset();
+  document.querySelector('.solver-model pre code').textContent=[POLICIES.ucb.pick.toString(), solve.toString(), localSearch.toString()].join('\n\n');
+  guide=SemiBanditGuide({
+    action:'tour', unit:'day', parts:'roads', count:N, total:NP,
+    choose:chooseAction, reveal:revealFeedback, learn:learnFeedback,
+    render:render, reset:reset, height:reportHeight,
+    setPlaying:function(value){playing=value;},
+    state:function(){return states[view];}, policy:function(){return POLICIES[view].name;}
+  });
+  tick();
 })();
 </script>
 </body>
