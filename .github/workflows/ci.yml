@@ -34,6 +34,9 @@ jobs:
       - name: Typecheck
         run: yarn typecheck
 
+      - name: Semi-bandit feedback invariants
+        run: node --test tests/semibandit-feedback.test.mjs
+
       - name: Lint
         run: yarn lint
 

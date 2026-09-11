@@ -29,20 +29,24 @@
   .cap{ color:var(--muted); font-size:12.5px; margin-top:10px; } .dim{ color:var(--muted); }
   .key{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:6px; } .key span{ display:inline-flex; align-items:center; gap:5px; } .key i{ width:10px; height:10px; border-radius:50%; display:inline-block; }
 </style>
+<link rel="stylesheet" href="semibandit-guide.css" />
+<script src="semibandit-guide.js"></script>
 </head>
 <body>
   <h1>Semi-bandit matching — assign customers to experts while learning who fits whom</h1>
   <p class="sub">Each round you must assign all customers to experts (one each). You only learn the quality of the pairings you actually make. Four policies race to the best total match.</p>
 
+  <div id="semibandit-guide"></div>
   <div class="controls">
-    <button id="play" class="primary">Pause</button>
-    <button id="step">Step</button>
+    <button id="play" aria-pressed="false">▶ Play walkthrough</button>
+    <button id="step" class="primary">Next step →</button>
     <button id="reset">Reset</button>
-    <label class="ctl">Speed <input id="speed" type="range" min="1" max="30" value="8" /></label>
+    <label class="ctl">Pace <select id="speed"><option value="2400">Slow</option><option value="1200" selected>Normal</option><option value="200">Fast</option></select></label>
     <label class="ctl">Noise <input id="noise" type="range" min="0" max="40" value="18" /><span id="noiseval" class="dim">18%</span></label>
     <label class="ctl">Explore β <input id="beta" type="range" min="0" max="150" value="55" /><span id="betaval" class="dim">0.55</span></label>
   </div>
 
+  <p class="cap">The charts and totals use hidden truth for evaluation only. Learners receive only the noisy outcomes listed in the feedback panel. Best-so-far means the best action visited, evaluated with hidden truth.</p>
   <div class="wrap">
     <div class="mapcard">
       <canvas id="bip" width="540" height="440"></canvas>
@@ -68,6 +72,66 @@
   <p class="cap">
     True pairing quality = a hidden <b>type × specialty</b> compatibility (some kinds of customer just fit some kinds of expert) plus a per-pair quirk unique to each customer–expert couple, observed with noise only when the pairing is actually made. The optimizer is the exact <b>Hungarian assignment</b> (the in-browser analogue of an LP solved with Pyomo/CVXPY) run on each policy's current value estimates: <b>random</b> ignores history, <b>greedy</b> trusts its current per-pair means, <b>UCB</b> adds an optimism bonus per pair, and <b>Contextual + per-pair</b> learns the small type×specialty table first (so one good match teaches it about every similar customer) then a per-couple correction. Contextual converges far sooner from far fewer pairings; the tabular policies must try almost every couple. Same pattern as the routing demo: a solver wrapped around uncertainty.
   </p>
+
+  <details class="solver-model">
+    <summary>Solver model · browser code + CVXPY equivalent</summary>
+    <p><b>What runs here:</b> Hungarian maximum-weight assignment in JavaScript. This finds an optimal assignment for the current score matrix; the scores are learned estimates.</p>
+    <p>Rows are the 18 clients; columns are the 18 experts. The learner turns its estimates and uncertainty into objective coefficients. The solver chooses a feasible action. Only the selected components then return noisy feedback.</p>
+    <h3>In the browser · JavaScript</h3><pre><code>// The actual browser UCB entry point
+return assignMax(valMatrix(st, t, &#x27;ucb&#x27;));
+
+// valMatrix constructs each tabular UCB score:
+score = mean(st, i, j)
+      + BETA*SCALE*Math.sqrt(Math.log(t+1)/(st.n[k]+1));
+
+// assignMax converts reward maximization to a cost assignment
+// and calls the Hungarian solver in this HTML file.</code></pre>
+    <h3>The optimization model · CVXPY</h3>
+    <p>Python reference code, shown for reading and running locally. Install with <code>pip install cvxpy highspy numpy</code>. The browser Hungarian algorithm solves the same assignment objective without a Python runtime.</p>
+    <pre><code>import cvxpy as cp
+import numpy as np
+
+def ucb_scores(sums, counts, t, beta, prior, scale, minimize=False):
+    &quot;&quot;&quot;Tabular policy: optimism lowers costs or raises rewards.&quot;&quot;&quot;
+    means = np.divide(sums, counts, out=np.full_like(sums, prior, dtype=float),
+                      where=counts &gt; 0)
+    bonus = beta * scale * np.sqrt(np.log(t + 1) / (counts + 1))
+    return np.maximum(0.02 * prior, means - bonus) if minimize else means + bonus
+
+def solve_assignment(scores):
+    &quot;&quot;&quot;Rows = clients; columns = experts (matching) or OPEN slots (scheduling).
+
+    Scheduling creates columns only for available (expert, day, time) slots.
+    In these demos there are exactly as many clients as columns.
+    &quot;&quot;&quot;
+    scores = np.asarray(scores, dtype=float)
+    n, m = scores.shape
+    if n != m:
+        raise ValueError(&quot;These demos use a square, complete assignment&quot;)
+    x = cp.Variable((n, m), boolean=True)
+    constraints = [cp.sum(x, axis=1) == 1,  # each client gets one assignment
+                   cp.sum(x, axis=0) == 1]  # each expert/open slot used once
+    problem = cp.Problem(cp.Maximize(cp.sum(cp.multiply(scores, x))), constraints)
+    problem.solve(solver=cp.HIGHS)
+    if problem.status != cp.OPTIMAL:
+        raise RuntimeError(f&quot;Assignment solve: {problem.status}&quot;)
+    return np.argmax(x.value, axis=1)
+
+def update_selected(sums, counts, observations, undirected=False):
+    &quot;&quot;&quot;Each (i, j, value) is one selected component&#x27;s noisy outcome.
+
+    No samples for unchosen components. Contextual policies additionally
+    update shared group estimates from these same observations.
+    &quot;&quot;&quot;
+    for i, j, value in observations:
+        sums[i, j] += value
+        counts[i, j] += 1
+        if undirected:
+            sums[j, i] += value
+            counts[j, i] += 1</code></pre>
+    <p>For tabular UCB, call <code>ucb_scores</code> with the stored sums and counts, the current round, β, and prior=55, scale=30. Pass those scores to <code>solve_assignment</code>. Contextual policies replace these coefficients with shared-group predictions plus per-component corrections; the feasibility model stays the same. Random skips optimization.</p>
+    <p><a href="data:text/x-python;base64,IiIiQ1ZYUFkgZXF1aXZhbGVudHMgZm9yIHRoZSBicm93c2VyIGRlbW9zLiBJbnN0YWxsOiBwaXAgaW5zdGFsbCBjdnhweSBoaWdoc3B5IG51bXB5CgpUaGUgYnJvd3NlciB1c2VzIEphdmFTY3JpcHQgSHVuZ2FyaWFuIGFzc2lnbm1lbnQgYW5kIGhldXJpc3RpYyB0b3VyIHNlYXJjaC4KVGhlc2UgZnVuY3Rpb25zIHNob3cgdGhlIGNvcnJlc3BvbmRpbmcgb3B0aW1pemF0aW9uIG1vZGVscyBpbiBQeXRob24uCklucHV0cyBhcmUgdGhlIGxlYXJuZXIncyBzY29yZXMsIG5ldmVyIHRoZSBzaW11bGF0b3IncyBoaWRkZW4gdHJ1ZSB2YWx1ZXMuCiIiIgppbXBvcnQgY3Z4cHkgYXMgY3AKaW1wb3J0IG51bXB5IGFzIG5wCgoKZGVmIHVjYl9zY29yZXMoc3VtcywgY291bnRzLCB0LCBiZXRhLCBwcmlvciwgc2NhbGUsIG1pbmltaXplPUZhbHNlKToKICAgICIiIlRhYnVsYXIgcG9saWN5OiBvcHRpbWlzbSBsb3dlcnMgY29zdHMgb3IgcmFpc2VzIHJld2FyZHMuIiIiCiAgICBtZWFucyA9IG5wLmRpdmlkZShzdW1zLCBjb3VudHMsIG91dD1ucC5mdWxsX2xpa2Uoc3VtcywgcHJpb3IsIGR0eXBlPWZsb2F0KSwKICAgICAgICAgICAgICAgICAgICAgIHdoZXJlPWNvdW50cyA+IDApCiAgICBib251cyA9IGJldGEgKiBzY2FsZSAqIG5wLnNxcnQobnAubG9nKHQgKyAxKSAvIChjb3VudHMgKyAxKSkKICAgIHJldHVybiBucC5tYXhpbXVtKDAuMDIgKiBwcmlvciwgbWVhbnMgLSBib251cykgaWYgbWluaW1pemUgZWxzZSBtZWFucyArIGJvbnVzCgoKZGVmIHNvbHZlX2Fzc2lnbm1lbnQoc2NvcmVzKToKICAgICIiIlJvd3MgPSBjbGllbnRzOyBjb2x1bW5zID0gZXhwZXJ0cyAobWF0Y2hpbmcpIG9yIE9QRU4gc2xvdHMgKHNjaGVkdWxpbmcpLgoKICAgIFNjaGVkdWxpbmcgY3JlYXRlcyBjb2x1bW5zIG9ubHkgZm9yIGF2YWlsYWJsZSAoZXhwZXJ0LCBkYXksIHRpbWUpIHNsb3RzLgogICAgSW4gdGhlc2UgZGVtb3MgdGhlcmUgYXJlIGV4YWN0bHkgYXMgbWFueSBjbGllbnRzIGFzIGNvbHVtbnMuCiAgICAiIiIKICAgIHNjb3JlcyA9IG5wLmFzYXJyYXkoc2NvcmVzLCBkdHlwZT1mbG9hdCkKICAgIG4sIG0gPSBzY29yZXMuc2hhcGUKICAgIGlmIG4gIT0gbToKICAgICAgICByYWlzZSBWYWx1ZUVycm9yKCJUaGVzZSBkZW1vcyB1c2UgYSBzcXVhcmUsIGNvbXBsZXRlIGFzc2lnbm1lbnQiKQogICAgeCA9IGNwLlZhcmlhYmxlKChuLCBtKSwgYm9vbGVhbj1UcnVlKQogICAgY29uc3RyYWludHMgPSBbY3Auc3VtKHgsIGF4aXM9MSkgPT0gMSwgICMgZWFjaCBjbGllbnQgZ2V0cyBvbmUgYXNzaWdubWVudAogICAgICAgICAgICAgICAgICAgY3Auc3VtKHgsIGF4aXM9MCkgPT0gMV0gICMgZWFjaCBleHBlcnQvb3BlbiBzbG90IHVzZWQgb25jZQogICAgcHJvYmxlbSA9IGNwLlByb2JsZW0oY3AuTWF4aW1pemUoY3Auc3VtKGNwLm11bHRpcGx5KHNjb3JlcywgeCkpKSwgY29uc3RyYWludHMpCiAgICBwcm9ibGVtLnNvbHZlKHNvbHZlcj1jcC5ISUdIUykKICAgIGlmIHByb2JsZW0uc3RhdHVzICE9IGNwLk9QVElNQUw6CiAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKGYiQXNzaWdubWVudCBzb2x2ZToge3Byb2JsZW0uc3RhdHVzfSIpCiAgICByZXR1cm4gbnAuYXJnbWF4KHgudmFsdWUsIGF4aXM9MSkKCgpkZWYgc29sdmVfdG91cihjb3N0cyk6CiAgICAiIiJFeGFjdCBkaXJlY3RlZCBUU1AgZm9ybXVsYXRpb247IG1heSBiZSBzbG93IGZvciBhbGwgNTIgc3RvcHMuCgogICAgU3ltbWV0cmljIGlucHV0IGNvc3RzIGRlc2NyaWJlIHRoZSBzYW1lIHVuZGlyZWN0ZWQgdG91ciBwcm9ibGVtLgogICAgVGhlIGJyb3dzZXIgdXNlcyBuZWFyZXN0LW5laWdoYm91ciArIDItb3B0ICsgT3Itb3B0IGZvciByZXNwb25zaXZlbmVzcy4KICAgIERlZ3JlZSBjb25zdHJhaW50cyBhbG9uZSBhbGxvdyBkaXNjb25uZWN0ZWQgc3VidG91cnM7IE1UWiBwcmV2ZW50cyB0aGVtLgogICAgIiIiCiAgICBjb3N0cyA9IG5wLmFzYXJyYXkoY29zdHMsIGR0eXBlPWZsb2F0KQogICAgbiA9IGxlbihjb3N0cykKICAgIHggPSBjcC5WYXJpYWJsZSgobiwgbiksIGJvb2xlYW49VHJ1ZSkKICAgIHUgPSBjcC5WYXJpYWJsZShuIC0gMSkgICMgdmlzaXQgb3JkZXIgZm9yIGV2ZXJ5IHN0b3AgZXhjZXB0IGRlcG90IDAKICAgIGNvbnN0cmFpbnRzID0gW2NwLmRpYWcoeCkgPT0gMCwKICAgICAgICAgICAgICAgICAgIGNwLnN1bSh4LCBheGlzPTEpID09IDEsICAjIGxlYXZlIGV2ZXJ5IHN0b3Agb25jZQogICAgICAgICAgICAgICAgICAgY3Auc3VtKHgsIGF4aXM9MCkgPT0gMSwgICMgZW50ZXIgZXZlcnkgc3RvcCBvbmNlCiAgICAgICAgICAgICAgICAgICB1ID49IDEsIHUgPD0gbiAtIDFdCiAgICBmb3IgaSBpbiByYW5nZSgxLCBuKToKICAgICAgICBmb3IgaiBpbiByYW5nZSgxLCBuKToKICAgICAgICAgICAgaWYgaSAhPSBqOgogICAgICAgICAgICAgICAgY29uc3RyYWludHMuYXBwZW5kKHVbaSAtIDFdIC0gdVtqIC0gMV0gKyBuICogeFtpLCBqXSA8PSBuIC0gMSkKICAgIHByb2JsZW0gPSBjcC5Qcm9ibGVtKGNwLk1pbmltaXplKGNwLnN1bShjcC5tdWx0aXBseShjb3N0cywgeCkpKSwgY29uc3RyYWludHMpCiAgICBwcm9ibGVtLnNvbHZlKHNvbHZlcj1jcC5ISUdIUywgaGlnaHNfb3B0aW9ucz17InRpbWVfbGltaXQiOiAzMC4wfSkKICAgIGlmIHByb2JsZW0uc3RhdHVzICE9IGNwLk9QVElNQUw6CiAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKGYiTm8gY2VydGlmaWVkIG9wdGltdW0gd2l0aGluIHRoZSBsaW1pdDoge3Byb2JsZW0uc3RhdHVzfSIpCiAgICByZXR1cm4gbnAuYXJnbWF4KHgudmFsdWUsIGF4aXM9MSkgICMgc3VjY2Vzc29yIG9mIGVhY2ggc3RvcAoKCmRlZiB1cGRhdGVfc2VsZWN0ZWQoc3VtcywgY291bnRzLCBvYnNlcnZhdGlvbnMsIHVuZGlyZWN0ZWQ9RmFsc2UpOgogICAgIiIiRWFjaCAoaSwgaiwgdmFsdWUpIGlzIG9uZSBzZWxlY3RlZCBjb21wb25lbnQncyBub2lzeSBvdXRjb21lLgoKICAgIE5vIHNhbXBsZXMgZm9yIHVuY2hvc2VuIGNvbXBvbmVudHMuIENvbnRleHR1YWwgcG9saWNpZXMgYWRkaXRpb25hbGx5CiAgICB1cGRhdGUgc2hhcmVkIGdyb3VwIGVzdGltYXRlcyBmcm9tIHRoZXNlIHNhbWUgb2JzZXJ2YXRpb25zLgogICAgIiIiCiAgICBmb3IgaSwgaiwgdmFsdWUgaW4gb2JzZXJ2YXRpb25zOgogICAgICAgIHN1bXNbaSwgal0gKz0gdmFsdWUKICAgICAgICBjb3VudHNbaSwgal0gKz0gMQogICAgICAgIGlmIHVuZGlyZWN0ZWQ6CiAgICAgICAgICAgIHN1bXNbaiwgaV0gKz0gdmFsdWUKICAgICAgICAgICAgY291bnRzW2osIGldICs9IDEKCgpkZWYgc29sdmVfc2NoZWR1bGUoc2NvcmVzLCBhdmFpbGFibGUpOgogICAgIyBzY29yZXM6IGNsaWVudCDDlyBleHBlcnQgw5cgZGF5IMOXIHRpbWUKICAgICMgYXZhaWxhYmxlOiBleHBlcnQgw5cgZGF5IMOXIHRpbWUsIHdpdGggVHJ1ZSBmb3IgYW4gb3BlbiBzbG90CiAgICBzbG90cyA9IG5wLmFyZ3doZXJlKGF2YWlsYWJsZSkKICAgIG9wZW5fc2NvcmVzID0gc2NvcmVzWzosIHNsb3RzWzosIDBdLCBzbG90c1s6LCAxXSwgc2xvdHNbOiwgMl1dCgogICAgIyBBcyBpbiB0aGUgZGVtbywgdGhlcmUgaXMgb25lIGNsaWVudCBwZXIgb3BlbiBzbG90LgogICAgaWYgbGVuKHNjb3JlcykgIT0gbGVuKHNsb3RzKToKICAgICAgICByYWlzZSBWYWx1ZUVycm9yKCJFeHBlY3RlZCBvbmUgY2xpZW50IHBlciBvcGVuIHNsb3QiKQogICAgY2hvc2VuX2NvbHVtbnMgPSBzb2x2ZV9hc3NpZ25tZW50KG9wZW5fc2NvcmVzKQogICAgcmV0dXJuIHNsb3RzW2Nob3Nlbl9jb2x1bW5zXSAgIyBvbmUgKGV4cGVydCwgZGF5LCB0aW1lKSBwZXIgY2xpZW50Cg==" download="solver-models.py">Download the Python models</a> · <a href="https://www.cvxpy.org/tutorial/constraints/index.html#mixed-integer-programs" target="_blank" rel="noreferrer">CVXPY integer variables</a> · <a href="https://www.cvxpy.org/tutorial/solvers/index.html" target="_blank" rel="noreferrer">Solver setup</a></p>
+  </details>
 
 <script>
 (function(){
@@ -129,7 +193,7 @@
       V[i].push(val); } }
     return V; }
   function observe(st,a){ for(var i=0;i<NC;i++){ var j=a[i], k=i*NE+j;
-      var x=MU[k]*(1+NOISE*gauss()); if(x<1)x=1;
+      var x=st.feedback[i].value;
       st.sum[k]+=x; st.n[k]+=1;
       if(st.cellN){ var c=TYPE[i]*S+SPEC[j]; st.cellSum[c]+=x; st.cellN[c]+=1; var ce=st.cellSum[c]/st.cellN[c]; st.resSum[k]+=(x-ce); st.resN[k]+=1; } } }
 
@@ -142,10 +206,11 @@
   var ORDER=["random","greedy","ucb","contextual"];
   function cv(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#888'; }
 
-  var NOISE=0.18, BETA=0.55, round=0, states={}, view="ucb", playing=true, frame=0;
+  var NOISE=0.18, BETA=0.55, round=0, states={}, view="ucb", playing=false, frame=0;
   function reset(){ rng=mulberry32(424242); round=0; frame=0; states={}; ORDER.forEach(function(p){ states[p]=newState(p==='contextual'); }); renderAll(); }
-  function stepRound(){ round++; ORDER.forEach(function(p){ var st=states[p]; var a=POLICIES[p].pick(st,round); var q=totalTrue(a);
-    st.asg=a; st.q=q; if(q>st.best)st.best=q; st.hist.push(q); observe(st,a); }); }
+  function chooseAction(){ round++; ORDER.forEach(function(p){ var st=states[p]; st.asg=POLICIES[p].pick(st,round); st.feedback=[]; }); }
+  function revealFeedback(){ ORDER.forEach(function(p){ var st=states[p]; st.feedback=st.asg.map(function(j,i){ var k=i*NE+j; return {label:'Client '+(i+1)+' → expert '+(j+1),index:k,value:Math.max(1,MU[k]*(1+NOISE*gauss()))}; }); }); }
+  function learnFeedback(){ ORDER.forEach(function(p){ var st=states[p]; observe(st,st.asg); var q=totalTrue(st.asg); st.q=q; st.best=Math.max(st.best,q); st.hist.push(q); }); }
 
   // ---- bipartite drawing ----
   var bc=document.getElementById('bip'), bx=bc.getContext('2d');
@@ -191,7 +256,7 @@
     ctx2.font='11px ui-sans-serif,system-ui';
     [0,10,20,40].forEach(function(g){ var y=Y(g); ctx2.globalAlpha=0.4; ctx2.strokeStyle=cv('--line'); ctx2.beginPath(); ctx2.moveTo(pad,y); ctx2.lineTo(pad+w,y); ctx2.stroke(); ctx2.globalAlpha=1; ctx2.fillStyle=cv('--muted'); ctx2.fillText((g===40?'≥40':g)+'%',6,y+3); });
     ctx2.strokeStyle=cv('--line'); ctx2.beginPath(); ctx2.moveTo(pad,8); ctx2.lineTo(pad,8+h); ctx2.lineTo(pad+w,8+h); ctx2.stroke();
-    ctx2.fillStyle=cv('--muted'); ctx2.fillText('gap below oracle, best so far — how fast each policy converges', pad+6, 8+h+14);
+    ctx2.fillStyle=cv('--muted'); ctx2.fillText('gap below oracle, best so far — hidden-truth evaluation of visited assignments', pad+6, 8+h+14);
     ORDER.forEach(function(p){ if(!POLICIES[p].on)return; var hh=states[p].hist; if(hh.length<2)return; ctx2.strokeStyle=POLICIES[p].color; ctx2.lineWidth=p===view?2.4:1.4; ctx2.globalAlpha=p===view?1:0.85;
       var run=-Infinity; ctx2.beginPath(); for(var i=0;i<hh.length;i++){ if(hh[i]>run)run=hh[i]; var gp=(ORACLE-run)/ORACLE*100, x=X(i), y=Y(gp); if(i===0)ctx2.moveTo(x,y); else ctx2.lineTo(x,y);} ctx2.stroke(); ctx2.globalAlpha=1; }); }
 
@@ -205,21 +270,25 @@
     document.getElementById('s-gap').textContent= st&&isFinite(st.best)? gv.toFixed(1)+'%':'—';
     var meas=0; if(st){ for(var k=0;k<NC*NE;k++) if(st.n[k]>0)meas++; } document.getElementById('s-meas').textContent= meas+' / '+(NC*NE); }
 
-  function buildLegend(){ var L=document.getElementById('legend'); L.innerHTML='';
-    ORDER.forEach(function(p){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name; s.onclick=function(){ view=p; renderAll(); }; L.appendChild(s); });
+  var legendBuilt=false;
+  function buildLegend(){
+    if(legendBuilt){
+      document.querySelectorAll('#viewpills button').forEach(function(b){
+        b.className='pill'+(view===b.value?' on':'');
+        b.setAttribute('aria-pressed',String(view===b.value));
+      });
+      return;
+    }
+    legendBuilt=true; var L=document.getElementById('legend'); L.innerHTML='';
+    ORDER.forEach(function(p){ var s=document.createElement('button'); s.innerHTML='<i style="background:'+POLICIES[p].color+'"></i>'+POLICIES[p].name; s.onclick=function(){ view=p; renderAll(); }; L.appendChild(s); });
     var V=document.getElementById('viewpills'); V.innerHTML='<span class="dim" style="font-size:12px;margin-right:4px">show on graph:</span>';
-    ORDER.forEach(function(p){ var b=document.createElement('span'); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name; b.onclick=function(){ view=p; renderAll(); }; V.appendChild(b); });
+    ORDER.forEach(function(p){ var b=document.createElement('button'); b.value=p; b.setAttribute('aria-pressed',String(view===p)); b.className='pill'+(view===p?' on':''); b.textContent=POLICIES[p].name; b.onclick=function(){ view=p; renderAll(); }; V.appendChild(b); });
     var K=document.getElementById('typekey'); K.innerHTML=''; for(var t=0;t<T;t++){ var s=document.createElement('span'); s.innerHTML='<i style="background:'+TCOL[t]+'"></i>type/specialty '+(t+1); K.appendChild(s); } }
 
-  function renderAll(){ buildLegend(); draw(); chart(); chart2(); stats(); reportHeight(); }
+  function renderAll(){ buildLegend(); draw(); chart(); chart2(); stats(); if(guide)guide.refresh(); reportHeight(); }
 
-  var acc=0, SPEED=8;
-  function tick(){ frame++; if(playing){ acc+=SPEED; while(acc>=10){ stepRound(); acc-=10; } } draw(); if(frame%3===0){ chart(); chart2(); stats(); } requestAnimationFrame(tick); }
-
-  document.getElementById('play').onclick=function(){ playing=!playing; this.textContent=playing?'Pause':'Play'; };
-  document.getElementById('step').onclick=function(){ playing=false; document.getElementById('play').textContent='Play'; stepRound(); renderAll(); };
-  document.getElementById('reset').onclick=function(){ reset(); };
-  document.getElementById('speed').oninput=function(){ SPEED=+this.value; };
+  var guide;
+  function tick(){ if(playing && !document.hidden)frame++; draw(); requestAnimationFrame(tick); }
   document.getElementById('noise').oninput=function(){ NOISE=+this.value/100; document.getElementById('noiseval').textContent=this.value+'%'; };
   document.getElementById('beta').oninput=function(){ BETA=+this.value/100; document.getElementById('betaval').textContent=(+this.value/100).toFixed(2); };
 
@@ -227,7 +296,16 @@
   window.addEventListener('resize', function(){ chart(); chart2(); reportHeight(); });
   window.addEventListener('load', reportHeight);
 
-  reset(); SPEED=8; tick();
+  reset();
+  document.querySelector('.solver-model pre code').textContent=[POLICIES.ucb.pick.toString(), valMatrix.toString(), assignMax.toString(), hungarian.toString()].join('\n\n');
+  guide=SemiBanditGuide({
+    action:'matching', unit:'round', parts:'pairings', count:NC, total:NC*NE,
+    choose:chooseAction, reveal:revealFeedback, learn:learnFeedback,
+    render:renderAll, reset:reset, height:reportHeight,
+    setPlaying:function(value){playing=value;},
+    state:function(){return states[view];}, policy:function(){return POLICIES[view].name;}
+  });
+  tick();
 })();
 </script>
 </body>

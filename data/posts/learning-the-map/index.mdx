@@ -50,6 +50,14 @@ For a top-K list, the solver is sorting. For a route, it is a TSP optimizer. For
 
 The rest of this part walks the same loop three times.
 
+The Python blocks below use **CVXPY**, with HiGHS as the numerical solver:
+
+```bash
+pip install cvxpy highspy numpy
+```
+
+The interactive demos run their solvers in JavaScript. The Python code makes their optimization problems explicit: which variables represent the action, what the objective adds up, and which constraints make the action legal. CVXPY's [integer-variable documentation](https://www.cvxpy.org/tutorial/constraints/index.html#mixed-integer-programs) and [solver setup](https://www.cvxpy.org/tutorial/solvers/index.html) cover the syntax and installation.
+
 ## Example 1 · Routing — learning a city by driving it
 
 Let the city be a graph $G=(V,E)$ where each edge has an unknown mean cost $\mu_e$. A legal action is not one edge but a **Hamiltonian cycle** $T_t$. On day $t$ the driver commits to a full tour, and the world returns a noisy cost $X_{t,e}$ for each of its 52 edges; the day's bill is their sum. The target is the familiar one,
@@ -68,6 +76,44 @@ The demo runs four learners on the real **Berlin52** instance, racing toward the
 
 <Demo src="/demos/posts/learning-the-map/berlin52-semibandit.html?v=1" title="Semi-bandit on Berlin52: learning the map by driving it" height={1180} />
 
+### The routing optimizer, in code
+
+The learner hands the optimizer a matrix of **estimated costs**. For UCB, uncertainty lowers these costs; for Thompson, they come from one sampled map. The optimizer sees that matrix, not the hidden travel times.
+
+Here is the corresponding model in CVXPY. `x[i, j] = 1` means the route uses the road from stop `i` to stop `j`. Every stop needs one incoming and one outgoing road. That alone would allow several disconnected loops, so the visit-order constraints join them into one tour.
+
+```python
+import cvxpy as cp
+import numpy as np
+
+def solve_tour(costs):
+    """Exact directed TSP formulation; may be slow for all 52 stops.
+
+    Symmetric input costs describe the same undirected tour problem.
+    The browser uses nearest-neighbour + 2-opt + Or-opt for responsiveness.
+    Degree constraints alone allow disconnected subtours; MTZ prevents them.
+    """
+    costs = np.asarray(costs, dtype=float)
+    n = len(costs)
+    x = cp.Variable((n, n), boolean=True)
+    u = cp.Variable(n - 1)  # visit order for every stop except depot 0
+    constraints = [cp.diag(x) == 0,
+                   cp.sum(x, axis=1) == 1,  # leave every stop once
+                   cp.sum(x, axis=0) == 1,  # enter every stop once
+                   u >= 1, u <= n - 1]
+    for i in range(1, n):
+        for j in range(1, n):
+            if i != j:
+                constraints.append(u[i - 1] - u[j - 1] + n * x[i, j] <= n - 1)
+    problem = cp.Problem(cp.Minimize(cp.sum(cp.multiply(costs, x))), constraints)
+    problem.solve(solver=cp.HIGHS, highs_options={"time_limit": 30.0})
+    if problem.status != cp.OPTIMAL:
+        raise RuntimeError(f"No certified optimum within the limit: {problem.status}")
+    return np.argmax(x.value, axis=1)  # successor of each stop
+```
+
+The browser uses nearest-neighbour construction followed by 2-opt and Or-opt improvements to keep the 52-stop race responsive. The Python model above instead asks for an exact solution and stops after 30 seconds if it cannot certify one. Both optimize the learner's supplied costs; the browser heuristic does not certify the global optimum.
+
 What the race shows is the heart of the toolbox. **Greedy** trusts its current means and gets stuck re-driving one mediocre tour. **Tabular UCB / Thompson** treat all 1,326 roads as independent unknowns and must drive most of the map before converging — hundreds of days. **Contextual** never learns roads one at a time: it estimates the congestion *field* on a coarse grid (so a few drives in a region predict every road there), then a per-road correction — and it reaches a good tour from a fraction of the measurements, refining toward the optimum as it covers ground. *Structure to start fast; per-piece detail to finish exact.* That contrast — learn-every-piece versus exploit-the-structure — is the one to keep in mind for the next two examples.
 
 ## Example 2 · Matching — pairing clients with experts
@@ -75,6 +121,43 @@ What the race shows is the heart of the toolbox. **Greedy** trusts its current m
 Swap the route for a bipartite **assignment**. Each round you must match clients to experts — one each — and you only learn how good a pairing is once you actually make it. The optimizer is now the exact **Hungarian algorithm** (the in-browser stand-in for an assignment LP you might solve with Pyomo or CVXPY); the learner supplies a value for every client·expert pair.
 
 <Demo src="/demos/posts/learning-the-map/matching-semibandit.html?v=1" title="Semi-bandit matching: clients to experts" height={1180} />
+
+### The matching optimizer, in code
+
+Now the decision variable has a simpler meaning: `x[i, j] = 1` assigns client `i` to expert `j`. Maximize the sum of the selected scores, give every client exactly one expert, and use every expert exactly once. There are no tour constraints.
+
+```python
+def solve_assignment(scores):
+    """Rows = clients; columns = experts (matching) or OPEN slots (scheduling).
+
+    Scheduling creates columns only for available (expert, day, time) slots.
+    In these demos there are exactly as many clients as columns.
+    """
+    scores = np.asarray(scores, dtype=float)
+    n, m = scores.shape
+    if n != m:
+        raise ValueError("These demos use a square, complete assignment")
+    x = cp.Variable((n, m), boolean=True)
+    constraints = [cp.sum(x, axis=1) == 1,  # each client gets one assignment
+                   cp.sum(x, axis=0) == 1]  # each expert/open slot used once
+    problem = cp.Problem(cp.Maximize(cp.sum(cp.multiply(scores, x))), constraints)
+    problem.solve(solver=cp.HIGHS)
+    if problem.status != cp.OPTIMAL:
+        raise RuntimeError(f"Assignment solve: {problem.status}")
+    return np.argmax(x.value, axis=1)
+```
+
+`solve_assignment` takes the learner's score matrix. For the tabular UCB policy in this demo, those coefficients are:
+
+```python
+# mean and counts have shape (18, 18); unseen means start at 55.
+# t starts at 1. The demo uses scale = 30 to put the bonus in score units.
+bonus = beta * 30 * np.sqrt(np.log(t + 1) / (counts + 1))
+scores = mean + bonus
+assignment = solve_assignment(scores)
+```
+
+Changing the learner changes `scores`. It does not change the two assignment constraints. The browser's Hungarian algorithm solves this same assignment problem directly in JavaScript.
 
 The same four policies appear, and **Contextual + per-pair** — which learns a small client-type × expert-specialty table before correcting per couple — leads in the early rounds while greedy stalls and random wanders.
 
@@ -87,6 +170,26 @@ Now give the experts a calendar. Each works only certain Mon–Fri × AM/PM slot
 This demo also makes the hidden quality more honest. Instead of a tidy table, it is sampled from a **matrix factorization**: every client has a latent "needs" vector and every expert a latent "strengths" vector, and a booking is good when the two **align** (clients and experts are coloured by their latent direction, so matching colours should fit) — plus a per-booking quirk. Toggle the **Bipartite view** to see clients fanning into experts sized by capacity; toggle back to watch the week fill the calendar.
 
 <Demo src="/demos/posts/learning-the-map/schedule-semibandit.html?v=1" title="Semi-bandit weekly scheduling on a calendar grid" height={1200} />
+
+### The calendar optimizer, in code
+
+An expert can serve several clients during the week, but each **open slot** can serve only one. Make each available `(expert, day, time)` a column and reuse the assignment model. An unavailable slot never enters the optimization.
+
+```python
+def solve_schedule(scores, available):
+    # scores: client × expert × day × time
+    # available: expert × day × time, with True for an open slot
+    slots = np.argwhere(available)
+    open_scores = scores[:, slots[:, 0], slots[:, 1], slots[:, 2]]
+
+    # As in the demo, there is one client per open slot.
+    if len(scores) != len(slots):
+        raise ValueError("Expected one client per open slot")
+    chosen_columns = solve_assignment(open_scores)
+    return slots[chosen_columns]  # one (expert, day, time) per client
+```
+
+Each expert's capacity is the number of their open columns. The per-column constraint prevents double booking; the per-row constraint prevents booking a client twice. This is still an assignment problem. Extra rules such as consecutive appointments or travel between bookings would need extra constraints.
 
 With the bigger, constrained board the contrast snaps back into focus: the contextual learner — a coarse, low-rank read of the latent factors plus a per-booking correction — runs at roughly **half** the gap of tabular UCB through the whole learning phase, while greedy locks onto an early guess and random never improves. Constraints made coverage hard, and structure paid for it.
 
