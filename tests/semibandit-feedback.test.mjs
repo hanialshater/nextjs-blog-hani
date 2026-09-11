@@ -7,7 +7,7 @@ import test from 'node:test'
 function loadDemo(kind) {
   const html = readFileSync(`data/posts/learning-the-map/demos/${kind}-semibandit.html`, 'utf8')
   const source = html.match(/<script>\s*([\s\S]*?)<\/script>/)[1]
-  const canvas = new Proxy(
+  const canvas = new global.Proxy(
     { createRadialGradient: () => ({ addColorStop() {} }) },
     { get: (target, key) => target[key] || (() => {}) }
   )
