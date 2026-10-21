@@ -83,7 +83,10 @@ export default function Home({
         <h1 className="mb-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           {authorName}
         </h1>
-        <p className="mb-6 text-base text-gray-500 dark:text-gray-400">{authorOccupation}</p>
+        <p className="mb-3 text-base text-gray-500 dark:text-gray-400">{authorOccupation}</p>
+        <p className="mb-6 max-w-md text-center text-base leading-relaxed text-gray-700 dark:text-gray-300">
+          {t('home.tagline')}
+        </p>
 
         {/* Navigation Links */}
         <nav

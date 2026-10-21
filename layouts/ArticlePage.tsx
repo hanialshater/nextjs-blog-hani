@@ -75,6 +75,7 @@ export async function generateArticleMetadata(
   return {
     title: post.title,
     description: post.summary,
+    keywords: post.tags?.length ? post.tags : undefined,
     alternates: { canonical, languages: languageAlternates(post) },
     robots: post.draft ? { index: false, follow: false } : undefined,
     openGraph: {

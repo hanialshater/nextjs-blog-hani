@@ -28,7 +28,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   en: {
     'site.title': "Hani's Blog",
     'site.description':
-      'Technical insights on machine learning, product management, and leadership',
+      'Essays and interactive demos on machine learning, decision-making, and the philosophy behind the systems we build',
     'nav.home': 'Home',
     'nav.primary': 'Main navigation',
     'nav.explore': 'Explore the blog',
@@ -93,10 +93,18 @@ export const translations: Record<Locale, Record<string, string>> = {
     'demo.readRelatedPost': 'Read the related post',
     'home.readMore': 'Read more',
     'home.featured': 'Featured Posts',
+    'home.tagline':
+      'Essays and interactive demos on machine learning, decision-making, and the philosophy hiding inside both.',
+    'follow.title': 'Keep reading',
+    'follow.body':
+      'New essays land here first. I share them on LinkedIn, where I also write Coffee & Commute, and you can follow along by RSS.',
+    'follow.linkedin': 'Follow on LinkedIn',
+    'follow.rss': 'Subscribe via RSS',
   },
   ar: {
     'site.title': 'مدونة هاني',
-    'site.description': 'أفكار تقنية عن التعلم الآلي، إدارة المنتجات، والقيادة',
+    'site.description':
+      'مقالات وعروض تفاعلية عن التعلّم الآلي واتخاذ القرار، والفلسفة المخبّاية ورا الأنظمة اللي منبنيها',
     'nav.home': 'الرئيسية',
     'nav.primary': 'القائمة الرئيسية',
     'nav.explore': 'تصفّح المدونة',
@@ -160,6 +168,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'demo.readRelatedPost': 'اقرأ المقال المرتبط',
     'home.readMore': 'اقرأ المزيد',
     'home.featured': 'مقالات مختارة',
+    'home.tagline':
+      'مقالات وعروض تفاعلية عن التعلّم الآلي واتخاذ القرار، والفلسفة المخبّاية جوّا الاثنين.',
+    'follow.title': 'خلّيك متابع',
+    'follow.body':
+      'المقالات الجديدة بتنزل هون أول. بشاركها على لينكدإن، وهناك بكتب كمان Coffee & Commute، وفيك تتابع عن طريق RSS.',
+    'follow.linkedin': 'تابعني على لينكدإن',
+    'follow.rss': 'اشترك عبر RSS',
   },
 }
 

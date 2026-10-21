@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
-import { locales, Locale } from '@/i18n/config'
+import { locales, Locale, getTranslation } from '@/i18n/config'
 
 interface PageSEOProps {
   title: string
@@ -46,6 +46,7 @@ export function genLocalizedPageMetadata({
   ...rest
 }: LocalizedPageSEOProps): Metadata {
   const validLocale = locales.includes(locale as Locale) ? (locale as Locale) : 'en'
+  const pageDescription = description || getTranslation(validLocale, 'site.description')
   const normalizedPath = path.replace(/^\//, '').replace(/\/$/, '')
   const canonicalUrl = `${siteMetadata.siteUrl}/${validLocale}${normalizedPath ? `/${normalizedPath}` : ''}`
   const languages = Object.fromEntries(
@@ -57,14 +58,14 @@ export function genLocalizedPageMetadata({
 
   return {
     title,
-    description: description || siteMetadata.description,
+    description: pageDescription,
     alternates: {
       canonical: canonicalUrl,
       languages,
     },
     openGraph: {
       title: `${title} | ${siteMetadata.title}`,
-      description: description || siteMetadata.description,
+      description: pageDescription,
       url: canonicalUrl,
       siteName: siteMetadata.title,
       images: image ? [image] : [siteMetadata.socialBanner],
