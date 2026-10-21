@@ -12,6 +12,7 @@ import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import ReadingProgressBar from '@/components/ReadingProgressBar'
 import ShareButtons from '@/components/ShareButtons'
+import FollowAlong from '@/components/FollowAlong'
 import { useLocale } from '@/i18n/LocaleContext'
 import type { Locale } from '@/i18n/config'
 import { getPostRoutePath, getPostCanonicalUrl } from '@/lib/content/postRoutes'
@@ -234,6 +235,7 @@ export default function PostLayout({
               >
                 {children}
               </div>
+              <FollowAlong />
               <div className={`flex pt-6 pb-6 ${isRTL ? 'justify-start' : 'justify-end'}`}>
                 <ShareButtons url={postUrl} title={title} />
               </div>
