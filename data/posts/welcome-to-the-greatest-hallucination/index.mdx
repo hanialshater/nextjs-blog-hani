@@ -5,206 +5,205 @@ date: '2025-11-20'
 tags: ['philosophy', 'ai', 'tech-industry', 'baudrillard']
 draft: false
 images: ['/static/images/posts/welcome-to-the-greatest-hallucination/simulacra.png']
-summary: "We're not in a bubble—bubbles pop and you return to normal. We're in a simulacrum. There's no normal to return to. A Baudrillardian analysis of the AI industry's drift from reality into hyperreality, and how to survive the inevitable reload."
+summary: 'How a story about the future of AI starts issuing instructions to the present, from Watson on Jeopardy! to Watson in the oncology clinic. What would change my mind, and how to keep building honestly inside the loop.'
 project: philosophy
-lastmod: '2026-09-06'
+lastmod: '2026-10-21'
 ---
 
 ![From Code to Cult: The AI Simulation Machine](/static/images/posts/welcome-to-the-greatest-hallucination/simulacra.png)
 
 Wake up in the morning, brush your teeth, and open LinkedIn. Tell me, what do you see?
 
-A stream of "groundbreaking" announcements, mind-blowing achievements. "Experts" who are absolutely "thrilled to share" their latest success. Apparently, we live in a world where everyone is a visionary, every startup is a unicorn, stocks are rising, the market is booming. Life is good!
+A stream of groundbreaking announcements. Experts absolutely thrilled to share. Everyone is founding something, shipping something, or explaining why the rest of us have eighteen months left to remain employable.
 
-But here's the thing: it's all of them but you.
+And you? You have a backlog.
 
-You scroll faster. Everyone's climbing the promotion ladder, making money, building products. And you? You're drowning. Linear algebra, optimization, ML and deep learning, then LLMs and agent systems, MLOps and system design. Too much on your plate. Too many papers to keep up with. Too many people to catch up to.
+Linear algebra, optimization, deep learning, LLMs, agents, MLOps. Papers to read, tools to learn, people to catch up to. You were halfway through understanding yesterday's future when somebody released tomorrow's.
 
-You know what success looks like: a very smart guy who writes complex math in papers, fills dense appendices with Greek letters, and designs architecture diagrams that look like circuit boards. We've learned to recognize this shape. We see it and think: this must be real. Look how cool and useful it is! But let me ask you: are you sure this is what success looks like? How could you be sure?
+You know what success looks like. A very smart person writes complex math, attaches an appendix full of Greek letters, and draws an architecture diagram that requires its own architecture diagram. We've learned to recognize the shape.
 
-It's not an easy question. You haven't lived that success; you've seen its showroom. So let me take you to an actual showroom: IKEA. You walk through staged rooms no one lives in, think, look how cool this is, then arrange your real home to match. The fake isn't a photoshopped image of a real room—it becomes the template for real rooms. The fake produces the reality!
+But how did that shape become the thing to pursue?
 
-That inversion creates a self-inflating balloon that keeps you up at night trying to catch a career that does not exist. And it is not only you—you suffer, companies suffer, and even the whole economy! But wait, I am not saying we are in a bubble. Bubbles pop and you return to normal. We're in a **simulacrum**—there's no normal to return to.
+Let me take you to IKEA. You walk through rooms nobody lives in, admire the life arranged inside them, then go home and move your furniture. The staged room becomes the template for the real one.
 
-So now, let me tell you what a simulacrum is. Jean Baudrillard described how an image can stop representing reality and become the model reality is made to follow. Eventually, asking where the original went no longer gets you anywhere. His *Simulacra and Simulation* opens with this warning:
+Something similar happens with careers. The public performance of success becomes a specification for how to live. You choose the skills, the job title, even the problems that will make your life look like the picture.
 
-> *"The simulacrum is never that which conceals the truth—it is the truth which conceals that there is none. The simulacrum is true!"*
+Companies do it too. A board asks what a company fit for the future should look like. The answer comes from other companies' announcements. A roadmap follows, then a team, then a budget. By the next funding round, those commitments can be presented as evidence that the future is arriving.
 
-Baudrillard's simulacrum is a very dangerous idea, and if you buy it, we will need to talk about it. But first, let me tell you how we got here.
+Jean Baudrillard described how representations can become models reality is made to follow. His simulacrum helps us see what is at stake here. A story about the future can acquire authority over what gets built in the present.
 
----
+The showroom starts issuing instructions.
 
-## Welcome to the Greatest Hallucination
+In AI, this can happen on a remarkable scale. Expectations attract investment. Investment buys infrastructure and produces revenue for suppliers. That revenue becomes evidence for the expectations that attracted the investment.
 
-Going from reality to simulation is not a new trick. Picture the old arrangement: people gather food and build houses. When trouble comes, they turn to the wise guys. The wise guys become important, acquire authority over the story, and start telling everyone how to live. Dogma becomes an institution. The hallucination becomes something real. It is not false information; it is the code people live by.
+A useful product can survive and still earn far less than the business built around it needs.
 
-The simulation validates and amplifies itself. It rewards narrators, not value builders. It is not the farmers or workers who came to power, but the priests and kings. It is not the workers who make money, but the guys who run the bank. And so on.
+## The Programmer Behind the App
 
-But who cares about the past? We are in the AI age now—the simulation on fast-forward, haha. We did not need centuries. In roughly fifteen years, the story went from useful models to a whole reality organized around them.
+Before the industry, start with one person.
 
-### Brief History of the Great Hallucination
+Imagine someone builds their first serious application by vibe coding. They describe what they want, ask a model for changes, and keep going until it runs. There is a login screen, a database, a payment flow. They have shipped something people can use.
 
-The stages overlap. What changes is which one sets the terms.
+Then an order appears twice. They ask the model to fix it. It produces a patch. The duplicate disappears, but they cannot explain what caused it or why the patch works.
 
-**Stage 1: The Sign Reflects Reality (2008-2012)**
+We might call this forgetting how to code. In this example, there was nothing to forget. They never worked through the implementation decisions we assumed the finished application demonstrated.
 
-ML became hot. People realized it was a very useful tool. Andrew Ng's [2011 online course](https://www.andrewng.org/courses) attracts more than 100,000 students. AlexNet crushes ImageNet in 2012. You can download code, run experiments, argue over results. Knowledge leads to results. Results lead to reward.
+The application is real. So is the achievement of getting it built. They may have learned useful skills in directing and testing an AI system. But the result alone cannot tell us whether they can reason about the code when the model's next answer is wrong.
 
-Then the break: too many ML graduates, too much venture capital. Everyone needs a new story.
+Once that app becomes a portfolio, it can stand in for a history of understanding its maker never acquired. An employer reads it that way. Its maker may start reading it that way too.
 
-**Stage 2: The Sign Distorts Reality (2013-2023)**
+That is the interesting hallucination: the working product becomes evidence for a particular picture of the person behind it. The code is available to inspect; the competence we attributed to its author has barely been examined.
 
-Ten years of gradual hype buildup. The shift wasn't a button press—it was slow drift.
+## How the Story Takes Over
 
-DeepMind's DQN learns to play Atari games. AlphaGo beats Lee Sedol and the world loses its mind. Neural machine translation takes over Google Translate. Real breakthroughs—but the hype machine kicks in.
+Baudrillard described four successive phases of the image, each further from the thing it once represented. Use them to watch what happens to the link between an announcement and what it promises. In practice the phases overlap. A single company can produce excellent research, exaggerate a product, and sell a future it has no idea how to deliver.
 
-"Deep Learning" becomes the name everyone wants on the cover. Neural networks acquire depth, compute—and much better branding. You test 47 architectures, report the winner, and let the other 46 rest in peace. Every startup adds "AI-powered" to its deck. Elon keeps promising full self-driving. IBM Watson goes from Jeopardy to oncology. Self-driving is "99% solved"—except the last 1% is the entire problem.
+### The Sign Reflects Reality
 
-GPT-2 arrives surrounded by warnings about misuse. The largest version is withheld, then [released that November](https://openai.com/index/gpt-2-1-5b-release/). Whatever the intention, "too dangerous to release" is quite a product launch. GPT-3 arrives at a scale most researchers cannot afford to train, with weights they cannot download. Papers cite papers cite capabilities their readers cannot independently check.
+Start with an experiment. A model does better at a task. Other people inspect the method, compare results, and try to reproduce it. The claim has somewhere to answer for itself.
 
-ML is eating the world. In 2014, [Parallel Double Greedy Submodular Maximization](https://proceedings.neurips.cc/paper_files/paper/2014/file/63545404a8d4327e42a3416d73647995-Paper.pdf) appears at NIPS: approximation guarantees, parallelism, concurrency control. Familiar computer-science questions, gathered under an ML roof. The umbrella now covers the algorithms, the optimization, and the systems underneath. By the time all of that reaches the company deck, the whole stack is an AI achievement.
+In 2011, IBM's Watson [defeated two _Jeopardy!_ champions](https://research.ibm.com/publications/introduction-to-this-is-watson). The challenge had rules, opponents, and a result people could watch. It was a real achievement in answering questions expressed in natural language.
 
-The sign still points to *something*. Just not as much as claimed.
+The distance between the announcement and the result was short enough to walk.
 
-**Stage 3: The Sign Masks Absence (2022-2024)**
+### The Sign Distorts Reality
 
-November 2022: ChatGPT launches. Within two months, [an estimated 100 million monthly active users](https://www.reuters.com/technology/chatgpt-sets-record-fastest-growing-user-base-analyst-note-2023-02-01/). AI stops being a niche topic and becomes the only topic.
+Now imagine a team trying dozens of architectures and publishing the winner. The result can be real while the presentation hides how much searching it took, which comparisons were convenient, or how badly the method behaves outside the benchmark.
 
-The multibillion-dollar commitments pile up. By early 2025, the reported figures include:
-- Microsoft → OpenAI: [at least $13B committed](https://www.ftc.gov/system/files/ftc_gov/pdf/p246201_aipartnerships6breport_redacted_0.pdf)
-- Google → Anthropic: [more than $3B committed](https://www.reuters.com/technology/artificial-intelligence/google-invests-1-bln-openai-rival-anthropic-ft-reports-2025-01-22/)
-- Amazon → Anthropic: [$8B](https://www.anthropic.com/news/anthropic-amazon-trainium)
+The distortion grows as the result travels. A paper demonstrates a capability under particular conditions. A presentation drops the conditions. A sales deck turns the capability into a product. By the time the story reaches the customer, the machine has acquired several skills its authors never tested.
 
-What are they buying? More than current capabilities—those are commoditizing. They're buying territory in the AGI market. The market that doesn't exist yet. The market everyone agrees will exist because everyone is buying territory in it.
+There is no need for a central liar. Each person makes the story a little easier to tell.
 
-**Stage 4: Full Simulacrum (By 2025)**
+### The Sign Masks Absence
 
-By now, the simulation is validating itself. Look at the episodes that brought us here.
+The promise expands from a demonstrated task to an anticipated capability.
 
-**The simulation protects its narrators:**
-November 2023—OpenAI's board fires Sam Altman. Employees threaten to leave en masse. Microsoft offers a landing place. Within days, a deal brings Sam back; a [new initial board](https://openai.com/index/sam-altman-returns-as-ceo-openai-has-a-new-initial-board/) follows. The people with the formal authority to remove him cannot make the removal stick. The narrator turns out to be harder to replace than the board.
+A system can write code. The pitch becomes autonomous software engineering. It can answer questions about documents. The pitch becomes an employee who understands your business. The distance between them contains research problems, integration work, and sometimes a human quietly keeping the demo alive.
 
-October 2024—Hinton and Hopfield win the [**Physics Nobel**](https://www.nobelprize.org/prizes/physics/2024/press-release/) for work that used ideas from physics to build learning networks. Hassabis and Jumper share the [**Chemistry Nobel**](https://www.nobelprize.org/prizes/chemistry/2024/press-release/) for protein-structure prediction, alongside David Baker for protein design. Watch what happens to the story: distinct scientific achievements become one industry-wide victory. AI won physics! AI won chemistry! The ultimate gatekeepers of scientific legitimacy become part of the AI victory lap. The prize is specific; the borrowed authority travels everywhere.
+This is where AGI becomes commercially useful before anyone agrees how to recognize it. It gives very different investments a shared destination.
 
-January 2025—[Stargate announces plans for $500B](https://openai.com/index/announcing-the-stargate-project/) in AI infrastructure over four years. Half a trillion dollars. The number is so absurd it glitches. But a number that large *must* mean something real is happening. The scale proves the substance. Which justifies more investment. Which proves AGI is near.
+In January 2025, Stargate [announced an intention to invest USD 500 billion](https://openai.com/index/announcing-the-stargate-project/) in AI infrastructure over four years. Half a trillion dollars. Before any of it had been spent, the sheer size of the number could already work as an argument: surely nobody would contemplate spending that much unless the destination were close.
 
-**The godfather still has work to do:**
-November 2025—Yann LeCun, Turing Award winner and one of the three "Godfathers of Deep Learning," [announces plans to leave Meta](https://www.linkedin.com/posts/yann-lecun_as-many-of-you-have-heard-through-rumors-activity-7397020300451749888-2lhA) to build a company around his Advanced Machine Intelligence research program. Meta will remain a partner. World understanding, persistent memory, planning: listen to the list. These are the things the sales pitch lets us assume are already on their way. A godfather is building a research program to get there. We borrow his authority to announce the destination, then stop listening when he describes how much road remains.
+A proposed expenditure starts doing the persuasive work of a result.
 
-**It's turtles all the way down:**
+### The Signs Become Their Own Reference
 
-Nvidia sells real chips. But investors are also pricing in a future in which demand keeps growing. Those expectations lean on OpenAI's growth story. That story leans on Microsoft's backing. Microsoft's backing leans on Azure compute growth. Azure compute growth leans on... startups buying compute with VC money to build AI products, while investors point at Nvidia's success as proof that the whole thing works.
+Eventually, announcements begin referring to each other for authority.
 
-Follow the justification around the loop and where do you end up? Back at the expectations you started with. A self-referential loop of expectations inflating expectations.
+A startup must have something because a major company invested. The investment must be wise because demand for compute is growing. Compute demand must demonstrate customer value because startups keep buying it.
 
-**The simulation bootstraps its own reality!**
+Here is a simplified version of how that can be wired. Big Tech Giant invests USD 500 million in an AI startup. The agreement requires the startup to spend some of that money on Big Tech Giant's cloud. The startup announces its funding. The provider records revenue as it delivers the computing services. Both have something impressive to report.
 
----
+The number is illustrative. The mechanism is documented: the FTC found that major cloud and AI partnerships [included commitments to spend substantial investment funds on the investor's cloud services](https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2025/01/behind-ftcs-6b-report-large-ai-partnerships-investments).
+
+The provider delivered real services and earned real revenue. Investment is supposed to finance work before customers can pay for the result. The mistake comes when we count the funding announcement and the resulting cloud revenue as two independent confirmations that customers will eventually support the business. Some of the apparent corroboration comes from the same financing decision.
+
+If those customers arrive and pay enough, the loop has helped build something productive. If they don't, another funding round may have to keep the apparent demand alive.
+
+The same circularity shows up inside companies. Ask why a company needs an AI strategy and the answer may be that every serious company has one. Ask how we know serious companies need one and out come the strategies.
+
+The loop has begun setting its own admission criteria. A project that fits the image of the future can look sensible before anyone identifies whose problem it solves. A useful project outside that image has to explain why it belongs.
+
+## Watson Goes to the Clinic
+
+Two years after the televised victory, Watson was being prepared for a very different setting.
+
+In November 2013, MD Anderson [told readers](https://www.mdanderson.org/cancerwise/what-ibm-watson-means-for-our-patients.h00-158834379.html) that its Watson-powered Oncology Expert Advisor would soon be used by doctors and researchers, starting with leukemia. The ambition extended to all its clinics and to making specialist knowledge available beyond Houston. Later in the same article, the hospital explained that the system was still being tested and that the timeline for patients to receive it was unknown.
+
+The university's later records put institutional decisions beside that public future. Its fiscal 2017 audit report [summarized a procurement review](https://www.utsystem.edu/sites/default/files/offices/system-audit/SAO%20Annual%20Report%20FY%202017%20-%20UT%20System%20Audit%20Office%20-%20FINAL.pdf#page=20): MD Anderson had adequate standard procedures, but they had not been consistently applied to the project under review.
+
+The 2018 audited financial statements [recorded a USD 26.5 million impairment](https://utsystem.edu/sites/default/files/documents/report-state/2018/consolidated-annual-financial-report-fy-2018/ut-system-audit-afr-2018.pdf#page=86) on part of the Oncology Expert Advisor project in 2017. This reduced the asset's recorded value; it was not the project's total spending. The note still described the project as construction in progress.
+
+An ambitious project can fail honorably. These records establish a financial disappointment and a failure to apply ordinary controls; they do not establish that the rhetoric caused either. They give us somewhere concrete to ask how much authority a promised future should have over the next deliverable and the next payment.
+
+The same system, two years apart: first a sign that reflected a result, then a sign standing in for one. The showroom had become a project. It still needed to pass inspection.
 
 ## The Nature of the Simulacrum
 
-Before you go looking for the architect—some shadowy cabal pulling strings—let me save you time: there aren't any. Nobody designed this. **The Matrix wasn't built by machines. It emerged from us.**
+No shadow council needs to arrange any of this. The incentives can assemble it from ordinary people trying to get their next decision approved.
 
-Fear of exclusion. Need for status. Looking at the group to work out where it's safe to stand. Now these instincts drive us to chase metrics we don't believe in and signal belonging to tribes we don't respect.
+In Baudrillard's terms, the product carries sign value as well as use value. It can signal that a company is innovative while contributing very little to its operations. A complicated architecture can make a team look sophisticated while making the service harder to maintain.
 
-The system optimizes for its own metrics—valuations, engagement, citations—which drift further from anything that matters. Take a simplified example: Big Tech Giant invests $500 million in a hot AI startup, with a commitment to buy cloud services back from Big Tech Giant. Tech Giant books cloud revenue as those services are delivered. Startup announces funding at an impressive valuation. Everyone gets a success story. Nobody has yet shown what an independent customer will pay for the finished product. The [cloud-spending commitments are real](https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2025/01/behind-ftcs-6b-report-large-ai-partnerships-investments); the round $500 million here is an illustration.
+The two values can coexist. Trouble begins when the rewards for the appearance become strong enough to weaken the checks on the substance.
 
-The market values **Sign Value**—hype, prestige, the appearance of innovation—over **Use Value**—does this solve a boring problem profitably? That gap is where the system eats itself.
+## Why Awareness Changes So Little
 
-**Why can't anyone escape?**
+You know all this already. You roll your eyes at the announcements. You recognize the demo with a person behind the curtain.
 
-In a simulacrum, awareness doesn't break the spell—it's part of the spell. Workers are trapped by hope ("If I build good tech, I'll become successful"), belief ("We really are building AGI"), and golden handcuffs (equity vesting, resume building, sunk cost). Narrators are trapped by competition (other narrators will out-simulate you) and lock-in (admitting simulation destroys valuation). Both are trapped. The system runs on everyone's participation.
+Then your manager asks about the AI roadmap.
 
-### The Glitches
+Your competitors have one. The board expects one. An engineer wants experience that will still look current on a CV next year. A founder needs to close a round before payroll. Each has a reason to participate, even if each privately doubts the performance.
 
-You know the feeling. Déjà vu. The story stutters. Something doesn't fit.
+This is the part I find hardest to dismiss. The system does not require universal belief. It can run on people who think they understand the bullshit and can manage their exposure to it. Peter Sloterdijk called this enlightened false consciousness. Žižek's shorter version: they know very well what they are doing, but still, they are doing it.
 
-We still die from cancer. We still live in small apartments. We still sit in traffic. Poverty is still there. COVID pushed us to the limit. Then you open LinkedIn and discover we've already entered a new civilization. Apparently nobody told the landlord.
+Cynicism becomes comfortable accommodation. We laugh, update our profiles, and carry on.
 
-Meanwhile:
-- Valuations price in customers who haven't arrived
-- "Experts" multiply but problems don't get solved
-- Investor-funded spending comes back dressed as independent demand
-- Everyone is "thriving" but everyone is burned out
-- Productivity tools proliferate but nobody has more time
-- The most valuable companies sell picks and shovels for a gold rush that may never come
+Somewhere inside the performance, people are also doing excellent work. The incentives rarely give us the courtesy of separating everyone into honest builders and dishonest narrators. The same person can solve a difficult problem in the morning and oversell it in the afternoon.
 
-The narrative says revolution. Reality says: same problems, shinier dashboards.
+## The Glitches
 
-And here's the really fucked up part: we see the glitches. We scroll past "thrilled to share" with a smirk. We joke about the grifters. We roll our eyes at the complexity theater. We're all aware the emperor has no clothes.
+The useful check comes after the demo, when someone has to do the job with the tool. Some tools pass it impressively.
 
-And we keep playing. We refresh portfolios. We network at conferences. We update LinkedIn with carefully crafted humility. We half-hope our company gets acquired before anyone checks whether the metrics are real.
+In a field study of 5,172 customer support agents, AI assistance [increased issues resolved per hour by 15% on average](https://academic.oup.com/qje/article/140/2/889/7990658), with larger benefits for less experienced workers. That is worth getting excited about.
 
-Because in a simulacrum, awareness doesn't break the spell—it's part of the spell. Cynical distance is how we tolerate our participation. **We know it's bullshit. We do it anyway.** The performance continues because everyone is performing, and no one wants to be the first to stop. The simulation runs on our participation.
+Now imagine turning that finding into a forecast for replacing knowledge work. The forecast helps justify a valuation, the valuation attracts investment, and the investment is cited as confirmation that the forecast is sensible.
 
----
+The measured improvement has acquired a much larger family of claims. It cannot support them all.
 
-## The Inevitable Collapse
+The glitches worth watching are closer to the business itself. A customer signs a pilot but never expands it. Time saved drafting reappears as time spent checking. Usage rises while the provider loses more money serving it. A company announces impressive revenue but depends heavily on customers funded by its own investors.
 
-So we like the game—why should we care? Couldn't the simulation run forever?
+Watch what happens when results disappoint. Does the explanation get more specific, producing a better test or a different product? Or does the payoff simply move further into the future?
 
-Fortunately or unfortunately, depending on your taste, the answer is no. Simulations need fuel. This one keeps borrowing it from the future.
+## Where the Loop Can Break
 
-**Economic Concentration**
+A lab misses its revenue target and needs more funding to keep buying compute. If the next round fails, it reduces its cloud spending. The provider loses some of the growth that helped justify its investment in the lab.
 
-The AI boom was driven by economic incentive. Now more and more of the growth story depends on the same bet: AI will justify the money pouring into it. The cloud providers, the chipmakers, the model labs—different names, increasingly dependent on the same promised future.
+The feedback can run backwards.
 
-But here's the problem with the next doubling: expectations can double on a screen. Paying demand has to come from somewhere. Customers need budgets. Data centers need power, chips, land. Healthcare, logistics, food, housing—the physical world keeps sending invoices while we finance its replacement.
+The adjustment could come through slower construction, acquisitions, or returns that disappoint investors while the products keep improving. A sudden crash is one possible outcome. A long, expensive disappointment would also send invoices.
 
-Now suppose a lab misses its revenue target. It needs more funding to keep buying compute. If that funding stops, it cuts its cloud spending. The cloud provider loses part of the growth that helped justify the investment in the first place. What looked like separate confirmations—funding, cloud revenue, rising valuations—turns out to depend on the same customer's next round. The loop can run backwards. A better story cannot pay the electricity bill forever.
+Three pressure points decide which one we get.
 
-**The Automation Paradox**
+**Paying demand.** Customers have to capture enough benefit to pay for the service. Providers have to retain enough of that payment to cover the full cost of delivering it and financing the infrastructure. Competition could make powerful AI cheap and widely useful while leaving investors with disappointing returns. Customers would quite reasonably call that progress. The shareholders might choose another word.
 
-AI promises automation and cost savings. Translation: massive job displacement. The pitch deck says "efficiency." The spreadsheet says "layoffs."
+**Distribution.** If savings accumulate with owners while displaced workers lose purchasing power, demand can suffer. Lower prices, new work, or redistribution could offset that loss. The outcome depends on how the gains reach people, a question no company's plan to reduce its own wage bill can settle.
 
-But here's the paradox nobody wants to talk about: if the savings flow to owners while workers lose their income, automation erodes the customer base. If AI replaces workers, who pays for AI? The product starts eating the market it was supposed to serve.
+**Research.** A company can approve a bigger training run. It cannot approve the discovery that run is expected to produce. A business can commit money and people to the next attempt. Its financing becomes fragile when it also needs the attempt to deliver a particular breakthrough by a particular date. What happens when the next leap takes longer than the funding cycle? The research problem gets a deadline, and the researcher gets a performance review.
 
-You can't automate your way to prosperity if prosperity requires customers with jobs.
+## What Would Change My Mind
 
-**The Breakthrough on the Roadmap**
+Growing numbers of customers renewing at prices that cover the full service cost would strengthen the case for durable demand. So would adoption that survives the end of subsidies, with measured benefits that hold up in normal operation. If those customers generate enough cash to support the infrastructure, the next funding round becomes less decisive.
 
-Tons of papers. Tons of conferences. Tons of PhDs. But where are the breakthroughs?
+The opposite pattern would deepen my concern: impressive usage maintained through discounts, pilots that never become routine purchases, and repeated refinancing of obligations whose payoff keeps moving away.
 
-It feels like technology building, not research. Same architectures, more parameters, bigger datasets. We plot GPT-2, GPT-3, and GPT-4 on a slide, extend the line, and budget for the next point. But that missing point is a research problem. You can approve a bigger training run; you cannot approve the discovery it is supposed to produce.
+A theory that can absorb every outcome becomes another way to protect its narrator. Calling everything a simulacrum should not give me that privilege.
 
-What happens when the next leap takes longer than the funding cycle? The research problem gets a deadline, and the researcher gets a performance review.
+## The Reload
 
-**The Structural Inevitability**
+Suppose some of the financial story fails. Useful technology can survive the correction. People who built it can still lose their jobs. Infrastructure may pass to new owners, sometimes owners with more power than before.
 
-Here's the really uncomfortable truth: every simulation eventually collides with something it can't simulate.
+A crash does not award the machines to the most deserving engineer.
 
-The AI simulation will collide with economics (financing and paying demand), society (the automation paradox), and science (research on a funding deadline).
+The dot-com crash did not erase the usefulness of the internet. It did expose the distance between a technology becoming important and particular investments paying off. An industry can eventually transform the world and still bankrupt people who correctly saw that transformation coming.
 
-These pressures meet in the same business plan. It needs capable systems, customers who can pay, and returns big enough to finance the next leap. The narrator can promise all three together; the company has to make them work together. That's where the loop runs into trouble. The models don't have to stop improving for the financial story to break. A useful product can survive and still earn far less than the business built around it needs.
+A financial reset also leaves plenty of room for the social machinery to continue. The appetite for prestige, the fear of missing out, and the demand for an impressive future will find new material.
 
-When that collision comes—and it will—the question isn't *whether* there's a correction. It's how severe.
-
-### The Reload
-
-When the simulation breaks, the hype vanishes. But the value stays. The infrastructure stays.
-
-Electricity had its prophets and exhibitions and wild promises. Now it powers everything quietly. The internet had its dot-com crash. What survived? Email, e-commerce, search—tools that actually work.
-
-AI will follow the same path. Not AGI prophecy. Not robot apocalypse. Just tools that solve specific problems. Exciting, useful, grounded.
-
-And here's the beautiful part: what emerges is often more impactful than what was promised. The real revolution happens after the hype dies.
-
-But don't get too comfortable. Every reload plants the seeds of the next simulation. The cycle continues. New technology, new prophets, new promises.
-
----
+There is no pristine normal waiting underneath the market chart. There can still be better ways to build.
 
 ## Surviving Simulacra
 
-Here's where The Matrix got it wrong. There's no red pill. There's no blue pill. Take both.
+_The Matrix_ offered a wonderfully convenient product: one pill, permanent clarity. Baudrillard himself said the film misunderstood him, which seems about right. I would still like a prescription.
 
-Live in the simulation. Think outside of it. You can't exit—you have bills, a career, a life inside. But you can learn to surf it.
+We have careers, bills, and work worth doing inside these systems. We need ways to make a promising story answer to the work, before it acquires a department that depends on keeping the story alive.
 
-**Open source erodes narrator value.** Narrators control access, gatekeep knowledge, hide behind mystery. Open source puts more capability in other people's hands. When code and model weights are available, more people can test, compete, improve. Llama didn't just challenge GPT—it broke the mystique. Hugging Face didn't just host models—it spread the ability to build. The narrators lose power when the magic becomes reproducible.
+**When choosing a project,** follow a customer's actual task. What became easier? What still requires human checking? Include integration, review, and failure in the cost. The customer who renews from an operating budget tells you something a conference applause meter cannot.
 
-**Democracy of infrastructure.** Don't rent your capabilities from the narrators. Local compute, open models, community-owned tools. The more decentralized the infrastructure, the less leverage the simulation has over you. Build on foundations you can verify, not promises you have to trust. A data center doesn't change owners because a valuation collapses. If we want the builders to inherit anything, we have to build that independence before the crash.
+**When choosing a technical foundation,** examine what you can inspect, reproduce, and replace. Open code and available model weights can give more people that ability. Work out the remaining dependencies too: chips, compute, expertise, and maintenance. Independence needs an actual budget.
 
-**Build real value.** Use Value over Sign Value. Solve problems customers actually pay for—without VC subsidies propping up the illusion. Your customer needs the thing to work, not another quarterly explanation of why it doesn't. When the reload comes, the things that actually work survive. The things that only exist as performance don't.
+**At work,** give uncertainty somewhere useful to go. A team should be able to report that a pilot disappointed, or that a simpler method worked better, without making its own survival depend on a more exciting explanation. Otherwise, everyone learns which results are welcome.
 
-**Surf the glitches.** Train your eye for contradictions—that's where opportunity lives. Valuations running ahead of customers. Expertise without output. Investment passing for demand. When the story stops making sense, that's your signal. The collapse opens a fight over who gets to build what comes next. The narrators lose their grip; the builders have a chance to take control of the infrastructure. Having that chance and taking it are two different things.
+**And keep a record of the original promise.** What was supposed to improve, by how much, and under which conditions? Decide what would make you stop before the quarterly review gives you reasons to continue.
 
-You can't exit the simulation. But you can learn to surf it.
+You can enjoy the technology. You can build ambitious things with it. You can even be thrilled to share.
+
+Then, a few months later, share what happened.
