@@ -1,10 +1,18 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: 'Hani\'s Blog',
+  title: "Hani's Blog",
   author: 'Hani Al-Shater',
-  headerTitle: 'Hani\'s Blog',
-  description: 'Technical insights on machine learning, product management, and leadership',
-  keywords: ['Machine Learning', 'Product Management', 'Leadership', 'Software Engineering'],
+  headerTitle: "Hani's Blog",
+  description:
+    'Essays and interactive demos on machine learning, decision-making, and the philosophy behind the systems we build',
+  keywords: [
+    'Machine Learning',
+    'Philosophy of AI',
+    'Decision-Making',
+    'Search and Ranking',
+    'Leadership',
+    'Interactive Demos',
+  ],
   googleSiteVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   language: 'en-us',
   theme: 'system', // system, dark or light

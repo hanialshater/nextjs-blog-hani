@@ -24,7 +24,12 @@ function loadSparks(): Spark[] {
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  return genLocalizedPageMetadata({ title: "Hani's Blog", locale })
+  // The layout's title template appends the site name, so the page title is the author's name
+  // (avoids "Hani's Blog | Hani's Blog").
+  return genLocalizedPageMetadata({
+    title: locale === 'ar' ? 'هاني الشاطر' : 'Hani Al-Shater',
+    locale,
+  })
 }
 
 export async function generateStaticParams() {
@@ -54,7 +59,10 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     <Main
       sparks={localizedSparks}
       authorName={author?.name || 'Hani Al-Shater'}
-      authorOccupation={author?.occupation || 'Technical Leader'}
+      authorOccupation={
+        [author?.occupation, author?.company].filter(Boolean).join(locale === 'ar' ? '، ' : ', ') ||
+        'Head of Search'
+      }
       authorAvatar={author?.avatar || '/static/images/avatar.png'}
       featuredPosts={featuredPosts}
     />
