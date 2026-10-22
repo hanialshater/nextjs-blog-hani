@@ -5,205 +5,207 @@ date: '2025-11-20'
 tags: ['philosophy', 'machine-learning']
 draft: false
 images: ['/static/images/posts/welcome-to-the-greatest-hallucination/simulacra.png']
-summary: 'How a story about the future of AI starts issuing instructions to the present, from Watson on Jeopardy! to Watson in the oncology clinic. What would change my mind, and how to keep building honestly inside the loop.'
+summary: "Not a bubble, a showroom. How stories about AI's future start giving orders to the present, from Watson on Jeopardy! to Watson in the oncology clinic. Plus the word I took back, what would change my mind, and how to keep building inside the loop."
 project: philosophy
-lastmod: '2026-10-21'
+lastmod: '2026-10-22'
 ---
 
-![From Code to Cult: The AI Simulation Machine](/static/images/posts/welcome-to-the-greatest-hallucination/simulacra.png)
+![A four-stage spaceship diagram of the AI hype cycle, from reproducible results to a self-sustaining narrative](/static/images/posts/welcome-to-the-greatest-hallucination/simulacra.png)
 
-Wake up in the morning, brush your teeth, and open LinkedIn. Tell me, what do you see?
+Wake up in the morning, brush your teeth, open LinkedIn. Tell me, what do you see?
 
-A stream of groundbreaking announcements. Experts absolutely thrilled to share. Everyone is founding something, shipping something, or explaining why the rest of us have eighteen months left to remain employable.
+A stream of groundbreaking announcements. "Experts" absolutely thrilled to share. Everyone is founding something, shipping something, or explaining why the rest of us have eighteen months left to remain employable.
 
-And you? You have a backlog.
+Everyone except you.
 
-Linear algebra, optimization, deep learning, LLMs, agents, MLOps. Papers to read, tools to learn, people to catch up to. You were halfway through understanding yesterday's future when somebody released tomorrow's.
+You have a backlog. Linear algebra, optimization, deep learning, LLMs, agents, MLOps. Papers to read, tools to learn, people to catch up to. You were halfway through understanding yesterday's future when somebody released tomorrow's.
 
-You know what success looks like. A very smart person writes complex math, attaches an appendix full of Greek letters, and draws an architecture diagram that requires its own architecture diagram. We've learned to recognize the shape.
+And you know what success looks like. A very smart person writes complex math, attaches an appendix full of Greek letters, and draws an architecture diagram that needs its own architecture diagram. We've learned to recognize the shape.
 
-But how did that shape become the thing to pursue?
+But how sure are you that this is what success looks like? You haven't lived it. You've only seen the showroom.
 
-Let me take you to IKEA. You walk through rooms nobody lives in, admire the life arranged inside them, then go home and move your furniture. The staged room becomes the template for the real one.
+So let me take you to an actual showroom. IKEA. You walk through rooms nobody lives in, think _look how good that looks_, then go home and move your furniture. The staged room isn't a copy of a real room. It's the template for one. The fake produces the real.
 
-Something similar happens with careers. The public performance of success becomes a specification for how to live. You choose the skills, the job title, even the problems that will make your life look like the picture.
+Careers work the same way. The public performance of success becomes the spec for how to live: which skills, which title, even which problems will make your life look like the picture.
 
-Companies do it too. A board asks what a company fit for the future should look like. The answer comes from other companies' announcements. A roadmap follows, then a team, then a budget. By the next funding round, those commitments can be presented as evidence that the future is arriving.
+Companies do it too. A board asks what a company fit for the future looks like. The answer comes from other companies' announcements. A roadmap follows, then a team, then a budget. By the next funding round, those commitments are presented as evidence that the future is arriving.
 
-Jean Baudrillard described how representations can become models reality is made to follow. His simulacrum helps us see what is at stake here. A story about the future can acquire authority over what gets built in the present.
+Jean Baudrillard had a name for this: the simulacrum. A representation that stops pointing at reality and starts giving it orders.
 
 The showroom starts issuing instructions.
 
-In AI, this can happen on a remarkable scale. Expectations attract investment. Investment buys infrastructure and produces revenue for suppliers. That revenue becomes evidence for the expectations that attracted the investment.
+In AI, it does this at a scale Baudrillard would have enjoyed. Expectations attract investment. Investment buys infrastructure and becomes revenue for suppliers. The revenue becomes evidence for the expectations. A useful product can survive all of this and still earn a fraction of what the business built around it needs.
 
-A useful product can survive and still earn far less than the business built around it needs.
+I'll come back to the money. First, one person.
 
 ## The Programmer Behind the App
 
-Before the industry, start with one person.
+Someone builds their first serious application by vibe coding. They describe what they want, ask the model for changes, and keep going until it runs. Login screen, database, payment flow. People can use it. Genuinely impressive.
 
-Imagine someone builds their first serious application by vibe coding. They describe what they want, ask a model for changes, and keep going until it runs. There is a login screen, a database, a payment flow. They have shipped something people can use.
+Then an order shows up twice. They ask the model to fix it. It writes a patch. The duplicate disappears. They can't tell you what caused it, or why the patch works.
 
-Then an order appears twice. They ask the model to fix it. It produces a patch. The duplicate disappears, but they cannot explain what caused it or why the patch works.
+We'd call this forgetting how to code. But there was nothing to forget. They never made the implementation decisions we assume a finished app demonstrates.
 
-We might call this forgetting how to code. In this example, there was nothing to forget. They never worked through the implementation decisions we assumed the finished application demonstrated.
+I'm not mocking this. Getting it built is real, and directing a model well is a real skill. But the app can't tell anyone whether its maker can reason about the code on the day the model's next answer is wrong.
 
-The application is real. So is the achievement of getting it built. They may have learned useful skills in directing and testing an AI system. But the result alone cannot tell us whether they can reason about the code when the model's next answer is wrong.
+Then the app goes into a portfolio, and it starts standing in for a history of understanding its maker never had. The employer reads it that way. After a while, the maker does too.
 
-Once that app becomes a portfolio, it can stand in for a history of understanding its maker never acquired. An employer reads it that way. Its maker may start reading it that way too.
-
-That is the interesting hallucination: the working product becomes evidence for a particular picture of the person behind it. The code is available to inspect; the competence we attributed to its author has barely been examined.
+That's the hallucination I find interesting. Not the model inventing a citation. Us, inventing a person behind a working product. The code is there for anyone to inspect. The competence we attached to its author, nobody checked.
 
 ## How the Story Takes Over
 
-Baudrillard described four successive phases of the image, each further from the thing it once represented. Use them to watch what happens to the link between an announcement and what it promises. In practice the phases overlap. A single company can produce excellent research, exaggerate a product, and sell a future it has no idea how to deliver.
+Baudrillard described four phases of the image, each further from the thing it once pointed at. They're a good lens for watching an AI announcement drift. In real life the phases overlap: the same company can do excellent research in the morning and sell a future it can't deliver by lunch.
 
-### The Sign Reflects Reality
+### Phase 1: The sign reflects reality
 
-Start with an experiment. A model does better at a task. Other people inspect the method, compare results, and try to reproduce it. The claim has somewhere to answer for itself.
+A model does better at a task. Other people inspect the method, rerun it, argue about it. The claim has somewhere to answer for itself.
 
-In 2011, IBM's Watson [defeated two _Jeopardy!_ champions](https://research.ibm.com/publications/introduction-to-this-is-watson). The challenge had rules, opponents, and a result people could watch. It was a real achievement in answering questions expressed in natural language.
+In 2011, IBM's Watson [beat two _Jeopardy!_ champions](https://research.ibm.com/publications/introduction-to-this-is-watson). Rules, opponents, a result you could watch on TV. A real achievement in answering natural-language questions. The distance between the announcement and the result was short enough to walk.
 
-The distance between the announcement and the result was short enough to walk.
+### Phase 2: The sign distorts reality
 
-### The Sign Distorts Reality
+A team tries forty-seven architectures, publishes the winner, and lets the other forty-six rest in peace. The result is real. The presentation hides how much searching it took, which baselines were convenient, and what happens off the benchmark.
 
-Now imagine a team trying dozens of architectures and publishing the winner. The result can be real while the presentation hides how much searching it took, which comparisons were convenient, or how badly the method behaves outside the benchmark.
+Then the result travels. The paper shows a capability under particular conditions. The keynote drops the conditions. The sales deck turns the capability into a product. By the time it reaches the customer, the model has picked up several skills its authors never tested.
 
-The distortion grows as the result travels. A paper demonstrates a capability under particular conditions. A presentation drops the conditions. A sales deck turns the capability into a product. By the time the story reaches the customer, the machine has acquired several skills its authors never tested.
+Nobody had to lie. Everyone just made the story a little easier to tell.
 
-There is no need for a central liar. Each person makes the story a little easier to tell.
+### Phase 3: The sign masks absence
 
-### The Sign Masks Absence
+Now the promise jumps from a demonstrated task to an anticipated capability.
 
-The promise expands from a demonstrated task to an anticipated capability.
+It can write code; the pitch becomes autonomous software engineering. It can answer questions about your documents; the pitch becomes an employee who understands your business. The gap between the two holds research problems, integration work, and occasionally a human quietly keeping the demo alive.
 
-A system can write code. The pitch becomes autonomous software engineering. It can answer questions about documents. The pitch becomes an employee who understands your business. The distance between them contains research problems, integration work, and sometimes a human quietly keeping the demo alive.
+This is where AGI becomes commercially useful before anyone agrees how to recognize it. It gives wildly different investments the same destination.
 
-This is where AGI becomes commercially useful before anyone agrees how to recognize it. It gives very different investments a shared destination.
+In January 2025, Stargate [announced it intended to invest USD 500 billion](https://openai.com/index/announcing-the-stargate-project/) in AI infrastructure over four years. Half a trillion dollars. The number is so big it glitches. And then it starts working as an argument on its own: surely nobody would plan to spend that much unless the destination were close.
 
-In January 2025, Stargate [announced an intention to invest USD 500 billion](https://openai.com/index/announcing-the-stargate-project/) in AI infrastructure over four years. Half a trillion dollars. Before any of it had been spent, the sheer size of the number could already work as an argument: surely nobody would contemplate spending that much unless the destination were close.
+The size of the bet becomes evidence for the bet.
 
-A proposed expenditure starts doing the persuasive work of a result.
+### Phase 4: The signs refer to each other
 
-### The Signs Become Their Own Reference
+Eventually the announcements stop pointing at results and start pointing at each other.
 
-Eventually, announcements begin referring to each other for authority.
+The startup must have something, because a giant invested. The investment must be smart, because demand for compute is exploding. The demand must prove customer value, because startups keep buying compute.
 
-A startup must have something because a major company invested. The investment must be wise because demand for compute is growing. Compute demand must demonstrate customer value because startups keep buying it.
+Here's how that gets wired. In January 2025 the FTC [published a study](https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2025/01/behind-ftcs-6b-report-large-ai-partnerships-investments) of three partnerships: Microsoft and OpenAI, Amazon and Anthropic, Google and Anthropic. More than USD 20 billion in investment between them. In each, the AI developer had agreed to spend a significant, set amount of that investment money on cloud services from the investor.
 
-Here is a simplified version of how that can be wired. Big Tech Giant invests USD 500 million in an AI startup. The agreement requires the startup to spend some of that money on Big Tech Giant's cloud. The startup announces its funding. The provider records revenue as it delivers the computing services. Both have something impressive to report.
+Follow the money for a second. The investor puts money in. The startup announces its round. The money flows back to the investor as cloud spending, and the investor books cloud revenue. Two impressive headlines, one financing decision.
 
-The number is illustrative. The mechanism is documented: the FTC found that major cloud and AI partnerships [included commitments to spend substantial investment funds on the investor's cloud services](https://www.ftc.gov/policy/advocacy-research/tech-at-ftc/2025/01/behind-ftcs-6b-report-large-ai-partnerships-investments).
+The services are real. The revenue is real. Funding work before customers can pay for it is literally what investment is for. The trick is in how we read it: the funding announcement and the cloud revenue look like two independent signs that customers will eventually pay. They're partly the same sign, counted twice.
 
-The provider delivered real services and earned real revenue. Investment is supposed to finance work before customers can pay for the result. The mistake comes when we count the funding announcement and the resulting cloud revenue as two independent confirmations that customers will eventually support the business. Some of the apparent corroboration comes from the same financing decision.
+If the paying customers arrive, the loop built something. If they don't, the next funding round has to keep the demand looking alive.
 
-If those customers arrive and pay enough, the loop has helped build something productive. If they don't, another funding round may have to keep the apparent demand alive.
+It's turtles all the way down, and the turtles have a board deck.
 
-The same circularity shows up inside companies. Ask why a company needs an AI strategy and the answer may be that every serious company has one. Ask how we know serious companies need one and out come the strategies.
+The same circle runs inside companies. Why do we need an AI strategy? Because every serious company has one. How do we know serious companies need one? Look at all the strategies.
 
-The loop has begun setting its own admission criteria. A project that fits the image of the future can look sensible before anyone identifies whose problem it solves. A useful project outside that image has to explain why it belongs.
+At this point the loop sets its own admission criteria. A project that fits the picture of the future looks sensible before anyone asks whose problem it solves. A useful project outside the picture has to explain why it exists.
 
 ## Watson Goes to the Clinic
 
-Two years after the televised victory, Watson was being prepared for a very different setting.
+Remember Watson on _Jeopardy!_? Two years later it was being prepared for a very different stage.
 
-In November 2013, MD Anderson [told readers](https://www.mdanderson.org/cancerwise/what-ibm-watson-means-for-our-patients.h00-158834379.html) that its Watson-powered Oncology Expert Advisor would soon be used by doctors and researchers, starting with leukemia. The ambition extended to all its clinics and to making specialist knowledge available beyond Houston. Later in the same article, the hospital explained that the system was still being tested and that the timeline for patients to receive it was unknown.
+In November 2013, MD Anderson [told its readers](https://www.mdanderson.org/cancerwise/what-ibm-watson-means-for-our-patients.h00-158834379.html) that its Watson-powered Oncology Expert Advisor would soon be in the hands of doctors and researchers, starting with leukemia. The ambition stretched to every clinic, and to bringing specialist knowledge beyond Houston. Further down the same article, the hospital said the system was still being tested and nobody knew when patients would get it.
 
-The university's later records put institutional decisions beside that public future. Its fiscal 2017 audit report [summarized a procurement review](https://www.utsystem.edu/sites/default/files/offices/system-audit/SAO%20Annual%20Report%20FY%202017%20-%20UT%20System%20Audit%20Office%20-%20FINAL.pdf#page=20): MD Anderson had adequate standard procedures, but they had not been consistently applied to the project under review.
+Then the paperwork. The University of Texas System's fiscal 2017 audit report [summarized a procurement review](https://www.utsystem.edu/sites/default/files/offices/system-audit/SAO%20Annual%20Report%20FY%202017%20-%20UT%20System%20Audit%20Office%20-%20FINAL.pdf#page=20): MD Anderson's standard procedures were adequate, but they hadn't been consistently applied to this project. The 2018 audited financial statements [recorded a USD 26.5 million impairment](https://utsystem.edu/sites/default/files/documents/report-state/2018/consolidated-annual-financial-report-fy-2018/ut-system-audit-afr-2018.pdf#page=86) on part of the project in 2017. That's a write-down of the asset's value, not the total spent. The project was still listed as construction in progress.
 
-The 2018 audited financial statements [recorded a USD 26.5 million impairment](https://utsystem.edu/sites/default/files/documents/report-state/2018/consolidated-annual-financial-report-fy-2018/ut-system-audit-afr-2018.pdf#page=86) on part of the Oncology Expert Advisor project in 2017. This reduced the asset's recorded value; it was not the project's total spending. The note still described the project as construction in progress.
+I want to be careful here, because this is a real hospital trying to help real patients. Ambitious projects are allowed to fail. The records show a financial disappointment and controls that weren't followed. They don't prove the hype caused either.
 
-An ambitious project can fail honorably. These records establish a financial disappointment and a failure to apply ordinary controls; they do not establish that the rhetoric caused either. They give us somewhere concrete to ask how much authority a promised future should have over the next deliverable and the next payment.
-
-The same system, two years apart: first a sign that reflected a result, then a sign standing in for one. The showroom had become a project. It still needed to pass inspection.
+But look at the arc. The same system, two years apart. On _Jeopardy!_, the sign pointed at a result you could watch. In the clinic, the sign pointed at a future, and the future was doing the persuading. The showroom had become a project, and the project still had to pass inspection.
 
 ## The Nature of the Simulacrum
 
-No shadow council needs to arrange any of this. The incentives can assemble it from ordinary people trying to get their next decision approved.
+Before you go looking for the architect, some shadowy cabal pulling strings, let me save you the time. There isn't one. **The Matrix wasn't built by machines. It emerged from us**: ordinary people trying to get their next decision approved.
 
-In Baudrillard's terms, the product carries sign value as well as use value. It can signal that a company is innovative while contributing very little to its operations. A complicated architecture can make a team look sophisticated while making the service harder to maintain.
+Fear of being left out. Need for status. Watching the tribe to know where it's safe to stand. These instincts kept us alive in the stone age. Now they make us chase metrics we don't believe in.
 
-The two values can coexist. Trouble begins when the rewards for the appearance become strong enough to weaken the checks on the substance.
+In Baudrillard's terms, every product carries sign value as well as use value. A tool can signal that a company is innovative while contributing almost nothing to how it runs. A complicated architecture can make a team look sophisticated while making the service harder to keep alive.
 
-## Why Awareness Changes So Little
+Both values can live together. The trouble starts when the rewards for the appearance get strong enough to switch off the checks on the substance.
 
-You know all this already. You roll your eyes at the announcements. You recognize the demo with a person behind the curtain.
+## We Know It's Bullshit. We Do It Anyway.
+
+You know all this already. You roll your eyes at the announcements. You can spot the demo with a person behind the curtain.
 
 Then your manager asks about the AI roadmap.
 
-Your competitors have one. The board expects one. An engineer wants experience that will still look current on a CV next year. A founder needs to close a round before payroll. Each has a reason to participate, even if each privately doubts the performance.
+Your competitors have one. The board expects one. Your engineers want experience that still looks current on a CV next year. The founder down the street has to close a round before payroll. Everyone has a reason to play, even when they privately doubt the show.
 
-This is the part I find hardest to dismiss. The system does not require universal belief. It can run on people who think they understand the bullshit and can manage their exposure to it. Peter Sloterdijk called this enlightened false consciousness. Žižek's shorter version: they know very well what they are doing, but still, they are doing it.
+This is the part I can't shake. The system doesn't need anyone to believe. It runs perfectly well on people who think they see through it and can manage their exposure. Peter Sloterdijk called this enlightened false consciousness. Žižek's version is shorter: they know very well what they are doing, but still, they are doing it.
 
-Cynicism becomes comfortable accommodation. We laugh, update our profiles, and carry on.
+We laugh, update our profiles, and carry on.
 
-Somewhere inside the performance, people are also doing excellent work. The incentives rarely give us the courtesy of separating everyone into honest builders and dishonest narrators. The same person can solve a difficult problem in the morning and oversell it in the afternoon.
+And here's what makes it harder to write off: inside the performance, people are doing excellent work. The incentives don't sort us neatly into honest builders and dishonest narrators. The same person solves a hard problem in the morning and oversells it in the afternoon. I've been that person.
 
 ## The Glitches
 
-The useful check comes after the demo, when someone has to do the job with the tool. Some tools pass it impressively.
+The real test comes after the demo, when someone has to do the job with the tool. Some tools pass it beautifully.
 
-In a field study of 5,172 customer support agents, AI assistance [increased issues resolved per hour by 15% on average](https://academic.oup.com/qje/article/140/2/889/7990658), with larger benefits for less experienced workers. That is worth getting excited about.
+In a field study of 5,172 customer-support agents, AI assistance [raised issues resolved per hour by 15% on average](https://academic.oup.com/qje/article/140/2/889/7990658), and more for less experienced agents. That's not hype. That's worth getting excited about.
 
-Now imagine turning that finding into a forecast for replacing knowledge work. The forecast helps justify a valuation, the valuation attracts investment, and the investment is cited as confirmation that the forecast is sensible.
+Now watch what the story does with it. The finding becomes a forecast about replacing knowledge work. The forecast justifies a valuation. The valuation attracts investment. The investment gets cited as proof the forecast was sensible. A 15% improvement for one support team is now carrying a family of claims it never signed up for.
 
-The measured improvement has acquired a much larger family of claims. It cannot support them all.
+So I watch for glitches closer to the business. A pilot that never expands. Time saved drafting that reappears as time spent checking. Usage going up while the provider loses more money serving it. Impressive revenue from customers funded by the provider's own investors.
 
-The glitches worth watching are closer to the business itself. A customer signs a pilot but never expands it. Time saved drafting reappears as time spent checking. Usage rises while the provider loses more money serving it. A company announces impressive revenue but depends heavily on customers funded by its own investors.
-
-Watch what happens when results disappoint. Does the explanation get more specific, producing a better test or a different product? Or does the payoff simply move further into the future?
+And I watch what happens when results disappoint. Does the explanation get more specific: a better test, a different product? Or does the payoff just move another eighteen months out?
 
 ## Where the Loop Can Break
 
-A lab misses its revenue target and needs more funding to keep buying compute. If the next round fails, it reduces its cloud spending. The provider loses some of the growth that helped justify its investment in the lab.
+A lab misses its revenue target and needs more funding to keep buying compute. The round doesn't close. It cuts its cloud spending. The cloud provider loses some of the growth that justified investing in the lab.
 
-The feedback can run backwards.
+The loop can run backwards.
 
-The adjustment could come through slower construction, acquisitions, or returns that disappoint investors while the products keep improving. A sudden crash is one possible outcome. A long, expensive disappointment would also send invoices.
+That doesn't have to look like a crash. It can look like slower construction, quiet acquisitions, and returns that disappoint investors while the products keep getting better. A long, expensive disappointment sends invoices too.
 
-Three pressure points decide which one we get.
+Three pressure points decide which version we get.
 
-**Paying demand.** Customers have to capture enough benefit to pay for the service. Providers have to retain enough of that payment to cover the full cost of delivering it and financing the infrastructure. Competition could make powerful AI cheap and widely useful while leaving investors with disappointing returns. Customers would quite reasonably call that progress. The shareholders might choose another word.
+**Someone has to pay.** Customers need to capture enough value to pay for the service, and providers need to keep enough of that payment to cover the full cost of running it and financing the data centers. Competition could make powerful AI cheap and everywhere while investors lose money. Customers would call that progress. Shareholders would choose another word.
 
-**Distribution.** If savings accumulate with owners while displaced workers lose purchasing power, demand can suffer. Lower prices, new work, or redistribution could offset that loss. The outcome depends on how the gains reach people, a question no company's plan to reduce its own wage bill can settle.
+**Someone has to have a job.** If the savings go to owners while displaced workers lose their income, the customer base starts shrinking. Lower prices, new kinds of work, or redistribution could offset that. No single company's plan to cut its own wage bill settles the question.
 
-**Research.** A company can approve a bigger training run. It cannot approve the discovery that run is expected to produce. A business can commit money and people to the next attempt. Its financing becomes fragile when it also needs the attempt to deliver a particular breakthrough by a particular date. What happens when the next leap takes longer than the funding cycle? The research problem gets a deadline, and the researcher gets a performance review.
+**Someone has to discover something.** A company can approve a bigger training run. It can't approve the discovery that run is supposed to produce. When the next leap takes longer than the funding cycle, the research problem gets a deadline and the researcher gets a performance review.
 
 ## What Would Change My Mind
 
-Growing numbers of customers renewing at prices that cover the full service cost would strengthen the case for durable demand. So would adoption that survives the end of subsidies, with measured benefits that hold up in normal operation. If those customers generate enough cash to support the infrastructure, the next funding round becomes less decisive.
+Thinking in public means showing where you moved.
 
-The opposite pattern would deepen my concern: impressive usage maintained through discounts, pilots that never become routine purchases, and repeated refinancing of obligations whose payoff keeps moving away.
+The first version of this essay, in November 2025, had a section called "The Inevitable Collapse." I was sure. Economics, automation, and science would all hit the wall, and "the question isn't _whether_ there's a correction. It's how severe."
 
-A theory that can absorb every outcome becomes another way to protect its narrator. Calling everything a simulacrum should not give me that privilege.
+I took the word out. Not because I got more optimistic, but because "inevitable" was doing exactly what I was criticizing. A theory that explains every possible outcome stops being a theory and becomes a way to protect its narrator. Calling everything a simulacrum shouldn't give me that privilege.
+
+So here is what would change my mind. Growing numbers of customers renewing at prices that cover the full cost of the service. Adoption that survives the end of discounts and subsidies. Measured benefits that hold up in normal operation, not just in pilots. If that cash can carry the infrastructure, the next funding round stops being a life-or-death event, and the loop has built something real.
+
+And here is what would deepen my worry: usage held up by discounts, pilots that never turn into routine purchases, and obligations refinanced again and again while the payoff keeps moving away.
+
+I'll keep checking. You should too.
 
 ## The Reload
 
-Suppose some of the financial story fails. Useful technology can survive the correction. People who built it can still lose their jobs. Infrastructure may pass to new owners, sometimes owners with more power than before.
+Say part of the financial story breaks. Useful technology survives corrections. The people who built it can still lose their jobs. The data centers get new owners, sometimes owners with more power than before.
 
-A crash does not award the machines to the most deserving engineer.
+A crash doesn't hand the machines to the most deserving engineer.
 
-The dot-com crash did not erase the usefulness of the internet. It did expose the distance between a technology becoming important and particular investments paying off. An industry can eventually transform the world and still bankrupt people who correctly saw that transformation coming.
+The dot-com crash didn't make the internet less useful. It exposed the distance between a technology becoming important and a particular investment paying off. An industry can transform the world and still bankrupt the people who correctly saw it coming.
 
-A financial reset also leaves plenty of room for the social machinery to continue. The appetite for prestige, the fear of missing out, and the demand for an impressive future will find new material.
+And a reset doesn't switch off the social machinery. The appetite for prestige, the fear of missing out, the hunger for an impressive future: they'll find new material. Every reload plants the seed of the next simulation.
 
-There is no pristine normal waiting underneath the market chart. There can still be better ways to build.
+There's no clean normal waiting under the market chart. There are still better ways to build.
 
 ## Surviving Simulacra
 
-_The Matrix_ offered a wonderfully convenient product: one pill, permanent clarity. Baudrillard himself said the film misunderstood him, which seems about right. I would still like a prescription.
+_The Matrix_ sold a wonderfully convenient product: one pill, permanent clarity. Baudrillard himself said the film misunderstood him, which feels about right. There's no red pill. You have bills, a career, and work worth doing inside the thing. So take both: live in the simulation, think outside it.
 
-We have careers, bills, and work worth doing inside these systems. We need ways to make a promising story answer to the work, before it acquires a department that depends on keeping the story alive.
+Here's how I try to make a story answer to the work, before it grows a department that depends on keeping the story alive.
 
-**When choosing a project,** follow a customer's actual task. What became easier? What still requires human checking? Include integration, review, and failure in the cost. The customer who renews from an operating budget tells you something a conference applause meter cannot.
+**Pick projects by following a customer's actual task.** What got easier? What still needs a human to check it? Count integration, review, and failure in the cost. A customer who renews from an operating budget tells you more than any conference applause meter.
 
-**When choosing a technical foundation,** examine what you can inspect, reproduce, and replace. Open code and available model weights can give more people that ability. Work out the remaining dependencies too: chips, compute, expertise, and maintenance. Independence needs an actual budget.
+**Build on what you can inspect, reproduce, and replace.** Open code and open weights give more people that power. Then count the dependencies that remain: chips, compute, expertise, maintenance. Independence needs an actual budget.
 
-**At work,** give uncertainty somewhere useful to go. A team should be able to report that a pilot disappointed, or that a simpler method worked better, without making its own survival depend on a more exciting explanation. Otherwise, everyone learns which results are welcome.
+**Give bad news somewhere to go.** A team should be able to say "the pilot disappointed" or "the boring method won" without its survival depending on a more exciting explanation. Otherwise everyone learns which results are welcome.
 
-**And keep a record of the original promise.** What was supposed to improve, by how much, and under which conditions? Decide what would make you stop before the quarterly review gives you reasons to continue.
+**Write down the promise.** What was supposed to improve, by how much, under which conditions? Decide what would make you stop before the quarterly review hands you reasons to continue.
 
 You can enjoy the technology. You can build ambitious things with it. You can even be thrilled to share.
 
-Then, a few months later, share what happened.
+Just come back a few months later and share what happened.
