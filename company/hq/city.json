@@ -1,0 +1,17 @@
+{
+ "note": "The blog in the city HQ, through Meta's tools (a checkout of hanialshater/system3-meta at ../../system3-meta from the repository root, or set META). Publish: node $META/hq/build.mjs --city=company/hq/city.json --snapshot=blog --out=<dir>",
+ "companies": [
+  {
+   "id": "blog",
+   "name": "Hani's Blog",
+   "archetype": "corporate",
+   "owner": "founder",
+   "eventsCmd": "node ${META:-../../../system3-meta}/src/git-events.mjs ../.. '--as=Hani M.M. Al-Shater:founder,Claude:chief-of-staff,google-labs-jules[bot]:chief-of-staff'",
+   "orgCmd": "node ${META:-../../../system3-meta}/src/orgfile.mjs ../org.json",
+   "dashboardCmd": "node ${META:-../../../system3-meta}/src/dashboard.mjs ..",
+   "docsCmd": "node ${META:-../../../system3-meta}/src/docs.mjs ../.. --config=docs.json",
+   "buildingCmd": "cat ../building.json",
+   "knowledge": "../knowledge"
+  }
+ ]
+}

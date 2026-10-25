@@ -1,0 +1,13 @@
+{
+ "roots": [
+  "data/posts",
+  "data/books",
+  "docs",
+  "company"
+ ],
+ "exclude": [
+  "node_modules",
+  ".git",
+  "hq"
+ ]
+}

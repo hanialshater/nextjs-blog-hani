@@ -1,0 +1,35 @@
+{
+ "v": 1,
+ "milestones": [
+  {
+   "id": "M0",
+   "title": "Onboarded: the editorial desk approved and generated; the blog in the city",
+   "state": "done",
+   "evidence": "approved by the author, 2026-10-25"
+  },
+  {
+   "id": "M1",
+   "title": "learning-the-map (Practical Decision-Making, Part 2) through the post flow: argument, claims, voice, the Arabic edition, its three demos evaluated, published with the author's go",
+   "state": "active",
+   "evidence": ""
+  },
+  {
+   "id": "M2",
+   "title": "The Dream, Part 1, through the chapter flow",
+   "state": "next",
+   "evidence": ""
+  },
+  {
+   "id": "M3",
+   "title": "Snippets for every published post, in both languages",
+   "state": "next",
+   "evidence": ""
+  },
+  {
+   "id": "M4",
+   "title": "Interface parity: every user-visible string in both locales, RTL checked on every page type (posts, book, demos, projects, slides)",
+   "state": "next",
+   "evidence": ""
+  }
+ ]
+}

@@ -1,0 +1,160 @@
+{
+ "note": "The org contract (system3-meta docs/product/STARTER.md \u00a73). The design: system3-meta docs/proposals/2026-10-25-blog-org.md, approved by the author 2026-10-25.",
+ "roles": [
+  {
+   "id": "founder",
+   "name": "Hani",
+   "title": "Author (owner)",
+   "reportsTo": null,
+   "team": "author",
+   "room": "study",
+   "roomName": "The author's study",
+   "roomKind": "office",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "chief-of-staff",
+   "title": "Managing editor",
+   "reportsTo": "founder",
+   "team": "desk",
+   "room": "editorial",
+   "roomName": "Editorial room",
+   "roomKind": "floor",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "developmental-editor",
+   "title": "Developmental editor",
+   "reportsTo": "chief-of-staff",
+   "team": "editorial",
+   "room": "editorial",
+   "roomName": "Editorial room",
+   "roomKind": "floor",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "line-editor",
+   "title": "Line editor",
+   "reportsTo": "chief-of-staff",
+   "team": "editorial",
+   "room": "editorial",
+   "roomName": "Editorial room",
+   "roomKind": "floor",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "fact-checker",
+   "title": "Fact-checker",
+   "reportsTo": "chief-of-staff",
+   "team": "editorial",
+   "room": "editorial",
+   "roomName": "Editorial room",
+   "roomKind": "floor",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "snippets-editor",
+   "title": "Snippets editor",
+   "reportsTo": "chief-of-staff",
+   "team": "editorial",
+   "room": "editorial",
+   "roomName": "Editorial room",
+   "roomKind": "floor",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "arabic-editor",
+   "title": "Arabic editor (translation)",
+   "reportsTo": "chief-of-staff",
+   "team": "localization",
+   "room": "localization",
+   "roomName": "Localization desk",
+   "roomKind": "office",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "localization-lead",
+   "title": "Localization lead",
+   "reportsTo": "chief-of-staff",
+   "team": "localization",
+   "room": "localization",
+   "roomName": "Localization desk",
+   "roomKind": "office",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "demo-designer",
+   "title": "Demo designer",
+   "reportsTo": "chief-of-staff",
+   "team": "demos",
+   "room": "demo-lab",
+   "roomName": "Demo lab",
+   "roomKind": "floor",
+   "floor": 2,
+   "floorName": "Floor 2 \u00b7 Demos and the site"
+  },
+  {
+   "id": "demo-builder",
+   "title": "Demo builder",
+   "reportsTo": "chief-of-staff",
+   "team": "demos",
+   "room": "demo-lab",
+   "roomName": "Demo lab",
+   "roomKind": "floor",
+   "floor": 2,
+   "floorName": "Floor 2 \u00b7 Demos and the site"
+  },
+  {
+   "id": "demo-evaluator",
+   "title": "Demo evaluator",
+   "reportsTo": "chief-of-staff",
+   "team": "demos",
+   "room": "evaluation",
+   "roomName": "Evaluation room",
+   "roomKind": "office",
+   "floor": 2,
+   "floorName": "Floor 2 \u00b7 Demos and the site"
+  },
+  {
+   "id": "evaluation-steward",
+   "title": "Evaluation steward (the referee: yarn check and the gates)",
+   "reportsTo": "founder",
+   "team": "site",
+   "room": "evaluation",
+   "roomName": "Evaluation room",
+   "roomKind": "office",
+   "floor": 2,
+   "floorName": "Floor 2 \u00b7 Demos and the site"
+  },
+  {
+   "id": "hq-engineer",
+   "title": "Site engineer (features, and the HQ)",
+   "reportsTo": "founder",
+   "team": "site",
+   "room": "site",
+   "roomName": "Site and release",
+   "roomKind": "office",
+   "floor": 2,
+   "floorName": "Floor 2 \u00b7 Demos and the site"
+  },
+  {
+   "id": "release-manager",
+   "title": "Release manager",
+   "reportsTo": "founder",
+   "team": "site",
+   "room": "site",
+   "roomName": "Site and release",
+   "roomKind": "office",
+   "floor": 2,
+   "floorName": "Floor 2 \u00b7 Demos and the site"
+  }
+ ]
+}
