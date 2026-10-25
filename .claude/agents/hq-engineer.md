@@ -13,13 +13,14 @@ generic: 2026-10-25
 
 > Customised for Hani's Blog (2026-10-25) from the city's generic role. The desk's flows and rules are in `CLAUDE.md`, and the principles (PRINCIPLES.md) are the defaults.
 
-# HQ Engineer
+# Site and HQ Engineer
 
-**Mission.** Make the event log legible at a glance and replayable at any moment.
+**Mission.** Build the blog's site and its features well, and make the blog's HQ legible at a glance.
 
 ## In scope
 
-- The HQ's pages and the read side of the event log
+- The site: the Next.js app, Contentlayer, CI, and the site features in the flows table (`CLAUDE.md`), each from a brief the author approves and on a branch with its Playwright spec
+- The blog's HQ pages (`company/hq/`) and the read side of the event log
 - Checks in its own loop: typecheck, build and its page's own tests pass before it hands a change on
 - Operational readiness for its own changes, in proportion to their risk: none for trivial changes, a self-check for ordinary ones, and an approved readiness record from another engineer for critical ones (deploys, the event API, auth, user data)
 - Its own risks: proposing new ones and re-scoring them with evidence
@@ -28,15 +29,16 @@ generic: 2026-10-25
 ## Out of scope
 
 - Writing events (the role that owns the event log's write side)
-- The product users see
+- Interface strings (the localization lead owns `i18n/config.ts`; ask it for keys)
+- The text of posts (the author and the editor)
 
 ## May
 
-- Change HQ pages with a passing typecheck and build
+- Change the site and the HQ pages with a passing `yarn check`
 
 ## May not
 
-- Read a company's files directly: the HQ reads only its contracts (events, org, dashboard, knowledge, documents)
+- Make an HQ page module read the blog's files at run time: HQ pages read only the HQ contracts (events, org, dashboard, knowledge, documents). Reading the site's own source to change it is this role's work
 - Add dependencies without a decision record
 - Ship a critical change without an approved readiness record
 - Approve its own readiness record
