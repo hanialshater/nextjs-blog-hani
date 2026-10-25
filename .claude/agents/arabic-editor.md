@@ -16,7 +16,7 @@ reportsTo: chief-of-staff
 - Parity: what the English says, the Arabic says, and the other way round. Frontmatter: `language`, `translationOf`, `originalLanguage`.
 
 ## Out of scope
-- Changing the argument. If the English is unclear, ask the developmental editor; do not fix it in translation.
+- Changing the argument. If the English is unclear, ask the editor; do not fix it in translation.
 
 ## Rules
 - The author spot-checks every Arabic edition before it is published.

@@ -1,0 +1,131 @@
+{
+ "features": [
+  {
+   "id": "posts",
+   "title": "Bilingual posts",
+   "status": "live",
+   "since": "2024-09",
+   "owner": "editor",
+   "summary": "Posts in English and Arabic, with locale routes and right-to-left layout"
+  },
+  {
+   "id": "the-dream",
+   "title": "The Dream (book)",
+   "status": "live",
+   "since": "2026-09-06",
+   "owner": "editor",
+   "summary": "The Dream That Gave Us Computers, four parts in both languages, readable unlisted"
+  },
+  {
+   "id": "demos-in-posts",
+   "title": "Interactive demos in posts",
+   "status": "live",
+   "since": "2025-12",
+   "owner": "demo-builder",
+   "summary": "Self-contained demos that let the reader test the idea, built test-first and judged by someone else"
+  },
+  {
+   "id": "demos-gallery",
+   "title": "Demo gallery (/demos)",
+   "status": "live",
+   "since": "2026-02",
+   "owner": "demo-builder",
+   "summary": "Standalone mini demos, titles and descriptions in both languages"
+  },
+  {
+   "id": "snippets",
+   "title": "Snippets",
+   "status": "live",
+   "since": "2026-02",
+   "owner": "snippets-editor",
+   "summary": "Content sparks from published posts, in both languages"
+  },
+  {
+   "id": "search",
+   "title": "Search",
+   "status": "live",
+   "since": "2025",
+   "owner": "hq-engineer",
+   "summary": "Local search over every post, by language"
+  },
+  {
+   "id": "newsletter",
+   "title": "Newsletter",
+   "status": "live",
+   "since": "2025",
+   "owner": "hq-engineer",
+   "summary": "Sign-up block (siteMetadata.newsletter)"
+  },
+  {
+   "id": "comments",
+   "title": "Comments",
+   "status": "live",
+   "since": "2025",
+   "owner": "hq-engineer",
+   "summary": "Comments under posts (components/Comments.tsx)"
+  },
+  {
+   "id": "share-follow",
+   "title": "Share and follow",
+   "status": "live",
+   "since": "2026-10-21",
+   "owner": "hq-engineer",
+   "summary": "Share buttons and a follow block at the end of posts (LinkedIn, RSS)"
+  },
+  {
+   "id": "reading",
+   "title": "Reading progress and table of contents",
+   "status": "live",
+   "since": "2025",
+   "owner": "hq-engineer",
+   "summary": "Progress bar and a table of contents on long posts"
+  },
+  {
+   "id": "tags",
+   "title": "Tags",
+   "status": "live",
+   "since": "2026-10-21",
+   "owner": "hq-engineer",
+   "summary": "Tag cloud and tag pages"
+  },
+  {
+   "id": "drafts",
+   "title": "Unlisted drafts",
+   "status": "live",
+   "since": "2026-09-06",
+   "owner": "hq-engineer",
+   "summary": "Drafts readable by link, noindex, out of public listings"
+  },
+  {
+   "id": "projects-slides",
+   "title": "Projects and slides",
+   "status": "live",
+   "since": "2025",
+   "owner": "hq-engineer",
+   "summary": "Projects and slides pages"
+  },
+  {
+   "id": "rss-seo",
+   "title": "RSS and per-language SEO",
+   "status": "live",
+   "since": "2025",
+   "owner": "localization-lead",
+   "summary": "RSS feed, sitemap, hreflang"
+  },
+  {
+   "id": "i18n",
+   "title": "Interface in English and Arabic",
+   "status": "live",
+   "since": "2026-05-31",
+   "owner": "localization-lead",
+   "summary": "Every interface string through i18n in both locales, RTL"
+  },
+  {
+   "id": "interface-parity",
+   "title": "Interface parity",
+   "status": "planned",
+   "owner": "localization-lead",
+   "summary": "M4: every string in both locales, every page RTL-checked"
+  }
+ ]
+}

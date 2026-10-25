@@ -36,42 +36,30 @@
  "approvedAt": "2026-10-25T17:32:43.355Z",
  "roles": [
   "chief-of-staff",
-  "evaluation-steward",
-  "hq-engineer",
-  "release-manager",
+  "editor",
   "fact-checker",
-  "developmental-editor",
-  "line-editor",
   "arabic-editor",
-  "spark-curator",
+  "localization-lead",
+  "snippets-editor",
   "demo-designer",
   "demo-builder",
-  "demo-evaluator"
+  "demo-evaluator",
+  "hq-engineer",
+  "release-manager",
+  "evaluation-steward"
  ],
  "newRoles": [
   {
-   "id": "developmental-editor",
-   "title": "Developmental editor",
+   "id": "editor",
+   "title": "Editor (argument, then sentences)",
    "team": "editorial",
-   "mission": "The argument of each post and book chapter: structure, what it claims and whether it holds; documents substantive edits for the author's review."
-  },
-  {
-   "id": "line-editor",
-   "title": "Line editor",
-   "team": "editorial",
-   "mission": "The sentences, in the author's voice (writing-style): proposes edits, never rewrites the baseline without the author's yes."
+   "mission": "One warm session per post: the argument, then the sentences in the author's voice, both as proposals (replaces the developmental and line editors, 2026-10-25, PRINCIPLES.md P2)."
   },
   {
    "id": "arabic-editor",
    "title": "Arabic editor",
    "team": "editorial",
    "mission": "The Arabic edition: mature conversational Levantine in the author's voice (translate-post), parity with the English, translationOf links."
-  },
-  {
-   "id": "spark-curator",
-   "title": "Spark curator",
-   "team": "editorial",
-   "mission": "Sparks from published posts (extract-spark), in both languages, released in batches with the author's go."
   },
   {
    "id": "demo-designer",
@@ -90,6 +78,12 @@
    "title": "Demo evaluator",
    "team": "demos",
    "mission": "Judges demos in the browser on their test cases, artifact before account (edu-demo-evaluator); never judges its own work."
+  },
+  {
+   "id": "snippets-editor",
+   "title": "Snippets editor",
+   "team": "editorial",
+   "mission": "Snippets from published posts, in both languages, released in batches the author approves."
   }
  ],
  "links": [
@@ -103,5 +97,186 @@
    "url": "https://github.com/hanialshater/nextjs-blog-hani",
    "kind": "repo"
   }
- ]
+ ],
+ "principles": "system3-meta PRINCIPLES.md",
+ "orgReasons": [
+  "recurs",
+  "independent-checking"
+ ],
+ "baseline": "design 2, one writing assistant, was weighed at onboarding (docs/proposals/2026-10-25-blog-org.md in system3-meta); the record of 6 September (edits that went too far, an unsupported claim) is why the checks are independent",
+ "alternatives": [
+  "single-agent"
+ ],
+ "sizeReason": "five kinds of work (posts, demos, snippets, site features, localization), each with one maker and its own independent check; roles run only when their flow runs, so at most 4 work at once",
+ "flows": [
+  {
+   "id": "post",
+   "steps": [
+    {
+     "role": "editor",
+     "kind": "maker"
+    },
+    {
+     "role": "fact-checker",
+     "kind": "check"
+    },
+    {
+     "role": "author",
+     "kind": "owner"
+    },
+    {
+     "role": "arabic-editor",
+     "kind": "maker"
+    },
+    {
+     "role": "localization-lead",
+     "kind": "check"
+    },
+    {
+     "role": "author",
+     "kind": "owner"
+    },
+    {
+     "role": "evaluation-steward",
+     "kind": "check"
+    },
+    {
+     "role": "release-manager",
+     "kind": "owner"
+    }
+   ]
+  },
+  {
+   "id": "demo",
+   "steps": [
+    {
+     "role": "demo-designer",
+     "kind": "check"
+    },
+    {
+     "role": "demo-builder",
+     "kind": "maker"
+    },
+    {
+     "role": "demo-evaluator",
+     "kind": "check"
+    }
+   ]
+  },
+  {
+   "id": "site feature",
+   "steps": [
+    {
+     "role": "author",
+     "kind": "owner"
+    },
+    {
+     "role": "hq-engineer",
+     "kind": "maker"
+    },
+    {
+     "role": "localization-lead",
+     "kind": "check"
+    },
+    {
+     "role": "evaluation-steward",
+     "kind": "check"
+    },
+    {
+     "role": "author",
+     "kind": "owner"
+    }
+   ]
+  },
+  {
+   "id": "snippet",
+   "steps": [
+    {
+     "role": "snippets-editor",
+     "kind": "maker"
+    },
+    {
+     "role": "author",
+     "kind": "owner"
+    }
+   ]
+  },
+  {
+   "id": "translation",
+   "steps": [
+    {
+     "role": "arabic-editor",
+     "kind": "maker"
+    },
+    {
+     "role": "localization-lead",
+     "kind": "check"
+    },
+    {
+     "role": "author",
+     "kind": "owner"
+    }
+   ]
+  }
+ ],
+ "owns": [
+  {
+   "role": "author",
+   "paths": [
+    "data/posts/",
+    "data/books/"
+   ]
+  },
+  {
+   "role": "localization-lead",
+   "paths": [
+    "i18n/config.ts"
+   ]
+  },
+  {
+   "role": "evaluation-steward",
+   "paths": [
+    "tests/",
+    "playwright.config.ts",
+    "playwright.books.config.mjs",
+    ".github/workflows/"
+   ]
+  },
+  {
+   "role": "hq-engineer",
+   "paths": [
+    "app/",
+    "components/",
+    "layouts/",
+    "lib/",
+    "contentlayer.config.ts",
+    "company/hq/"
+   ]
+  },
+  {
+   "role": "snippets-editor",
+   "paths": [
+    "content-sparks/"
+   ]
+  },
+  {
+   "role": "demo-builder",
+   "paths": [
+    "data/miniDemosData.ts"
+   ]
+  }
+ ],
+ "referee": {
+  "cmd": "yarn check",
+  "heldOut": "each demo's held-out test cases: the demo designer keeps one or two from the builder until the evaluator runs them"
+ },
+ "costTarget": {
+  "unit": "post",
+  "usd": 8,
+  "also": {
+   "demo": 12
+  }
+ },
+ "stopRule": "work over 2× its cost target pauses for the author (PRINCIPLES.md P8)",
+ "parkRule": "a role with no work in 4 weeks is parked, and comes back when its flow next runs"
 }
