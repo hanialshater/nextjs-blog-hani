@@ -1,0 +1,107 @@
+{
+ "v": 1,
+ "id": "blog",
+ "name": "Hani's Blog",
+ "owner": "founder",
+ "archetype": "corporate",
+ "mission": "Writing worth rereading on machine learning, product and leadership, in English and Arabic, with interactive demos that let the reader test the idea",
+ "measure": "published bilingual posts that pass the site's checks (typecheck, lint, build, Playwright) and the editor's review",
+ "budget": {
+  "unit": "USD",
+  "lines": [
+   {
+    "id": "start",
+    "title": "Starting budget (proposed; the author sets it)",
+    "approved": null,
+    "spent": 0,
+    "approvedBy": null,
+    "source": "onboarding intake, 2026-10-25"
+   }
+  ]
+ },
+ "intake": {
+  "id": "blog",
+  "name": "Hani's Blog",
+  "owner": "founder",
+  "purpose": "Writing worth rereading on machine learning, product and leadership, in English and Arabic, with interactive demos that let the reader test the idea",
+  "product": "bilingual posts (EN/AR), the book The Dream, interactive demos, content sparks",
+  "measure": "published bilingual posts that pass the site's checks (typecheck, lint, build, Playwright) and the editor's review",
+  "budget": 100,
+  "referee": {
+   "cmd": "yarn check"
+  }
+ },
+ "design": "system3-meta docs/proposals/2026-10-25-blog-org.md (design 1: an editorial desk around the author)",
+ "approvedBy": "founder",
+ "approvedAt": "2026-10-25T17:32:43.355Z",
+ "roles": [
+  "chief-of-staff",
+  "evaluation-steward",
+  "hq-engineer",
+  "release-manager",
+  "fact-checker",
+  "developmental-editor",
+  "line-editor",
+  "arabic-editor",
+  "spark-curator",
+  "demo-designer",
+  "demo-builder",
+  "demo-evaluator"
+ ],
+ "newRoles": [
+  {
+   "id": "developmental-editor",
+   "title": "Developmental editor",
+   "team": "editorial",
+   "mission": "The argument of each post and book chapter: structure, what it claims and whether it holds; documents substantive edits for the author's review."
+  },
+  {
+   "id": "line-editor",
+   "title": "Line editor",
+   "team": "editorial",
+   "mission": "The sentences, in the author's voice (writing-style): proposes edits, never rewrites the baseline without the author's yes."
+  },
+  {
+   "id": "arabic-editor",
+   "title": "Arabic editor",
+   "team": "editorial",
+   "mission": "The Arabic edition: mature conversational Levantine in the author's voice (translate-post), parity with the English, translationOf links."
+  },
+  {
+   "id": "spark-curator",
+   "title": "Spark curator",
+   "team": "editorial",
+   "mission": "Sparks from published posts (extract-spark), in both languages, released in batches with the author's go."
+  },
+  {
+   "id": "demo-designer",
+   "title": "Demo designer",
+   "team": "demos",
+   "mission": "What a demo must teach: learning test cases first (edu-demo-test-cases, the decision-lab pedagogy)."
+  },
+  {
+   "id": "demo-builder",
+   "title": "Demo builder",
+   "team": "demos",
+   "mission": "Self-contained demo bundles that pass their test cases (edu-demo-builder)."
+  },
+  {
+   "id": "demo-evaluator",
+   "title": "Demo evaluator",
+   "team": "demos",
+   "mission": "Judges demos in the browser on their test cases, artifact before account (edu-demo-evaluator); never judges its own work."
+  }
+ ],
+ "links": [
+  {
+   "label": "Website",
+   "url": "https://www.hani-alshater.com",
+   "kind": "website"
+  },
+  {
+   "label": "Repository",
+   "url": "https://github.com/hanialshater/nextjs-blog-hani",
+   "kind": "repo"
+  }
+ ]
+}

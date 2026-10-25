@@ -1,0 +1,3 @@
+{"v":1,"type":"company.proposed","by":"chief-of-staff","t":"2026-10-25T17:28:55.901Z","designs":["corporate","single-agent"]}
+{"v":1,"type":"company.approved","by":"founder","t":"2026-10-25T17:32:43.355Z","archetype":"corporate"}
+{"v":1,"type":"company.start","by":"meta","t":"2026-10-25T17:32:43.357Z","archetype":"corporate","roles":["chief-of-staff","evaluation-steward","hq-engineer","release-manager","fact-checker","developmental-editor","line-editor","arabic-editor","spark-curator","demo-designer","demo-builder","demo-evaluator"],"budget":100}

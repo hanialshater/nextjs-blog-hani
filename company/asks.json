@@ -1,0 +1,39 @@
+{
+ "note": "What waits on the author (the owner); the HQ shows the open ones.",
+ "asks": [
+  {
+   "id": "B-1",
+   "title": "Set the blog's budget (a placeholder of $100 was proposed at onboarding)",
+   "kind": "decision",
+   "priority": 2,
+   "status": "open",
+   "since": "2026-10-25",
+   "from": "chief-of-staff",
+   "blocks": "dispatching the desk on M1",
+   "options": [
+    "$100 to start",
+    "another amount",
+    "per post, decided each time"
+   ],
+   "links": []
+  },
+  {
+   "id": "B-2",
+   "title": "Which of the two drafts goes through the post flow first (M1)",
+   "kind": "decision",
+   "priority": 2,
+   "status": "open",
+   "since": "2026-10-25",
+   "from": "chief-of-staff",
+   "blocks": "M1",
+   "options": [
+    "learning-the-map",
+    "hello-bundle"
+   ],
+   "links": [
+    "data/posts/learning-the-map/index.mdx",
+    "data/posts/hello-bundle/index.mdx"
+   ]
+  }
+ ]
+}

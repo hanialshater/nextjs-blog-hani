@@ -1,0 +1,29 @@
+{
+ "v": 1,
+ "milestones": [
+  {
+   "id": "M0",
+   "title": "Onboarded: the editorial desk approved and generated; the blog in the city",
+   "state": "done",
+   "evidence": "approved by the author, 2026-10-25"
+  },
+  {
+   "id": "M1",
+   "title": "The two drafts (learning-the-map, hello-bundle) through the post flow, published in both languages",
+   "state": "next",
+   "evidence": ""
+  },
+  {
+   "id": "M2",
+   "title": "The Dream, Part 1, through the chapter flow",
+   "state": "next",
+   "evidence": ""
+  },
+  {
+   "id": "M3",
+   "title": "Sparks for every published post, in both languages",
+   "state": "next",
+   "evidence": ""
+  }
+ ]
+}

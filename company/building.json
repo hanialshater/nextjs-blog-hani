@@ -1,0 +1,62 @@
+{
+ "floors": [
+  {
+   "n": 1,
+   "name": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "n": 2,
+   "name": "Floor 2 \u00b7 Demos and the site"
+  }
+ ],
+ "rooms": [
+  {
+   "id": "study",
+   "name": "The author's study",
+   "kind": "office",
+   "floor": 1
+  },
+  {
+   "id": "editorial",
+   "name": "Editorial room",
+   "kind": "floor",
+   "floor": 1
+  },
+  {
+   "id": "translation",
+   "name": "Translation desk",
+   "kind": "office",
+   "floor": 1
+  },
+  {
+   "id": "editorial-meeting",
+   "name": "Editorial meeting room",
+   "kind": "meeting",
+   "floor": 1
+  },
+  {
+   "id": "demo-lab",
+   "name": "Demo lab",
+   "kind": "floor",
+   "floor": 2
+  },
+  {
+   "id": "evaluation",
+   "name": "Evaluation room",
+   "kind": "office",
+   "floor": 2
+  },
+  {
+   "id": "site",
+   "name": "Site and release",
+   "kind": "office",
+   "floor": 2
+  },
+  {
+   "id": "publish-review",
+   "name": "Publish review",
+   "kind": "meeting",
+   "floor": 2
+  }
+ ]
+}
