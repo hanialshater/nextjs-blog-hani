@@ -11,25 +11,49 @@
    "id": "M1",
    "title": "learning-the-map (Practical Decision-Making, Part 2) through the post flow: argument, claims, voice, the Arabic edition, its three demos evaluated, published with the author's go",
    "state": "active",
-   "evidence": ""
+   "evidence": "",
+   "predictions": [
+    {
+     "text": "learning-the-map goes draft to published through the post flow for at most $8, and the author makes no more corrections than on the September pass",
+     "wrongIf": "over $16, or more author corrections than the September pass"
+    }
+   ]
   },
   {
    "id": "M2",
    "title": "The Dream, Part 1, through the chapter flow",
    "state": "next",
-   "evidence": ""
+   "evidence": "",
+   "predictions": [
+    {
+     "text": "The Dream Part 1 passes the chapter flow with every claim checked and both languages in parity, for at most $8 per chapter",
+     "wrongIf": "a claim reaches the author unchecked, or parity fails at the spot-check"
+    }
+   ]
   },
   {
    "id": "M3",
    "title": "Snippets for every published post, in both languages",
    "state": "next",
-   "evidence": ""
+   "evidence": "",
+   "predictions": [
+    {
+     "text": "every published post has snippets in both languages, approved in at most 2 batches",
+     "wrongIf": "a post without snippets in either language, or more than 2 batches"
+    }
+   ]
   },
   {
    "id": "M4",
    "title": "Interface parity: every user-visible string in both locales, RTL checked on every page type (posts, book, demos, projects, slides)",
    "state": "next",
-   "evidence": ""
+   "evidence": "",
+   "predictions": [
+    {
+     "text": "every interface string is in both locales and every page passes an RTL check",
+     "wrongIf": "a hard-coded English string or an RTL layout break found after M4 is closed"
+    }
+   ]
   }
  ]
 }

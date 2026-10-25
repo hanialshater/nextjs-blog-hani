@@ -14,7 +14,7 @@ and the company's records are in `company/`.
 
 | Work | Flow |
 |---|---|
-| **Post**, standalone or part of a series | developmental editor (the argument; for a series, continuity with the earlier parts) → fact-checker → line editor → **author approves** → Arabic editor → localization lead (both editions on the page: routes, links, RTL) → **author spot-checks** → `yarn check` → release, with the **author's deploy approval** → snippets editor |
+| **Post**, standalone or part of a series | editor, one warm session: the argument, then the sentences, both as proposals (for a series, continuity with the earlier parts) → fact-checker → **author approves** → Arabic editor → localization lead (both editions on the page: routes, links, RTL) → **author spot-checks** → `yarn check` → release, with the **author's deploy approval** → snippets editor |
 | **Demo in a post** | demo designer (learning test cases) → demo builder → demo evaluator (free, then the test cases) → into the post bundle, with the post |
 | **Standalone demo** (the `/demos` gallery) | demo designer → demo builder → demo evaluator → localization lead (title and description in both languages in `data/miniDemosData.ts`, interface strings, RTL) → `yarn check` → **author approves** → release |
 | **Snippet** | snippets editor, from published posts only, in both languages; the **author approves a batch** |
@@ -23,6 +23,19 @@ and the company's records are in `company/`.
 | **Site feature** (newsletter, search, comments, share and follow, reading, tags, drafts, …) | a brief the **author approves** (what and why) → site engineer, on a branch with its Playwright spec → localization lead (every new string in both locales, RTL) → evaluation steward (checks green, no regression) → preview → **author approves** → release |
 | **Translation of an existing item** | Arabic editor (prose) or localization lead (interface) → author spot-check → `yarn check` → release |
 | **Localization** (interface strings, RTL, SEO by language) | localization lead → `yarn check` → release with the next approved deploy. A **new locale** is the author's decision, with a decision record |
+
+## The principles
+
+The desk follows the city's principles (`system3-meta PRINCIPLES.md`): the defaults that made an org of agents as good as
+one strong agent.
+- **One warm maker per item, then its independent checks.** No relay of cold editors.
+- **Cost targets with a stop rule.** $8 a post and $12 a demo; work over 2× its target pauses for the author.
+- **Predictions on every milestone.**
+- **Lessons with beliefs** in `company/knowledge/`.
+- **One owner per path** (`company/company.json` `owns`).
+- **A role with no work in 4 weeks is parked.**
+
+The HQ's Principles page shows the audit.
 
 ## Hard rules
 

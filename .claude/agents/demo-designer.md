@@ -12,4 +12,5 @@ reportsTo: chief-of-staff
 
 ## In scope
 - Write `test_cases.json`: the learning outcomes to verify, with `skills/edu-demo-test-cases`.
+- Keep one or two test cases **held out**: give them to the demo evaluator, not the builder (the referee's held-out part, PRINCIPLES.md P6).
 - Read the pedagogy note (`docs/decision-lab-pedagogy.md`): start paused, make one loop inspectable, show what the learner sees, and separate evaluator diagnostics from the learner's feedback.

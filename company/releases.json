@@ -1,0 +1,149 @@
+{
+ "note": "Every merge to main deploys the site (GitHub Pages and the site build) and needs the author's approval (CLAUDE.md).",
+ "releases": [
+  {
+   "id": "pr25",
+   "date": "2026-10-25",
+   "title": "pin Playwright CI jobs to ubuntu-24.04 (author-approved)",
+   "notes": [],
+   "commit": "c91af66",
+   "approvedBy": "the author (\"Merge in my behalf\", 2026-10-25), merged by the managing editor"
+  },
+  {
+   "id": "pr24",
+   "date": "2026-10-25",
+   "title": "the blog joins the System 3 city (author-approved)",
+   "notes": [],
+   "commit": "66948e7",
+   "approvedBy": "the author (\"Merge in my behalf\", 2026-10-25), merged by the managing editor"
+  },
+  {
+   "id": "pr22",
+   "date": "2026-10-21",
+   "title": "Merge pull request #22 from hanialshater/content/greatest-hallucination-revision",
+   "notes": [],
+   "commit": "31bbb4e",
+   "approvedBy": "the author, merging PR #22"
+  },
+  {
+   "id": "pr21",
+   "date": "2026-10-21",
+   "title": "Merge pull request #21 from hanialshater/site-refresh-about-tags-follow",
+   "notes": [],
+   "commit": "fcffca4",
+   "approvedBy": "the author, merging PR #21"
+  },
+  {
+   "id": "pr19",
+   "date": "2026-09-06",
+   "title": "Open unlisted drafts and the bilingual Dream book without passwords (#19)",
+   "notes": [],
+   "commit": "55d217a",
+   "approvedBy": "the author, merging PR #19"
+  },
+  {
+   "id": "pr18",
+   "date": "2026-09-06",
+   "title": "Strengthen the Hallucination essay without changing its voice (#18)",
+   "notes": [],
+   "commit": "9a65b2a",
+   "approvedBy": "the author, merging PR #18"
+  },
+  {
+   "id": "pr17",
+   "date": "2026-09-06",
+   "title": "Restore Hani's voice in Welcome to the Greatest Hallucination (#17)",
+   "notes": [],
+   "commit": "52d1aa9",
+   "approvedBy": "the author, merging PR #17"
+  },
+  {
+   "id": "pr16",
+   "date": "2026-09-06",
+   "title": "Fix Arabic menu layout and duplicate navigation (#16)",
+   "notes": [],
+   "commit": "4ae7176",
+   "approvedBy": "the author, merging PR #16"
+  },
+  {
+   "id": "pr14",
+   "date": "2026-09-06",
+   "title": "Merge bilingual editorial review and Arabic prose improvements (#14)",
+   "notes": [],
+   "commit": "8762851",
+   "approvedBy": "the author, merging PR #14"
+  },
+  {
+   "id": "pr13",
+   "date": "2026-09-06",
+   "title": "Improve bilingual typography and article reading features (#13)",
+   "notes": [],
+   "commit": "ec7f393",
+   "approvedBy": "the author, merging PR #13"
+  },
+  {
+   "id": "pr12",
+   "date": "2026-09-06",
+   "title": "Use one Blog archive and add protected draft previews (#12)",
+   "notes": [],
+   "commit": "aeed379",
+   "approvedBy": "the author, merging PR #12"
+  },
+  {
+   "id": "pr11",
+   "date": "2026-09-06",
+   "title": "Fix empty blog pages, article links and bilingual reading (#11)",
+   "notes": [],
+   "commit": "6a952d5",
+   "approvedBy": "the author, merging PR #11"
+  },
+  {
+   "id": "0c59a0b",
+   "date": "2026-05-31",
+   "title": "Merge Arabic translations of 4 posts + translate-and-deploy workflow",
+   "notes": [],
+   "commit": "0c59a0b",
+   "approvedBy": "the author, merging to main"
+  },
+  {
+   "id": "pr9",
+   "date": "2026-05-30",
+   "title": "Merge pull request #9 from hanialshater/codex/evaluate-blog-code-structure-and-suggest-improvements",
+   "notes": [],
+   "commit": "b7629d9",
+   "approvedBy": "the author, merging PR #9"
+  },
+  {
+   "id": "pr8",
+   "date": "2026-02-16",
+   "title": "Merge pull request #8 from hanialshater/claude/add-feathers-content-X6lw4",
+   "notes": [],
+   "commit": "8504a5c",
+   "approvedBy": "the author, merging PR #8"
+  },
+  {
+   "id": "pr7",
+   "date": "2026-02-15",
+   "title": "Merge pull request #7 from hanialshater/claude/add-feathers-content-X6lw4",
+   "notes": [],
+   "commit": "d5df14c",
+   "approvedBy": "the author, merging PR #7"
+  },
+  {
+   "id": "pr5",
+   "date": "2026-02-15",
+   "title": "Merge pull request #5 from hanialshater/claude/fix-vercel-build-6wNgv",
+   "notes": [],
+   "commit": "34d5097",
+   "approvedBy": "the author, merging PR #5"
+  },
+  {
+   "id": "pr4",
+   "date": "2026-02-15",
+   "title": "Merge pull request #4 from hanialshater/claude/blog-post-prioritization-KflVl",
+   "notes": [],
+   "commit": "cd5f401",
+   "approvedBy": "the author, merging PR #4"
+  }
+ ]
+}

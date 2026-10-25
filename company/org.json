@@ -25,19 +25,8 @@
    "floorName": "Floor 1 \u00b7 The desk"
   },
   {
-   "id": "developmental-editor",
-   "title": "Developmental editor",
-   "reportsTo": "chief-of-staff",
-   "team": "editorial",
-   "room": "editorial",
-   "roomName": "Editorial room",
-   "roomKind": "floor",
-   "floor": 1,
-   "floorName": "Floor 1 \u00b7 The desk"
-  },
-  {
-   "id": "line-editor",
-   "title": "Line editor",
+   "id": "editor",
+   "title": "Editor (argument, then sentences)",
    "reportsTo": "chief-of-staff",
    "team": "editorial",
    "room": "editorial",
