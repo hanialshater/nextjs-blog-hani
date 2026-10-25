@@ -1,4 +1,8 @@
 # Inspired from https://github.com/actions/starter-workflows/blob/main/pages/nextjs.yml
+#
+# Deploys need the author's approval, every time. A push to main deploys only when its head commit
+# message carries [deploy] (put it in the merge commit's title when merging an approved PR); otherwise
+# run this workflow by hand (Actions -> GitHub Pages -> Run workflow, on main). Unmarked merges do not deploy.
 name: GitHub Pages
 
 on:
@@ -17,6 +21,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
