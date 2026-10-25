@@ -58,23 +58,34 @@
    "floorName": "Floor 1 \u00b7 The desk"
   },
   {
-   "id": "arabic-editor",
-   "title": "Arabic editor",
+   "id": "snippets-editor",
+   "title": "Snippets editor",
    "reportsTo": "chief-of-staff",
    "team": "editorial",
-   "room": "translation",
-   "roomName": "Translation desk",
+   "room": "editorial",
+   "roomName": "Editorial room",
+   "roomKind": "floor",
+   "floor": 1,
+   "floorName": "Floor 1 \u00b7 The desk"
+  },
+  {
+   "id": "arabic-editor",
+   "title": "Arabic editor (translation)",
+   "reportsTo": "chief-of-staff",
+   "team": "localization",
+   "room": "localization",
+   "roomName": "Localization desk",
    "roomKind": "office",
    "floor": 1,
    "floorName": "Floor 1 \u00b7 The desk"
   },
   {
-   "id": "spark-curator",
-   "title": "Spark curator",
+   "id": "localization-lead",
+   "title": "Localization lead",
    "reportsTo": "chief-of-staff",
-   "team": "editorial",
-   "room": "translation",
-   "roomName": "Translation desk",
+   "team": "localization",
+   "room": "localization",
+   "roomName": "Localization desk",
    "roomKind": "office",
    "floor": 1,
    "floorName": "Floor 1 \u00b7 The desk"
@@ -125,7 +136,7 @@
   },
   {
    "id": "hq-engineer",
-   "title": "Site and HQ engineer",
+   "title": "Site engineer (features, and the HQ)",
    "reportsTo": "founder",
    "team": "site",
    "room": "site",

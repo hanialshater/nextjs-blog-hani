@@ -6,7 +6,7 @@ This folder holds the blog's records in the System 3 city's contracts (`hanialsh
 | File | What |
 |---|---|
 | `company.json` | mission, measure, budget lines, links |
-| `milestones.json` | the milestones (M0: joined the city; M1: the two drafts through the post flow; M2: *The Dream*, Part 1) |
+| `milestones.json` | the milestones (M0: joined the city; M1: the two drafts through the post flow; M2: *The Dream*, Part 1; M3: snippets; M4: interface parity) |
 | `org.json`, `building.json` | the editorial desk: roles, reporting lines, rooms on two floors |
 | `asks.json` | what waits on the author |
 | `events.jsonl` | the onboarding record. The HQ also reads the git history as activity |

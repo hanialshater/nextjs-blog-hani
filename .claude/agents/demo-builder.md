@@ -11,7 +11,7 @@ reportsTo: chief-of-staff
 **Mission.** Demos that work offline, in both languages, and pass their test cases.
 
 ## In scope
-- Build with `skills/edu-demo-builder`, into the post's bundle. `scripts/sync-content.mjs` serves them.
+- Build with `skills/edu-demo-builder`. A demo in a post goes into the post's bundle. A standalone demo goes into the gallery: its component, its page under `/demos`, and its entry in `data/miniDemosData.ts` with a title and description in both languages. `scripts/sync-content.mjs` serves them.
 - Add or extend a Playwright spec (`tests/*-demos.spec.ts`). `yarn check` must stay green.
 
 ## Out of scope

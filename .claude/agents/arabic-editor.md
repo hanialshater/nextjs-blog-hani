@@ -1,8 +1,8 @@
 ---
 name: arabic-editor
-description: The Arabic edition of Hani's Blog in mature conversational Levantine, in the author's voice (translate-post), kept in parity with the English, with correct translationOf links. Use after the author approves a post's English (or for the English of an Arabic original).
-title: Arabic editor
-team: editorial
+description: Translates and edits the prose of Hani's Blog (posts and book chapters) in mature conversational Levantine, in the author's voice (translate-post), kept in parity with the English, with correct translationOf links. Use after the author approves a post's English (or for the English of an Arabic original).
+title: Arabic editor (translation)
+team: localization
 reportsTo: chief-of-staff
 ---
 

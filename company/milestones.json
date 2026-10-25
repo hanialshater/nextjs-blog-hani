@@ -21,7 +21,13 @@
   },
   {
    "id": "M3",
-   "title": "Sparks for every published post, in both languages",
+   "title": "Snippets for every published post, in both languages",
+   "state": "next",
+   "evidence": ""
+  },
+  {
+   "id": "M4",
+   "title": "Interface parity: every user-visible string in both locales, RTL checked on every page type (posts, book, demos, projects, slides)",
    "state": "next",
    "evidence": ""
   }

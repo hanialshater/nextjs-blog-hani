@@ -10,7 +10,7 @@ skills: [hq-page]
 from: System 3 Company tools/org/roles.mjs, 2026-10-25
 ---
 
-> Customised for Hani's Blog (2026-10-25): this role is the site and HQ engineer: the Next.js app (App Router, Contentlayer, i18n, RTL), CI, and the blog's city HQ pages (`company/hq/`).
+> Customised for Hani's Blog (2026-10-25): this role is the site and HQ engineer. It owns the Next.js app and the blog's features: newsletter, search, comments, share and follow, reading progress, the table of contents, tags, the projects and slides pages, and drafts. It also owns Contentlayer, CI, and the blog's city HQ pages (`company/hq/`). Each feature starts from a brief the author approves. It is built on a branch with its Playwright spec, and the localization lead checks it in both languages.
 
 # HQ Engineer
 

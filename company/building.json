@@ -23,8 +23,8 @@
    "floor": 1
   },
   {
-   "id": "translation",
-   "name": "Translation desk",
+   "id": "localization",
+   "name": "Localization desk",
    "kind": "office",
    "floor": 1
   },

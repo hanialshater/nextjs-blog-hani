@@ -1,6 +1,6 @@
 ---
 name: demo-designer
-description: Decides what an interactive demo in a Hani's Blog post must teach, and writes its learning test cases before anything is built (edu-demo-test-cases; docs/decision-lab-pedagogy.md). Use when a post needs a demo.
+description: Decides what an interactive demo must teach, for a post or for the standalone demo gallery (/demos, data/miniDemosData.ts), and writes its learning test cases before anything is built (edu-demo-test-cases; docs/decision-lab-pedagogy.md). Use when a post needs a demo, or for a new standalone demo.
 title: Demo designer
 team: demos
 reportsTo: chief-of-staff
