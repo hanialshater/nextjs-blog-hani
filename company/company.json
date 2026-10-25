@@ -217,14 +217,43 @@
      "kind": "owner"
     }
    ]
+  },
+  {
+   "id": "book release",
+   "reason": "the press's writer is the maker; here only publishing",
+   "steps": [
+    {
+     "role": "hq-engineer",
+     "kind": "maker"
+    },
+    {
+     "role": "arabic-editor",
+     "kind": "maker"
+    },
+    {
+     "role": "localization-lead",
+     "kind": "check"
+    },
+    {
+     "role": "author",
+     "kind": "owner"
+    },
+    {
+     "role": "evaluation-steward",
+     "kind": "check"
+    },
+    {
+     "role": "release-manager",
+     "kind": "owner"
+    }
+   ]
   }
  ],
  "owns": [
   {
    "role": "author",
    "paths": [
-    "data/posts/",
-    "data/books/"
+    "data/posts/"
    ]
   },
   {
@@ -264,6 +293,13 @@
    "paths": [
     "data/miniDemosData.ts"
    ]
+  },
+  {
+   "role": "hq-engineer",
+   "paths": [
+    "data/books/"
+   ],
+   "note": "the web edition, built from a release S3 Press tags; the manuscripts are S3 Press's"
   }
  ],
  "referee": {

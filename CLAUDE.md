@@ -18,7 +18,7 @@ and the company's records are in `company/`.
 | **Demo in a post** | demo designer (learning test cases) → demo builder → demo evaluator (free, then the test cases) → into the post bundle, with the post |
 | **Standalone demo** (the `/demos` gallery) | demo designer → demo builder → demo evaluator → localization lead (title and description in both languages in `data/miniDemosData.ts`, interface strings, RTL) → `yarn check` → **author approves** → release |
 | **Snippet** | snippets editor, from published posts only, in both languages; the **author approves a batch** |
-| **Book chapter** (*The Dream*) | as a post, chapter by chapter; unlisted until the author publishes it |
+| **Book chapter** (*The Dream*) | **S3 Press owns the manuscript** and edits and fact-checks it (founder, 2026-10-25). From a release the press tags: hq-engineer updates `data/books/` (the web edition) → Arabic editor (the Arabic edition stays the blog's) → localization lead → **author spot-checks** → `yarn check` → release, with the **author's deploy approval**. Unlisted until the author publishes it. The blog's editors do not edit chapter text |
 | **Projects and slides** | managing editor's brief → site engineer → localization lead → `yarn check` → **author approves** → release |
 | **Site feature** (newsletter, search, comments, share and follow, reading, tags, drafts, …) | a brief the **author approves** (what and why) → site engineer, on a branch with its Playwright spec → localization lead (every new string in both locales, RTL) → evaluation steward (checks green, no regression) → preview → **author approves** → release |
 | **Translation of an existing item** | Arabic editor (prose) or localization lead (interface) → author spot-check → `yarn check` → release |

@@ -22,14 +22,8 @@
   {
    "id": "M2",
    "title": "The Dream, Part 1, through the chapter flow",
-   "state": "next",
-   "evidence": "",
-   "predictions": [
-    {
-     "text": "The Dream Part 1 passes the chapter flow with every claim checked and both languages in parity, for at most $8 per chapter",
-     "wrongIf": "a claim reaches the author unchecked, or parity fails at the spot-check"
-    }
-   ]
+   "state": "dropped",
+   "evidence": "moved to S3 Press (founder, 2026-10-25: the press owns the manuscripts; its M1 takes The Dream's Part 1 through its flow). The blog publishes the press's release of Part 1 in both languages."
   },
   {
    "id": "M3",
