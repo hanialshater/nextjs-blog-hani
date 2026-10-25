@@ -11,11 +11,11 @@
   "lines": [
    {
     "id": "start",
-    "title": "Starting budget (proposed; the author sets it)",
-    "approved": null,
+    "title": "Starting budget",
+    "approved": 100,
     "spent": 0,
-    "approvedBy": null,
-    "source": "onboarding intake, 2026-10-25"
+    "approvedBy": "the author, 2026-10-25 (\"decide for me\"; Meta decided $100)",
+    "source": "company/asks.json B-1"
    }
   ]
  },

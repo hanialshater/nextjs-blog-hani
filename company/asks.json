@@ -6,7 +6,7 @@
    "title": "Set the blog's budget (a placeholder of $100 was proposed at onboarding)",
    "kind": "decision",
    "priority": 2,
-   "status": "open",
+   "status": "decided",
    "since": "2026-10-25",
    "from": "chief-of-staff",
    "blocks": "dispatching the desk on M1",
@@ -15,14 +15,15 @@
     "another amount",
     "per post, decided each time"
    ],
-   "links": []
+   "links": [],
+   "answer": "$100 to start (the author, 2026-10-25: \"decide for me\"; decided by Meta for the author). Reviewed when M1 is done."
   },
   {
    "id": "B-2",
    "title": "Which of the two drafts goes through the post flow first (M1)",
    "kind": "decision",
    "priority": 2,
-   "status": "open",
+   "status": "decided",
    "since": "2026-10-25",
    "from": "chief-of-staff",
    "blocks": "M1",
@@ -33,7 +34,8 @@
    "links": [
     "data/posts/learning-the-map/index.mdx",
     "data/posts/hello-bundle/index.mdx"
-   ]
+   ],
+   "answer": "learning-the-map (Practical Decision-Making, Part 2: three semi-bandit demos, English only so far). hello-bundle is the bundle template, not a post: it stays an unlisted template (the author, 2026-10-25: \"decide for me\")."
   }
  ]
 }
