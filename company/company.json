@@ -2,6 +2,7 @@
  "v": 1,
  "id": "blog",
  "name": "Hani's Blog",
+ "logo": "../data/logo.svg",
  "owner": "founder",
  "archetype": "corporate",
  "mission": "Writing worth rereading on machine learning, product and leadership, in English and Arabic, with interactive demos that let the reader test the idea",
